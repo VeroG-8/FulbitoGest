@@ -144,7 +144,10 @@ export default function Show({ jugador }: Props) {
                                     Fecha de nacimiento
                                 </p>
                                 <p className="font-semibold">
-                                    {jugador.fecha_nacimiento}
+                                    {jugador.fecha_nacimiento
+                                        ? jugador.fecha_nacimiento.substring(0, 10).split('-').reverse().join('/')
+                                        : 'No especificada'
+                                    }
                                 </p>
                             </div>
 
