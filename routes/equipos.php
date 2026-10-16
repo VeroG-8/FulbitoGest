@@ -15,7 +15,7 @@ Route::post('/equipos', [EquipoController::class, 'store'])
 Route::get('/equipos/{equipo}', [EquipoController::class, 'show'])
     ->name('equipos.show');
 
-Route::get('/equipos/{equipo}/editar', [EquipoController::class, 'edit'])
+Route::get('/equipos/{equipo}/edit', [EquipoController::class, 'edit'])
     ->name('equipos.edit');
 
 Route::put('/equipos/{equipo}', [EquipoController::class, 'update'])

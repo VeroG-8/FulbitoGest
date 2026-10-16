@@ -1,5 +1,14 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import {
+    Plus,
+    Pencil,
+    Eye,
+    ShieldCheck,
+    Search,
+    Trash2,
+    Users,
+} from 'lucide-react';
+import { FormEvent, useState } from 'react';
 
 interface Club {
     id: number;
@@ -14,6 +23,7 @@ interface Categoria {
 interface Equipo {
     id: number;
     nombre: string;
+    estado: boolean;
     club: Club | null;
     categoria: Categoria | null;
 }
@@ -26,11 +36,8 @@ interface Paginacion<T> {
     total: number;
     from: number | null;
     to: number | null;
-    links: {
-        url: string | null;
-        label: string;
-        active: boolean;
-    }[];
+    prev_page_url: string | null;
+    next_page_url: string | null;
 }
 
 interface Props {
@@ -43,7 +50,7 @@ interface Props {
 export default function Index({ equipos, filtros }: Props) {
     const [buscar, setBuscar] = useState(filtros.buscar ?? '');
 
-    function aplicarBusqueda(e: React.FormEvent<HTMLFormElement>) {
+    const aplicarBusqueda = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         router.get(
@@ -53,261 +60,313 @@ export default function Index({ equipos, filtros }: Props) {
                 preserveState: true,
                 preserveScroll: true,
                 replace: true,
-            }
+            },
         );
-    }
+    };
 
-    function limpiarBusqueda() {
-        setBuscar('');
-
-        router.get(
-            '/equipos',
-            {},
-            {
-                preserveState: true,
-                preserveScroll: true,
-            }
-        );
-    }
+    const eliminarEquipo = (equipo: Equipo) => {
+        if (
+            confirm(
+                `¿Estás segura de que querés eliminar el equipo "${equipo.nombre}"?`,
+            )
+        ) {
+            router.delete(`/equipos/${equipo.id}`);
+        }
+    };
 
     return (
         <>
             <Head title="Equipos" />
 
-            <div className="min-h-screen bg-slate-100 px-4 py-8 sm:px-6 lg:px-10">
+            <div className="min-h-screen bg-slate-50 p-6 md:p-10">
                 <div className="mx-auto max-w-7xl">
                     {/* Encabezado */}
-                    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                         <div>
-                            <p className="text-sm font-semibold uppercase tracking-wider text-blue-600">
-                                FulbitoGest
-                            </p>
-
-                            <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-800">
+                            <h1 className="text-3xl font-bold tracking-tight text-slate-800">
                                 Equipos
                             </h1>
 
                             <p className="mt-2 text-sm text-slate-500">
-                                Consultá los equipos, sus clubes y categorías.
+                                Administrá los equipos registrados en
+                                FulbitoGest.
                             </p>
                         </div>
 
                         <Link
-                            href="/dashboard"
-                            className="inline-flex w-fit items-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                            href="/equipos/crear"
+                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
                         >
-                            Volver al panel
+                            <Plus size={18} />
+                            Registrar equipo
                         </Link>
                     </div>
 
-                    {/* Contenido */}
-                    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                        {/* Título y cantidad */}
-                        <div className="flex flex-col gap-3 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                                <h2 className="text-lg font-semibold text-slate-800">
-                                    Listado de equipos
-                                </h2>
+                    {/* Resumen */}
+                    <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-slate-500">
+                                        Equipos encontrados
+                                    </p>
 
-                                <p className="mt-1 text-sm text-slate-500">
-                                    {equipos.total}{' '}
-                                    {equipos.total === 1
-                                        ? 'equipo registrado'
-                                        : 'equipos registrados'}
-                                </p>
+                                    <p className="mt-2 text-3xl font-bold text-slate-800">
+                                        {equipos.total}
+                                    </p>
+                                </div>
+
+                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50">
+                                    <ShieldCheck
+                                        size={25}
+                                        className="text-blue-600"
+                                    />
+                                </div>
                             </div>
                         </div>
+                    </div>
 
-                        {/* Buscador */}
-                        <div className="border-b border-slate-200 bg-slate-50/70 p-6">
-                            <form
-                                onSubmit={aplicarBusqueda}
-                                className="flex flex-col gap-3 sm:flex-row"
+                    {/* Buscador */}
+                    <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <form
+                            onSubmit={aplicarBusqueda}
+                            className="flex flex-col gap-3 sm:flex-row"
+                        >
+                            <div className="relative flex-1">
+                                <Search
+                                    size={18}
+                                    className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400"
+                                />
+
+                                <input
+                                    type="text"
+                                    value={buscar}
+                                    onChange={(e) =>
+                                        setBuscar(e.target.value)
+                                    }
+                                    placeholder="Buscar por equipo, club o categoría..."
+                                    className="w-full rounded-lg border border-slate-300 py-3 pr-4 pl-10 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
                             >
-                                <div className="flex-1">
-                                    <label
-                                        htmlFor="buscar"
-                                        className="mb-2 block text-sm font-medium text-slate-700"
-                                    >
-                                        Buscar equipo
-                                    </label>
+                                <Search size={17} />
+                                Buscar
+                            </button>
 
-                                    <input
-                                        id="buscar"
-                                        type="text"
-                                        value={buscar}
-                                        onChange={(e) =>
-                                            setBuscar(e.target.value)
-                                        }
-                                        placeholder="Nombre del equipo, club o categoría..."
-                                        className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            {buscar !== '' && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setBuscar('');
+                                        router.get('/equipos');
+                                    }}
+                                    className="rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                                >
+                                    Limpiar
+                                </button>
+                            )}
+                        </form>
+                    </div>
+
+                    {/* Tabla */}
+                    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                        <div className="border-b border-slate-200 px-6 py-4">
+                            <h2 className="font-semibold text-slate-800">
+                                Listado de equipos
+                            </h2>
+
+                            <p className="mt-1 text-sm text-slate-500">
+                                Consultá y administrá los equipos de cada club
+                                y categoría.
+                            </p>
+                        </div>
+
+                        {equipos.data.length === 0 ? (
+                            <div className="px-6 py-16 text-center">
+                                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+                                    <Users
+                                        size={25}
+                                        className="text-slate-500"
                                     />
                                 </div>
 
-                                <div className="flex items-end gap-2">
-                                    <button
-                                        type="submit"
-                                        className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-                                    >
-                                        Buscar
-                                    </button>
+                                <h3 className="font-semibold text-slate-800">
+                                    No se encontraron equipos
+                                </h3>
 
-                                    <button
-                                        type="button"
-                                        onClick={limpiarBusqueda}
-                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                                    >
-                                        Limpiar
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+                                <p className="mt-2 text-sm text-slate-500">
+                                    Registrá un equipo o modificá los criterios
+                                    de búsqueda.
+                                </p>
 
-                        {/* Tabla */}
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
-                                    <tr>
-                                        <th className="px-6 py-4 font-semibold">
-                                            ID
-                                        </th>
+                                <Link
+                                    href="/equipos/crear"
+                                    className="mt-5 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                                >
+                                    <Plus size={16} />
+                                    Registrar equipo
+                                </Link>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-slate-50 text-xs tracking-wide text-slate-500 uppercase">
+                                        <tr>
+                                            <th className="px-6 py-4">
+                                                Equipo
+                                            </th>
 
-                                        <th className="px-6 py-4 font-semibold">
-                                            Equipo
-                                        </th>
+                                            <th className="px-6 py-4">
+                                                Club
+                                            </th>
 
-                                        <th className="px-6 py-4 font-semibold">
-                                            Club
-                                        </th>
+                                            <th className="px-6 py-4">
+                                                Categoría
+                                            </th>
 
-                                        <th className="px-6 py-4 font-semibold">
-                                            Categoría
-                                        </th>
-                                    </tr>
-                                </thead>
+                                            <th className="px-6 py-4">
+                                                Estado
+                                            </th>
 
-                                <tbody className="divide-y divide-slate-100">
-                                    {equipos.data.length > 0 ? (
-                                        equipos.data.map((equipo) => (
+                                            <th className="px-6 py-4 text-right">
+                                                Acciones
+                                            </th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody className="divide-y divide-slate-100">
+                                        {equipos.data.map((equipo) => (
                                             <tr
                                                 key={equipo.id}
-                                                className="transition hover:bg-blue-50/50"
+                                                className="transition hover:bg-slate-50"
                                             >
-                                                <td className="whitespace-nowrap px-6 py-4 text-slate-500">
-                                                    {equipo.id}
+                                                <td className="px-6 py-4">
+                                                    <div className="font-semibold text-slate-800">
+                                                        {equipo.nombre}
+                                                    </div>
+
+                                                    <div className="mt-1 text-xs text-slate-400">
+                                                        ID: {equipo.id}
+                                                    </div>
                                                 </td>
 
-                                                <td className="whitespace-nowrap px-6 py-4 font-semibold text-slate-800">
-                                                    {equipo.nombre}
-                                                </td>
-
-                                                <td className="whitespace-nowrap px-6 py-4 text-slate-600">
+                                                <td className="px-6 py-4 text-slate-600">
                                                     {equipo.club?.nombre ??
                                                         'Sin club asignado'}
                                                 </td>
 
-                                                <td className="whitespace-nowrap px-6 py-4">
-                                                    {equipo.categoria ? (
-                                                        <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-                                                            {
-                                                                equipo.categoria
-                                                                    .nombre
+                                                <td className="px-6 py-4 text-slate-600">
+                                                    {equipo.categoria?.nombre ??
+                                                        'Sin categoría'}
+                                                </td>
+
+                                                <td className="px-6 py-4">
+                                                    <span
+                                                        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                                                            equipo.estado
+                                                                ? 'bg-emerald-50 text-emerald-700'
+                                                                : 'bg-red-50 text-red-700'
+                                                        }`}
+                                                    >
+                                                        {equipo.estado
+                                                            ? 'Activo'
+                                                            : 'Inactivo'}
+                                                    </span>
+                                                </td>
+
+                                                <td className="px-6 py-4">
+                                                    <div className="flex justify-end gap-2">
+                                                        <Link
+                                                            href={`/equipos/${equipo.id}`}
+                                                            title="Ver equipo"
+                                                            className="rounded-lg border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100"
+                                                        >
+                                                            <Eye size={17} />
+                                                        </Link>
+
+                                                        <Link
+                                                            href={`/equipos/${equipo.id}/edit`}
+                                                            title="Editar equipo"
+                                                            className="rounded-lg border border-slate-200 p-2 text-blue-600 transition hover:bg-blue-50"
+                                                        >
+                                                            <Pencil size={17} />
+                                                        </Link>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                eliminarEquipo(
+                                                                    equipo,
+                                                                )
                                                             }
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-slate-400">
-                                                            Sin categoría
-                                                        </span>
-                                                    )}
+                                                            title="Eliminar equipo"
+                                                            className="rounded-lg border border-slate-200 p-2 text-red-600 transition hover:bg-red-50"
+                                                        >
+                                                            <Trash2 size={17} />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td
-                                                colSpan={4}
-                                                className="px-6 py-16 text-center"
-                                            >
-                                                <p className="font-medium text-slate-700">
-                                                    No se encontraron equipos.
-                                                </p>
-
-                                                <p className="mt-1 text-sm text-slate-500">
-                                                    Probá con otro nombre de
-                                                    equipo, club o categoría.
-                                                </p>
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
 
                         {/* Paginación */}
                         {equipos.last_page > 1 && (
                             <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
                                 <p className="text-sm text-slate-500">
-                                    Mostrando{' '}
-                                    <span className="font-medium text-slate-700">
-                                        {equipos.from ?? 0}
-                                    </span>{' '}
-                                    a{' '}
-                                    <span className="font-medium text-slate-700">
-                                        {equipos.to ?? 0}
-                                    </span>{' '}
-                                    de{' '}
-                                    <span className="font-medium text-slate-700">
-                                        {equipos.total}
-                                    </span>{' '}
+                                    Mostrando {equipos.from ?? 0} a{' '}
+                                    {equipos.to ?? 0} de {equipos.total}{' '}
                                     equipos
                                 </p>
 
-                                <div className="flex flex-wrap gap-1">
-                                    {equipos.links.map((link, index) => {
-                                        const esAnterior =
-                                            link.label.includes('Previous') ||
-                                            link.label.includes('Anterior');
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        disabled={!equipos.prev_page_url}
+                                        onClick={() =>
+                                            equipos.prev_page_url &&
+                                            router.visit(
+                                                equipos.prev_page_url,
+                                            )
+                                        }
+                                        className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                        Anterior
+                                    </button>
 
-                                        const esSiguiente =
-                                            link.label.includes('Next') ||
-                                            link.label.includes('Siguiente');
+                                    <span className="px-2 text-sm text-slate-600">
+                                        Página {equipos.current_page} de{' '}
+                                        {equipos.last_page}
+                                    </span>
 
-                                        const etiqueta = esAnterior
-                                            ? 'Anterior'
-                                            : esSiguiente
-                                              ? 'Siguiente'
-                                              : link.label.replace(
-                                                    /&laquo;|&raquo;|&amp;laquo;|&amp;raquo;/g,
-                                                    ''
-                                                );
-
-                                        return (
-                                            <button
-                                                key={index}
-                                                type="button"
-                                                disabled={!link.url}
-                                                onClick={() => {
-                                                    if (link.url) {
-                                                        router.visit(link.url, {
-                                                            preserveScroll: true,
-                                                            preserveState: true,
-                                                        });
-                                                    }
-                                                }}
-                                                className={`rounded-lg border px-3 py-2 text-sm transition ${
-                                                    link.active
-                                                        ? 'border-blue-600 bg-blue-600 font-semibold text-white'
-                                                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                                                } disabled:cursor-not-allowed disabled:opacity-40`}
-                                            >
-                                                {etiqueta}
-                                            </button>
-                                        );
-                                    })}
+                                    <button
+                                        type="button"
+                                        disabled={!equipos.next_page_url}
+                                        onClick={() =>
+                                            equipos.next_page_url &&
+                                            router.visit(
+                                                equipos.next_page_url,
+                                            )
+                                        }
+                                        className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                        Siguiente
+                                    </button>
                                 </div>
                             </div>
                         )}
                     </div>
+
+                    <p className="mt-4 text-xs text-slate-400">
+                        Se muestran los equipos registrados en FulbitoGest.
+                    </p>
                 </div>
             </div>
         </>

@@ -62,7 +62,7 @@ class EquipoController extends Controller
             'club_id' => [
                 'required',
                 'integer',
-                Rule::exists('clubs', 'id'),
+                Rule::exists('clubes', 'id'),
             ],
             'categoria_id' => [
                 'required',
@@ -98,17 +98,52 @@ class EquipoController extends Controller
     /**
      * Mostrar el formulario de edición.
      */
+   /**
+ * Mostrar el formulario para editar un equipo.
+ */
     public function edit(Equipo $equipo)
     {
-        //
+        return Inertia::render('Equipos/Edit', [
+            'equipo' => $equipo,
+            'clubes' => Club::orderBy('nombre')
+                ->get(['id', 'nombre']),
+            'categorias' => Categoria::orderBy('nombre')
+                ->get(['id', 'nombre']),
+        ]);
     }
 
     /**
-     * Actualizar un equipo.
+     * Actualizar un equipo existente.
      */
     public function update(Request $request, Equipo $equipo)
     {
-        //
+        $datos = $request->validate([
+            'club_id' => [
+                'required',
+                'integer',
+                Rule::exists('clubes', 'id'),
+            ],
+            'categoria_id' => [
+                'required',
+                'integer',
+                Rule::exists('categorias', 'id'),
+            ],
+            'nombre' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+            'estado' => [
+                'required',
+                'boolean',
+            ],
+        ]);
+
+        $equipo->update($datos);
+
+        return redirect()
+            ->route('equipos.index')
+            ->with('success', 'El equipo se actualizó correctamente.');
     }
 
     /**
