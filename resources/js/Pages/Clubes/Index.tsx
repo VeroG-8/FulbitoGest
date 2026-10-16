@@ -1,5 +1,5 @@
-import { Head, Link } from '@inertiajs/react';
-import { Plus, Pencil, Eye, MapPin, Phone, Mail } from 'lucide-react';
+import { Head, Link, router } from '@inertiajs/react';
+import { Plus, Pencil, Eye, MapPin, Phone, Mail, Ban } from 'lucide-react';
 
 interface Club {
     id: number;
@@ -16,6 +16,11 @@ interface Props {
 }
 
 export default function Index({ clubes }: Props) {
+    const desactivarClub = (id: number, nombre: string) => {
+        if (confirm(`¿Estás segura de que querés desactivar el club "${nombre}"?`)) {
+            router.delete(`/clubes/${id}`);
+        }
+    };
     return (
         <>
             <Head title="Clubes" />
@@ -154,6 +159,14 @@ export default function Index({ clubes }: Props) {
                                                         >
                                                             <Pencil size={17} />
                                                         </Link>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => desactivarClub(club.id, club.nombre)}
+                                                            title="Desactivar club"
+                                                            className="rounded-lg border border-slate-200 p-2 text-red-600 transition hover:bg-red-50"
+                                                        >
+                                                            <Ban size={17} />
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
