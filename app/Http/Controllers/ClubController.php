@@ -85,4 +85,26 @@ class ClubController extends Controller
             ->route('clubes.index')
             ->with('success', 'Club desactivado correctamente.');
     }
+
+    public function historial()
+{
+    $clubes = Club::where('estado', false)
+        ->orderBy('nombre')
+        ->get();
+
+    return Inertia::render('Clubes/Historial', [
+        'clubes' => $clubes,
+    ]);
+}
+
+public function reactivar(Club $club)
+{
+    $club->update([
+        'estado' => true,
+    ]);
+
+    return redirect()
+        ->route('clubes.historial')
+        ->with('success', 'Club reactivado correctamente.');
+}
 }
