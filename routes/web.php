@@ -13,6 +13,7 @@ require __DIR__ . '/horarios.php';
 require __DIR__ . '/carnets.php';
 require __DIR__ . '/cuotas.php';
 require __DIR__ . '/clubes.php';
+require __DIR__ . '/equipos.php';
 
 
 
