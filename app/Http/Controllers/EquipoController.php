@@ -92,7 +92,11 @@ class EquipoController extends Controller
      */
     public function show(Equipo $equipo)
     {
-        //
+        $equipo->load(['club', 'categoria']);
+
+        return Inertia::render('Equipos/Show', [
+            'equipo' => $equipo,
+        ]);
     }
 
     /**
