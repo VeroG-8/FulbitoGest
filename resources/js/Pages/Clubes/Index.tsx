@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Plus, Pencil, Eye, MapPin, Phone, Mail, Ban } from 'lucide-react';
+import { Plus, Pencil, Eye, MapPin, Phone, Mail, Ban, History } from 'lucide-react';
 
 interface Club {
     id: number;
@@ -38,13 +38,23 @@ export default function Index({ clubes }: Props) {
                             </p>
                         </div>
 
-                        <Link
-                            href="/clubes/create"
-                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
-                        >
-                            <Plus size={18} />
-                            Registrar club
-                        </Link>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <Link
+                                href="/clubes/historial"
+                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                            >
+                                <History size={18} />
+                                Historial
+                            </Link>
+
+                            <Link
+                                href="/clubes/create"
+                                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                            >
+                                <Plus size={18} />
+                                Registrar club
+                            </Link>
+                        </div>
                     </div>
 
                     <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
