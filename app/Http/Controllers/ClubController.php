@@ -2,63 +2,87 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Club;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class ClubController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        //
+        $clubes = Club::where('estado', true)
+            ->orderBy('nombre')
+            ->get();
+
+        return Inertia::render('Clubes/Index', [
+            'clubes' => $clubes,
+        ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        //
+        return Inertia::render('Clubes/Create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
+        $datos = $request->validate([
+            'nombre' => ['required', 'string', 'max:255'],
+            'localidad' => ['nullable', 'string', 'max:255'],
+            'direccion' => ['nullable', 'string', 'max:255'],
+            'telefono' => ['nullable', 'string', 'max:30'],
+            'email' => ['nullable', 'email', 'max:255'],
+        ]);
+
+        $datos['estado'] = true;
+
+        Club::create($datos);
+
+        return redirect()
+            ->route('clubes.index')
+            ->with('success', 'Club registrado correctamente.');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function show(Club $club)
     {
-        //
+        return Inertia::render('Clubes/Show', [
+            'club' => $club,
+        ]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
+    public function edit(Club $club)
     {
-        //
+        return Inertia::render('Clubes/Edit', [
+            'club' => $club,
+        ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    public function update(Request $request, Club $club)
     {
-        //
+        $datos = $request->validate([
+            'nombre' => ['required', 'string', 'max:255'],
+            'localidad' => ['nullable', 'string', 'max:255'],
+            'direccion' => ['nullable', 'string', 'max:255'],
+            'telefono' => ['nullable', 'string', 'max:30'],
+            'email' => ['nullable', 'email', 'max:255'],
+        ]);
+
+        $club->update($datos);
+
+        return redirect()
+            ->route('clubes.index')
+            ->with('success', 'Club actualizado correctamente.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
+    public function destroy(Club $club)
     {
-        //
+        $club->update([
+            'estado' => false,
+        ]);
+
+        return redirect()
+            ->route('clubes.index')
+            ->with('success', 'Club desactivado correctamente.');
     }
 }
