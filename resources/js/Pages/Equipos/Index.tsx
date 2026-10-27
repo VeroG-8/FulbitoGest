@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router,usePage } from '@inertiajs/react';
 import {
     Plus,
     Pencil,
@@ -7,6 +7,8 @@ import {
     Search,
     Trash2,
     Users,
+    CheckCircle2,
+    AlertCircle,
 } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 
@@ -49,6 +51,12 @@ interface Props {
 
 export default function Index({ equipos, filtros }: Props) {
     const [buscar, setBuscar] = useState(filtros.buscar ?? '');
+    const { flash } = usePage<{
+        flash: {
+            success?: string;
+            error?: string;
+        };
+    }>().props;
 
     const aplicarBusqueda = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -80,6 +88,27 @@ export default function Index({ equipos, filtros }: Props) {
 
             <div className="min-h-screen bg-slate-50 p-6 md:p-10">
                 <div className="mx-auto max-w-7xl">
+                {/* Notificación de éxito */}
+                {flash?.success && (
+                    <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-emerald-800 shadow-sm">
+                        <CheckCircle2 size={22} className="shrink-0" />
+
+                        <p className="text-sm font-medium">
+                            {flash.success}
+                        </p>
+                    </div>
+                )}
+
+                {/* Notificación de error */}
+                {flash?.error && (
+                    <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-red-800 shadow-sm">
+                        <AlertCircle size={22} className="shrink-0" />
+
+                        <p className="text-sm font-medium">
+                            {flash.error}
+                        </p>
+                    </div>
+                )}
                     {/* Encabezado */}
                     <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                         <div>

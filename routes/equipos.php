@@ -23,3 +23,5 @@ Route::put('/equipos/{equipo}', [EquipoController::class, 'update'])
 
 Route::delete('/equipos/{equipo}', [EquipoController::class, 'destroy'])
     ->name('equipos.destroy');
+
+    

@@ -8,6 +8,7 @@ use App\Models\Categoria;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
 
 class EquipoController extends Controller
 {
@@ -153,8 +154,35 @@ class EquipoController extends Controller
     /**
      * Eliminar un equipo.
      */
+    /**
+ * Eliminar un equipo.
+ */
     public function destroy(Equipo $equipo)
     {
-        //
+        // Verificar si tiene partidos como local o visitante
+        $tienePartidos = DB::table('partidos')
+            ->where('equipo_local_id', $equipo->id)
+            ->orWhere('equipo_visitante_id', $equipo->id)
+            ->exists();
+
+        // Impedir la eliminación si tiene partidos registrados
+        if ($tienePartidos) {
+            return redirect()
+                ->route('equipos.index')
+                ->with(
+                    'error',
+                    'No se puede eliminar el equipo porque tiene partidos registrados.'
+                );
+        }
+
+        // Eliminar el equipo
+        $equipo->delete();
+
+        return redirect()
+            ->route('equipos.index')
+            ->with(
+                'success',
+                'El equipo se eliminó correctamente.'
+            );
     }
 }
