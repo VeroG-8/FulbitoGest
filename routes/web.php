@@ -14,7 +14,7 @@ require __DIR__ . '/carnets.php';
 require __DIR__ . '/cuotas.php';
 require __DIR__ . '/clubes.php';
 require __DIR__ . '/equipos.php';
-
+require __DIR__ . '/torneos.php';
 
 
 // OTRAS RUTAS GENERALES
