@@ -12,6 +12,7 @@ class Torneo extends Model
 
     protected $fillable = [
         'nombre',
+        'tipo',
         'organizador',
         'fecha_inicio',
         'fecha_fin',
@@ -44,8 +45,19 @@ class Torneo extends Model
             'estado'
         )->withTimestamps();
     }
+    
     public function partidos(): HasMany
     {
         return $this->hasMany(Partido::class);
+    }
+
+    /**
+     * Equipos inscriptos en el torneo.
+     */
+    public function equipos(): BelongsToMany
+    {
+        return $this->belongsToMany(Equipo::class, 'equipo_torneo')
+            ->withPivot('fecha_inscripcion', 'estado')
+            ->withTimestamps();
     }
 }

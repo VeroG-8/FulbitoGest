@@ -46,4 +46,13 @@ class Equipo extends Model
             'equipo_visitante_id'
         );
     }
+    /**
+     * Torneos en los que participa el equipo.
+     */
+    public function torneos(): BelongsToMany
+    {
+        return $this->belongsToMany(Torneo::class, 'equipo_torneo')
+            ->withPivot('fecha_inscripcion', 'estado')
+            ->withTimestamps();
+    }
 }
