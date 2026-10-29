@@ -68,14 +68,17 @@ class Jugador extends Model
         return $this->hasMany(Pase::class);
     }
     
+    
     public function torneos(): BelongsToMany
-{
-    return $this->belongsToMany(
-        Torneo::class,
-        'inscripciones_torneo'
-    )->withPivot(
-        'fecha_inscripcion',
-        'estado'
-    )->withTimestamps();
-}
+    {
+        return $this->belongsToMany(
+            Torneo::class,
+            'inscripciones_torneo'
+        )->withPivot(
+            'fecha_inscripcion',
+            'monto_inscripcion',
+            'estado'
+        )->withTimestamps();
+    }
+
 }

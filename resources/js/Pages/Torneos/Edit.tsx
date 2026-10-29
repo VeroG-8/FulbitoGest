@@ -18,6 +18,7 @@ interface Torneo {
     id: number;
     nombre: string;
     tipo: 'propio' | 'externo';
+    monto_inscripcion: string;
     organizador: string | null;
     fecha_inicio: string;
     fecha_fin: string | null;
@@ -35,6 +36,7 @@ interface Props {
 interface TorneoForm {
     nombre: string;
     tipo: 'propio' | 'externo';
+    monto_inscripcion: string;
     organizador: string;
     fecha_inicio: string;
     fecha_fin: string;
@@ -54,6 +56,7 @@ export default function Edit({ torneo, categorias }: Props) {
         useForm<TorneoForm>({
             nombre: torneo.nombre,
             tipo: torneo.tipo,
+            monto_inscripcion: String(torneo.monto_inscripcion ?? '0.00'),
             organizador: torneo.organizador ?? '',
             fecha_inicio: formatearFechaInput(torneo.fecha_inicio),
             fecha_fin: formatearFechaInput(torneo.fecha_fin),
@@ -255,7 +258,34 @@ export default function Edit({ torneo, categorias }: Props) {
                                         </p>
                                     )}
                                 </div>
+                                {/* MONTO DE INSCRIPCIÓN */}
+                                <div>
+                                    <label
+                                        htmlFor="monto_inscripcion"
+                                        className="mb-2 block text-sm font-semibold !text-slate-700"
+                                    >
+                                        Monto de inscripción ($) *
+                                    </label>
 
+                                    <input
+                                        id="monto_inscripcion"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={data.monto_inscripcion}
+                                        onChange={(e) =>
+                                            setData('monto_inscripcion', e.target.value)
+                                        }
+                                        required
+                                        className={inputClass}
+                                    />
+
+                                    {errors.monto_inscripcion && (
+                                        <p className="mt-1 text-sm text-red-600">
+                                            {errors.monto_inscripcion}
+                                        </p>
+                                    )}
+                                </div>
                                 {/* ORGANIZADOR */}
                                 <div>
                                     <label

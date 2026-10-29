@@ -27,3 +27,8 @@ Route::post(
     'torneos/{torneo}/inscribir-jugador',
     [InscripcionJugadorController::class, 'store']
 )->name('torneos.inscripciones-jugadores.store');
+
+Route::patch(
+    'torneos/{torneo}/jugadores/{jugador}',
+    [InscripcionJugadorController::class, 'update']
+)->name('torneos.inscripciones-jugadores.update');

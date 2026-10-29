@@ -32,4 +32,15 @@ class Pago extends Model
     {
         return $this->belongsTo(ModalidadPago::class);
     }
+    
+    public function recibo(): \Illuminate\Database\Eloquent\Relations\MorphOne
+    {
+        return $this->morphOne(
+            Recibo::class,
+            'pago',
+            'pago_type',
+            'pago_id'
+        );
+    }
+
 }

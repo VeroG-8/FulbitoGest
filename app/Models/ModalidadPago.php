@@ -22,4 +22,9 @@ class ModalidadPago extends Model
     {
         return $this->hasMany(Pago::class);
     }
+    
+    public function pagosInscripcionTorneo(): HasMany
+    {
+        return $this->hasMany(InscripcionTorneoPago::class, 'modalidad_pago_id');
+    }
 }

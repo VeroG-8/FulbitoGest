@@ -69,6 +69,7 @@ class TorneoController extends Controller
         $validated = $request->validate([
             'nombre' => ['required', 'string', 'max:150'],
             'tipo' => ['required', Rule::in(['propio', 'externo'])],
+            'monto_inscripcion' => ['required', 'numeric', 'min:0'],
             'organizador' => ['nullable', 'string', 'max:150'],
             'fecha_inicio' => ['required', 'date'],
             'fecha_fin' => ['nullable', 'date', 'after_or_equal:fecha_inicio'],
@@ -153,6 +154,7 @@ class TorneoController extends Controller
         $validated = $request->validate([
             'nombre' => ['required', 'string', 'max:150'],
             'tipo' => ['required', Rule::in(['propio', 'externo'])],
+            'monto_inscripcion' => ['required', 'numeric', 'min:0'],
             'organizador' => ['nullable', 'string', 'max:150'],
             'fecha_inicio' => ['required', 'date'],
             'fecha_fin' => ['nullable', 'date', 'after_or_equal:fecha_inicio'],

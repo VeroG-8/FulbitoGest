@@ -8,6 +8,8 @@ use App\Models\Torneo;
 use App\Models\Jugador;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Validation\Rule;
+
 class InscripcionJugadorController extends Controller
 {
     /**
@@ -95,14 +97,55 @@ class InscripcionJugadorController extends Controller
             ]);
         }
 
-        // Registrar la inscripción
-        $torneo->jugadores()->attach($jugador->id, [
-            'fecha_inscripcion' => now()->toDateString(),
-            'estado' => 'inscripto',
-        ]);
+        // Registrar la inscripción con el monto vigente del torneo
+    $torneo->jugadores()->attach($jugador->id, [
+        'fecha_inscripcion' => now()->toDateString(),
+        'monto_inscripcion' => $torneo->monto_inscripcion,
+        'estado' => 'inscripto',
+    ]);
 
         return redirect()
             ->route('torneos.inscripciones-jugadores.create', $torneo)
             ->with('success', 'El jugador fue inscripto correctamente.');
+    }
+
+    /**
+     * Actualizar el estado de inscripción de un jugador.
+     */
+    public function update(Request $request, Torneo $torneo, Jugador $jugador)
+    {
+        // Verificar que sea un torneo externo.
+        abort_if(
+            $torneo->tipo !== 'externo',
+            403,
+            'Esta acción solo está disponible para torneos externos.'
+        );
+
+        // Validar el nuevo estado.
+        $validated = $request->validate([
+            'estado' => [
+                'required',
+                Rule::in(['pendiente', 'inscripto', 'cancelado']),
+            ],
+        ]);
+
+        // Verificar que el jugador esté asociado al torneo.
+        $inscripto = $torneo->jugadores()
+            ->where('jugadores.id', $jugador->id)
+            ->exists();
+
+        if (!$inscripto) {
+            abort(404, 'El jugador no está inscripto en este torneo.');
+        }
+
+        // Actualizar solamente el estado de esta inscripción.
+        $torneo->jugadores()->updateExistingPivot(
+            $jugador->id,
+            ['estado' => $validated['estado']]
+        );
+
+        return redirect()
+            ->route('torneos.show', $torneo)
+            ->with('success', 'El estado de la inscripción se actualizó correctamente.');
     }
 }

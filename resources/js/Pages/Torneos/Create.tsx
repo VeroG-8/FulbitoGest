@@ -21,6 +21,7 @@ interface Props {
 interface TorneoForm {
     nombre: string;
     tipo: 'propio' | 'externo';
+    monto_inscripcion: string;
     organizador: string;
     fecha_inicio: string;
     fecha_fin: string;
@@ -35,6 +36,7 @@ export default function Create({ categorias }: Props) {
         useForm<TorneoForm>({
             nombre: '',
             tipo: 'propio',
+            monto_inscripcion: '0.00',
             organizador: '',
             fecha_inicio: '',
             fecha_fin: '',
@@ -238,7 +240,35 @@ export default function Create({ categorias }: Props) {
                                         </p>
                                     )}
                                 </div>
+                                {/* MONTO DE INSCRIPCIÓN */}
+                                <div>
+                                    <label
+                                        htmlFor="monto_inscripcion"
+                                        className="mb-2 block text-sm font-semibold text-slate-700"
+                                    >
+                                        Monto de inscripción ($) *
+                                    </label>
 
+                                    <input
+                                        id="monto_inscripcion"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={data.monto_inscripcion}
+                                        onChange={(e) =>
+                                            setData('monto_inscripcion', e.target.value)
+                                        }
+                                        placeholder="Ej: 15000"
+                                        required
+                                        className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-slate-700"
+                                    />
+
+                                    {errors.monto_inscripcion && (
+                                        <p className="mt-1 text-sm text-red-600">
+                                            {errors.monto_inscripcion}
+                                        </p>
+                                    )}
+                                </div>
                                 {/* ORGANIZADOR */}
                                 <div>
                                     <label

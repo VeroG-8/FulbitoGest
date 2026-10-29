@@ -19,12 +19,14 @@ class Torneo extends Model
         'lugar',
         'descripcion',
         'estado',
+        'monto_inscripcion',
     ];
 
     protected $casts = [
         'fecha_inicio' => 'date',
         'fecha_fin' => 'date',
         'estado' => 'boolean',
+        'monto_inscripcion' => 'decimal:2',
     ];
 
     public function categorias(): BelongsToMany
@@ -35,6 +37,7 @@ class Torneo extends Model
         )->withTimestamps();
     }
 
+
     public function jugadores(): BelongsToMany
     {
         return $this->belongsToMany(
@@ -42,9 +45,11 @@ class Torneo extends Model
             'inscripciones_torneo'
         )->withPivot(
             'fecha_inscripcion',
+            'monto_inscripcion',
             'estado'
         )->withTimestamps();
     }
+
     
     public function partidos(): HasMany
     {
