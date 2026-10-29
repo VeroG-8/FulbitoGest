@@ -29,6 +29,7 @@ interface TorneoForm {
     descripcion: string;
     estado: boolean;
     categorias: number[];
+    montos_categorias: Record<number, string>;
 }
 
 export default function Create({ categorias }: Props) {
@@ -36,7 +37,7 @@ export default function Create({ categorias }: Props) {
         useForm<TorneoForm>({
             nombre: '',
             tipo: 'propio',
-            monto_inscripcion: '0.00',
+            monto_inscripcion: '',
             organizador: '',
             fecha_inicio: '',
             fecha_fin: '',
@@ -44,6 +45,7 @@ export default function Create({ categorias }: Props) {
             descripcion: '',
             estado: true,
             categorias: [],
+            montos_categorias: {},
         });
 
     const guardarTorneo = (e: FormEvent<HTMLFormElement>) => {
@@ -58,8 +60,22 @@ export default function Create({ categorias }: Props) {
                 'categorias',
                 data.categorias.filter((categoria) => categoria !== id)
             );
+
+            setData(
+                'montos_categorias',
+                Object.fromEntries(
+                    Object.entries(data.montos_categorias).filter(
+                        ([categoriaId]) => Number(categoriaId) !== id
+                    )
+                )
+            );
         } else {
             setData('categorias', [...data.categorias, id]);
+
+            setData('montos_categorias', {
+                ...data.montos_categorias,
+                [id]: '',
+            });
         }
     };
 
@@ -412,31 +428,64 @@ export default function Create({ categorias }: Props) {
                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
 
                                     {categorias.map((categoria) => {
-                                        const seleccionada =
-                                            data.categorias.includes(categoria.id);
+                                        const seleccionada = data.categorias.includes(categoria.id);
 
                                         return (
-                                            <label
+                                            <div
                                                 key={categoria.id}
-                                                className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition ${
+                                                className={`rounded-xl border p-4 transition ${
                                                     seleccionada
                                                         ? 'border-blue-500 bg-blue-50'
-                                                        : 'border-slate-200 bg-white hover:bg-slate-50'
+                                                        : 'border-slate-200 bg-white'
                                                 }`}
                                             >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={seleccionada}
-                                                    onChange={() =>
-                                                        seleccionarCategoria(categoria.id)
-                                                    }
-                                                    className="h-4 w-4 accent-blue-600"
-                                                />
+                                                <label className="flex cursor-pointer items-center gap-3">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={seleccionada}
+                                                        onChange={() => seleccionarCategoria(categoria.id)}
+                                                        className="h-4 w-4 accent-blue-600"
+                                                    />
 
-                                                <span className="text-sm font-medium text-slate-800">
-                                                    {categoria.nombre}
-                                                </span>
-                                            </label>
+                                                    <span className="text-sm font-medium text-slate-800">
+                                                        {categoria.nombre}
+                                                    </span>
+                                                </label>
+
+                                                {seleccionada && (
+                                                    <div className="mt-4">
+                                                        <label
+                                                            htmlFor={`monto_categoria_${categoria.id}`}
+                                                            className="mb-2 block text-sm font-semibold text-slate-700"
+                                                        >
+                                                            Importe por jugador ($) *
+                                                        </label>
+
+                                                        <input
+                                                            id={`monto_categoria_${categoria.id}`}
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            value={data.montos_categorias[categoria.id] ?? ''}
+                                                            onChange={(e) =>
+                                                                setData('montos_categorias', {
+                                                                    ...data.montos_categorias,
+                                                                    [categoria.id]: e.target.value,
+                                                                })
+                                                            }
+                                                            placeholder="Ej.: 50000"
+                                                            required
+                                                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500"
+                                                        />
+
+                                                        {errors.montos_categorias && (
+                                                            <p className="mt-1 text-sm text-red-600">
+                                                                {errors.montos_categorias}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         );
                                     })}
                                 </div>

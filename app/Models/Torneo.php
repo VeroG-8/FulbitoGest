@@ -13,13 +13,14 @@ class Torneo extends Model
     protected $fillable = [
         'nombre',
         'tipo',
+        'monto_inscripcion',
         'organizador',
         'fecha_inicio',
         'fecha_fin',
         'lugar',
         'descripcion',
         'estado',
-        'monto_inscripcion',
+        
     ];
 
     protected $casts = [
@@ -34,7 +35,9 @@ class Torneo extends Model
         return $this->belongsToMany(
             Categoria::class,
             'torneo_categoria'
-        )->withTimestamps();
+        )
+        ->withPivot('monto_inscripcion')
+        ->withTimestamps();
     }
 
 

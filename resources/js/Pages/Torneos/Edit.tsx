@@ -25,7 +25,11 @@ interface Torneo {
     lugar: string | null;
     descripcion: string | null;
     estado: boolean;
-    categorias: Categoria[];
+    categorias: (Categoria & {
+        pivot: {
+            monto_inscripcion: string | number;
+        };
+    })[];
 }
 
 interface Props {
@@ -44,6 +48,7 @@ interface TorneoForm {
     descripcion: string;
     estado: boolean;
     categorias: number[];
+    montos_categorias: Record<number, string>;
 }
 
 // Convierte fechas ISO a YYYY-MM-DD para inputs type="date"
@@ -64,6 +69,12 @@ export default function Edit({ torneo, categorias }: Props) {
             descripcion: torneo.descripcion ?? '',
             estado: torneo.estado,
             categorias: torneo.categorias.map((categoria) => categoria.id),
+            montos_categorias: Object.fromEntries(
+                torneo.categorias.map((categoria) => [
+                    categoria.id,
+                    String(categoria.pivot.monto_inscripcion ?? '0'),
+                ])
+            ),
         });
 
     const actualizarTorneo = (e: FormEvent<HTMLFormElement>) => {
@@ -78,8 +89,22 @@ export default function Edit({ torneo, categorias }: Props) {
                 'categorias',
                 data.categorias.filter((categoria) => categoria !== id)
             );
+
+            setData(
+                'montos_categorias',
+                Object.fromEntries(
+                    Object.entries(data.montos_categorias).filter(
+                        ([categoriaId]) => Number(categoriaId) !== id
+                    )
+                )
+            );
         } else {
             setData('categorias', [...data.categorias, id]);
+
+            setData('montos_categorias', {
+                ...data.montos_categorias,
+                [id]: '',
+            });
         }
     };
 
@@ -427,31 +452,64 @@ export default function Edit({ torneo, categorias }: Props) {
                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
 
                                     {categorias.map((categoria) => {
-                                        const seleccionada =
-                                            data.categorias.includes(categoria.id);
+                                        const seleccionada = data.categorias.includes(categoria.id);
 
                                         return (
-                                            <label
+                                            <div
                                                 key={categoria.id}
-                                                className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition ${
+                                                className={`rounded-xl border p-4 transition ${
                                                     seleccionada
                                                         ? 'border-blue-500 !bg-blue-50'
                                                         : 'border-slate-200 !bg-white hover:!bg-slate-50'
                                                 }`}
                                             >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={seleccionada}
-                                                    onChange={() =>
-                                                        seleccionarCategoria(categoria.id)
-                                                    }
-                                                    className="h-4 w-4 accent-blue-600"
-                                                />
+                                                <label className="flex cursor-pointer items-center gap-3">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={seleccionada}
+                                                        onChange={() => seleccionarCategoria(categoria.id)}
+                                                        className="h-4 w-4 accent-blue-600"
+                                                    />
 
-                                                <span className="text-sm font-medium !text-slate-800">
-                                                    {categoria.nombre}
-                                                </span>
-                                            </label>
+                                                    <span className="text-sm font-medium !text-slate-800">
+                                                        {categoria.nombre}
+                                                    </span>
+                                                </label>
+
+                                                {seleccionada && (
+                                                    <div className="mt-4">
+                                                        <label
+                                                            htmlFor={`monto_categoria_${categoria.id}`}
+                                                            className="mb-2 block text-sm font-semibold !text-slate-700"
+                                                        >
+                                                            Importe por jugador ($) *
+                                                        </label>
+
+                                                        <input
+                                                            id={`monto_categoria_${categoria.id}`}
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            value={data.montos_categorias[categoria.id] ?? ''}
+                                                            onChange={(e) =>
+                                                                setData('montos_categorias', {
+                                                                    ...data.montos_categorias,
+                                                                    [categoria.id]: e.target.value,
+                                                                })
+                                                            }
+                                                            placeholder="Ej.: 50000"
+                                                            required
+                                                            className={inputClass}
+                                                        />
+
+                                                        {errors.montos_categorias && (
+                                                            <p className="mt-1 text-sm text-red-600">
+                                                                {errors.montos_categorias}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         );
                                     })}
                                 </div>
