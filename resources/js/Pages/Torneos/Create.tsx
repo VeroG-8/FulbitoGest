@@ -29,6 +29,7 @@ interface TorneoForm {
     estado: boolean;
     categorias: number[];
     montos_categorias: Record<number, string>;
+    montos_por_jugador: Record<number, string>;
 }
 
 export default function Create({ categorias }: Props) {
@@ -44,6 +45,7 @@ export default function Create({ categorias }: Props) {
             estado: true,
             categorias: [],
             montos_categorias: {},
+            montos_por_jugador: {},
         });
 
     const guardarTorneo = (e: FormEvent<HTMLFormElement>) => {
@@ -67,11 +69,25 @@ export default function Create({ categorias }: Props) {
                     )
                 )
             );
+
+            setData(
+                'montos_por_jugador',
+                Object.fromEntries(
+                    Object.entries(data.montos_por_jugador).filter(
+                        ([categoriaId]) => Number(categoriaId) !== id
+                    )
+                )
+            );
         } else {
             setData('categorias', [...data.categorias, id]);
 
             setData('montos_categorias', {
                 ...data.montos_categorias,
+                [id]: '',
+            });
+
+            setData('montos_por_jugador', {
+                ...data.montos_por_jugador,
                 [id]: '',
             });
         }
@@ -423,12 +439,14 @@ export default function Create({ categorias }: Props) {
                                                 </label>
 
                                                 {seleccionada && (
-                                                    <div className="mt-4">
+                                                <div className="mt-4 space-y-4">
+                                                    {/* IMPORTE DE INSCRIPCIÓN DE LA CATEGORÍA */}
+                                                    <div>
                                                         <label
                                                             htmlFor={`monto_categoria_${categoria.id}`}
                                                             className="mb-2 block text-sm font-semibold text-slate-700"
                                                         >
-                                                            Importe por jugador ($) *
+                                                            Importe de inscripción de la categoría ($) *
                                                         </label>
 
                                                         <input
@@ -443,7 +461,7 @@ export default function Create({ categorias }: Props) {
                                                                     [categoria.id]: e.target.value,
                                                                 })
                                                             }
-                                                            placeholder="Ej.: 50000"
+                                                            placeholder="Ej.: 300000"
                                                             required
                                                             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500"
                                                         />
@@ -454,7 +472,41 @@ export default function Create({ categorias }: Props) {
                                                             </p>
                                                         )}
                                                     </div>
-                                                )}
+
+                                                    {/* IMPORTE INDIVIDUAL POR JUGADOR */}
+                                                    <div>
+                                                        <label
+                                                            htmlFor={`monto_por_jugador_${categoria.id}`}
+                                                            className="mb-2 block text-sm font-semibold text-slate-700"
+                                                        >
+                                                            Importe por jugador ($) *
+                                                        </label>
+
+                                                        <input
+                                                            id={`monto_por_jugador_${categoria.id}`}
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            value={data.montos_por_jugador[categoria.id] ?? ''}
+                                                            onChange={(e) =>
+                                                                setData('montos_por_jugador', {
+                                                                    ...data.montos_por_jugador,
+                                                                    [categoria.id]: e.target.value,
+                                                                })
+                                                            }
+                                                            placeholder="Ej.: 15000"
+                                                            required
+                                                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500"
+                                                        />
+
+                                                        {errors.montos_por_jugador && (
+                                                            <p className="mt-1 text-sm text-red-600">
+                                                                {errors.montos_por_jugador}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
                                             </div>
                                         );
                                     })}

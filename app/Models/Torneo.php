@@ -36,7 +36,7 @@ class Torneo extends Model
             Categoria::class,
             'torneo_categoria'
         )
-        ->withPivot('monto_inscripcion')
+        ->withPivot('monto_inscripcion','monto_por_jugador')
         ->withTimestamps();
     }
 
@@ -47,6 +47,7 @@ class Torneo extends Model
             Jugador::class,
             'inscripciones_torneo'
         )->withPivot(
+            'id',
             'fecha_inscripcion',
             'monto_inscripcion',
             'estado'

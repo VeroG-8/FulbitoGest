@@ -84,35 +84,48 @@ class TorneoController extends Controller
         // Importe de inscripción por categoría
         'montos_categorias' => ['nullable', 'array'],
         'montos_categorias.*' => ['required', 'numeric', 'min:0'],
+        // Importe individual por jugador
+        'montos_por_jugador' => ['nullable', 'array'],
+        'montos_por_jugador.*' => ['required', 'numeric', 'min:0'],
         ]);
 
         // Separar las categorías y sus importes
         $categorias = $validated['categorias'] ?? [];
         $montosCategorias = $validated['montos_categorias'] ?? [];
+        $montosPorJugador = $validated['montos_por_jugador'] ?? [];
 
-        unset($validated['categorias'], $validated['montos_categorias']);
+        unset($validated['categorias'], $validated['montos_categorias'], $validated['montos_por_jugador']);
 
-        DB::transaction(function () use ($validated, $categorias, $montosCategorias) {
-
-            // Crear el torneo
+       DB::transaction(function () use (
+            $validated,
+            $categorias,
+            $montosCategorias,
+            $montosPorJugador
+        ) {
             $torneo = Torneo::create($validated);
-
-            // Preparar las categorías con sus respectivos importes
             $categoriasConMontos = [];
 
             foreach ($categorias as $categoriaId) {
                 if (!array_key_exists($categoriaId, $montosCategorias)) {
                     throw \Illuminate\Validation\ValidationException::withMessages([
-                        'montos_categorias' => 'Debés indicar el importe de cada categoría seleccionada.',
+                        'montos_categorias' =>
+                            'Debés indicar el importe de inscripción de cada categoría seleccionada.',
+                    ]);
+                }
+
+                if (!array_key_exists($categoriaId, $montosPorJugador)) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'montos_por_jugador' =>
+                            'Debés indicar el importe por jugador de cada categoría seleccionada.',
                     ]);
                 }
 
                 $categoriasConMontos[$categoriaId] = [
                     'monto_inscripcion' => $montosCategorias[$categoriaId],
+                    'monto_por_jugador' => $montosPorJugador[$categoriaId],
                 ];
             }
 
-            // Asociar las categorías con sus importes
             $torneo->categorias()->sync($categoriasConMontos);
         });
 
@@ -186,6 +199,9 @@ class TorneoController extends Controller
             // Importes de inscripción por categoría
             'montos_categorias' => ['nullable', 'array'],
             'montos_categorias.*' => ['required', 'numeric', 'min:0'],
+            // Importe individual por jugador
+            'montos_por_jugador' => ['nullable', 'array'],
+            'montos_por_jugador.*' => ['required', 'numeric', 'min:0'],
         ]);
 
         // Evitar cambiar el tipo si el torneo ya tiene equipos o partidos.
@@ -205,29 +221,40 @@ class TorneoController extends Controller
         // Separar las categorías y sus importes de los datos del torneo.
         $categorias = $validated['categorias'] ?? [];
         $montosCategorias = $validated['montos_categorias'] ?? [];
-
+        $montosPorJugador = $validated['montos_por_jugador'] ?? [];
         unset(
             $validated['categorias'],
-            $validated['montos_categorias']
+            $validated['montos_categorias'],
+            $validated['montos_por_jugador']
         );
 
         // Preparar las categorías con sus respectivos importes.
-        $categoriasConMontos = [];
+$categoriasConMontos = [];
 
-        foreach ($categorias as $categoriaId) {
-            if (!array_key_exists($categoriaId, $montosCategorias)) {
-                return back()
-                    ->withErrors([
-                        'montos_categorias' =>
-                            'Debés indicar el importe de cada categoría seleccionada.',
-                    ])
-                    ->withInput();
-            }
+foreach ($categorias as $categoriaId) {
+    if (!array_key_exists($categoriaId, $montosCategorias)) {
+        return back()
+            ->withErrors([
+                'montos_categorias' =>
+                    'Debés indicar el importe de inscripción de cada categoría seleccionada.',
+            ])
+            ->withInput();
+    }
 
-            $categoriasConMontos[$categoriaId] = [
-                'monto_inscripcion' => $montosCategorias[$categoriaId],
-            ];
-        }
+    if (!array_key_exists($categoriaId, $montosPorJugador)) {
+        return back()
+            ->withErrors([
+                'montos_por_jugador' =>
+                    'Debés indicar el importe por jugador de cada categoría seleccionada.',
+            ])
+            ->withInput();
+    }
+
+    $categoriasConMontos[$categoriaId] = [
+        'monto_inscripcion' => $montosCategorias[$categoriaId],
+        'monto_por_jugador' => $montosPorJugador[$categoriaId],
+    ];
+}
 
         // Actualizar el torneo y las categorías dentro de una transacción.
         DB::transaction(function () use (

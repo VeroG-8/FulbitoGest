@@ -121,8 +121,27 @@ class InscripcionTorneoPagoController extends Controller
 
             $reciboService->generar($pago);
 
+            // Actualizar el estado según el saldo, excepto si está cancelada.
+            if ($inscripcion->estado !== 'cancelado') {
+                $totalPagado = InscripcionTorneoPago::query()
+                    ->where('inscripcion_torneo_id', $inscripcion->id)
+                    ->where('estado', 'confirmado')
+                    ->sum('monto');
+
+                $saldoPendiente = round(
+                    (float) $inscripcion->monto_inscripcion - (float) $totalPagado,
+                    2
+                );
+
+                $inscripcion->update([
+                    'estado' => $saldoPendiente <= 0
+                        ? 'inscripto'
+                        : 'pendiente',
+                ]);
+            }
+
             return $pago;
-        });
+                    });
 
         return redirect()
             ->route('torneos.show', $inscripcionTorneo->torneo_id)

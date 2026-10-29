@@ -27,6 +27,7 @@ interface Torneo {
     categorias: (Categoria & {
         pivot: {
             monto_inscripcion: string | number;
+            monto_por_jugador: string | number;
         };
     })[];
 }
@@ -47,6 +48,7 @@ interface TorneoForm {
     estado: boolean;
     categorias: number[];
     montos_categorias: Record<number, string>;
+    montos_por_jugador: Record<number, string>;
 }
 
 // Convierte fechas ISO a YYYY-MM-DD para inputs type="date"
@@ -72,6 +74,12 @@ export default function Edit({ torneo, categorias }: Props) {
                     String(categoria.pivot.monto_inscripcion ?? '0'),
                 ])
             ),
+            montos_por_jugador: Object.fromEntries(
+                torneo.categorias.map((categoria) => [
+                    categoria.id,
+                    String(categoria.pivot.monto_por_jugador ?? '0'),
+                ])
+            ),
         });
 
     const actualizarTorneo = (e: FormEvent<HTMLFormElement>) => {
@@ -95,11 +103,23 @@ export default function Edit({ torneo, categorias }: Props) {
                     )
                 )
             );
+            setData(
+                'montos_por_jugador',
+                Object.fromEntries(
+                    Object.entries(data.montos_por_jugador).filter(
+                        ([categoriaId]) => Number(categoriaId) !== id
+                    )
+                )
+            );
         } else {
             setData('categorias', [...data.categorias, id]);
 
             setData('montos_categorias', {
                 ...data.montos_categorias,
+                [id]: '',
+            });
+            setData('montos_por_jugador', {
+                ...data.montos_por_jugador,
                 [id]: '',
             });
         }
@@ -447,12 +467,14 @@ export default function Edit({ torneo, categorias }: Props) {
                                                 </label>
 
                                                 {seleccionada && (
-                                                    <div className="mt-4">
+                                                <div className="mt-4 space-y-4">
+                                                    {/* IMPORTE DE INSCRIPCIÓN DE LA CATEGORÍA */}
+                                                    <div>
                                                         <label
                                                             htmlFor={`monto_categoria_${categoria.id}`}
                                                             className="mb-2 block text-sm font-semibold !text-slate-700"
                                                         >
-                                                            Importe por jugador ($) *
+                                                            Importe de inscripción de la categoría ($) *
                                                         </label>
 
                                                         <input
@@ -467,7 +489,7 @@ export default function Edit({ torneo, categorias }: Props) {
                                                                     [categoria.id]: e.target.value,
                                                                 })
                                                             }
-                                                            placeholder="Ej.: 50000"
+                                                            placeholder="Ej.: 300000"
                                                             required
                                                             className={inputClass}
                                                         />
@@ -478,7 +500,41 @@ export default function Edit({ torneo, categorias }: Props) {
                                                             </p>
                                                         )}
                                                     </div>
-                                                )}
+
+                                                    {/* IMPORTE INDIVIDUAL POR JUGADOR */}
+                                                    <div>
+                                                        <label
+                                                            htmlFor={`monto_jugador_${categoria.id}`}
+                                                            className="mb-2 block text-sm font-semibold !text-slate-700"
+                                                        >
+                                                            Importe por jugador ($) *
+                                                        </label>
+
+                                                        <input
+                                                            id={`monto_jugador_${categoria.id}`}
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            value={data.montos_por_jugador[categoria.id] ?? ''}
+                                                            onChange={(e) =>
+                                                                setData('montos_por_jugador', {
+                                                                    ...data.montos_por_jugador,
+                                                                    [categoria.id]: e.target.value,
+                                                                })
+                                                            }
+                                                            placeholder="Ej.: 15000"
+                                                            required
+                                                            className={inputClass}
+                                                        />
+
+                                                        {errors.montos_por_jugador && (
+                                                            <p className="mt-1 text-sm text-red-600">
+                                                                {errors.montos_por_jugador}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
                                             </div>
                                         );
                                     })}

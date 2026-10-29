@@ -67,7 +67,9 @@ interface JugadorInscripto {
         nombre: string;
     } | null;
     pivot: {
+        id:number;
         fecha_inscripcion: string;
+        monto_inscripcion: string | number;
         estado: string;
     };
 }
@@ -546,7 +548,10 @@ export default function Show({ torneo }: Props) {
                     )}    
 
                    {/* PARTICIPACIÓN EN TORNEOS EXTERNOS */}
-                        {torneo.tipo === 'externo' && (
+                        {(
+                            torneo.tipo === 'propio' ||
+                            torneo.tipo === 'externo'
+                        ) && (
                             <section className="rounded-2xl border border-slate-200 !bg-white p-6 shadow-sm">
 
                                 {/* ENCABEZADO */}
@@ -559,7 +564,7 @@ export default function Show({ torneo }: Props) {
                                         </h2>
 
                                         <p className="mt-1 text-sm !text-slate-500">
-                                            Jugadores inscriptos en este torneo externo.
+                                            Jugadores inscriptos en este torneo.
                                         </p>
                                     </div>
 
@@ -736,7 +741,12 @@ export default function Show({ torneo }: Props) {
                                                                     <option value="inscripto">Inscripto</option>
                                                                     <option value="cancelado">Cancelado</option>
                                                                 </select>
-
+                                                                <Link
+                                                                    href={`/inscripciones-torneo/${jugador.pivot.id}/pagos`}
+                                                                    className="inline-flex items-center justify-center rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800"
+                                                                >
+                                                                    Ver pagos
+                                                                </Link>
                                                             </div>
                                                         </td>
 

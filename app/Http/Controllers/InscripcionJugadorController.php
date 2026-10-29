@@ -9,6 +9,8 @@ use App\Models\Jugador;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Validation\Rule;
+use App\Models\InscripcionTorneo;
+use App\Models\InscripcionTorneoPago;
 
 class InscripcionJugadorController extends Controller
 {
@@ -18,21 +20,21 @@ class InscripcionJugadorController extends Controller
      */
     public function create(Torneo $torneo): Response
     {
-        // Obtener las categorías habilitadas para el torneo
+        // Obtener las categorías habilitadas para el torneo.
         $torneo->load('categorias');
 
-        // Verificar que el torneo sea externo
+        // Permitir la inscripción individual en ambos tipos de torneo.
         abort_if(
-            $torneo->tipo !== 'externo',
+            !in_array($torneo->tipo, ['propio', 'externo'], true),
             403,
-            'Solo se pueden inscribir jugadores en torneos externos.'
+            'El tipo de torneo no es válido para inscribir jugadores.'
         );
 
-        // Obtener los IDs de las categorías participantes
+        // Obtener los IDs de las categorías participantes.
         $categoriasIds = $torneo->categorias->pluck('id');
 
         // Obtener jugadores activos de esas categorías
-        // que todavía no estén inscriptos en este torneo
+        // que todavía no estén inscriptos en este torneo.
         $jugadores = Jugador::with('categoria')
             ->where('estado', true)
             ->whereIn('categoria_id', $categoriasIds)
@@ -43,7 +45,6 @@ class InscripcionJugadorController extends Controller
             ->orderBy('nombre')
             ->get();
 
-        // Enviar los datos a React mediante Inertia
         return Inertia::render('Torneos/InscribirJugador', [
             'torneo' => $torneo,
             'jugadores' => $jugadores,
@@ -55,54 +56,72 @@ class InscripcionJugadorController extends Controller
      */
     public function store(Request $request, Torneo $torneo)
     {
-        // Verificar que el torneo sea externo
+        // Permitir la inscripción individual en ambos tipos de torneo.
         abort_if(
-            $torneo->tipo !== 'externo',
+            !in_array($torneo->tipo, ['propio', 'externo'], true),
             403,
-            'Solo se pueden inscribir jugadores en torneos externos.'
+            'El tipo de torneo no es válido para inscribir jugadores.'
         );
 
-        // Validar los datos recibidos
+        // Validar los datos recibidos.
         $validated = $request->validate([
-            'jugador_id' => ['required', 'integer', 'exists:jugadores,id'],
+            'jugador_id' => [
+                'required',
+                'integer',
+                'exists:jugadores,id',
+            ],
         ]);
 
-        // Buscar el jugador
+        // Buscar el jugador.
         $jugador = Jugador::findOrFail($validated['jugador_id']);
 
-        // Verificar que el jugador esté activo
+        // Verificar que el jugador esté activo.
         if (!$jugador->estado) {
             throw ValidationException::withMessages([
                 'jugador_id' => 'El jugador seleccionado no está activo.',
             ]);
         }
 
-        // Verificar que su categoría participe en el torneo
-        if (!$torneo->categorias()
+        // Obtener la categoría del jugador dentro del torneo.
+        $categoriaTorneo = $torneo->categorias()
             ->where('categorias.id', $jugador->categoria_id)
-            ->exists()) {
+            ->first();
 
+        if (!$categoriaTorneo) {
             throw ValidationException::withMessages([
-                'jugador_id' => 'La categoría del jugador no participa en este torneo.',
+                'jugador_id' =>
+                    'La categoría del jugador no participa en este torneo.',
             ]);
         }
 
-        // Evitar inscripciones duplicadas
-        if ($torneo->jugadores()
-            ->where('jugadores.id', $jugador->id)
-            ->exists()) {
-
+        // Evitar inscripciones duplicadas.
+        if (
+            $torneo->jugadores()
+                ->where('jugadores.id', $jugador->id)
+                ->exists()
+        ) {
             throw ValidationException::withMessages([
-                'jugador_id' => 'Este jugador ya está inscripto en el torneo.',
+                'jugador_id' =>
+                    'Este jugador ya está inscripto en el torneo.',
             ]);
         }
 
-        // Registrar la inscripción con el monto vigente del torneo
-    $torneo->jugadores()->attach($jugador->id, [
-        'fecha_inscripcion' => now()->toDateString(),
-        'monto_inscripcion' => $torneo->monto_inscripcion,
-        'estado' => 'inscripto',
-    ]);
+        // Obtener el importe individual definido para esa categoría.
+        $montoPorJugador = (float) $categoriaTorneo->pivot->monto_por_jugador;
+
+        if ($montoPorJugador <= 0) {
+            throw ValidationException::withMessages([
+                'jugador_id' =>
+                    'La categoría no tiene definido un importe válido por jugador.',
+            ]);
+        }
+
+        // Registrar la inscripción con el importe individual.
+        $torneo->jugadores()->attach($jugador->id, [
+            'fecha_inscripcion' => now()->toDateString(),
+            'monto_inscripcion' => $montoPorJugador,
+            'estado' => 'pendiente',
+        ]);
 
         return redirect()
             ->route('torneos.inscripciones-jugadores.create', $torneo)
@@ -112,16 +131,17 @@ class InscripcionJugadorController extends Controller
     /**
      * Actualizar el estado de inscripción de un jugador.
      */
-    public function update(Request $request, Torneo $torneo, Jugador $jugador)
-    {
-        // Verificar que sea un torneo externo.
+    public function update(
+        Request $request,
+        Torneo $torneo,
+        Jugador $jugador
+    ) {
         abort_if(
-            $torneo->tipo !== 'externo',
+            !in_array($torneo->tipo, ['propio', 'externo'], true),
             403,
-            'Esta acción solo está disponible para torneos externos.'
+            'El tipo de torneo no es válido para actualizar inscripciones.'
         );
 
-        // Validar el nuevo estado.
         $validated = $request->validate([
             'estado' => [
                 'required',
@@ -129,23 +149,43 @@ class InscripcionJugadorController extends Controller
             ],
         ]);
 
-        // Verificar que el jugador esté asociado al torneo.
-        $inscripto = $torneo->jugadores()
-            ->where('jugadores.id', $jugador->id)
-            ->exists();
+        $inscripcion = InscripcionTorneo::query()
+            ->where('torneo_id', $torneo->id)
+            ->where('jugador_id', $jugador->id)
+            ->firstOrFail();
 
-        if (!$inscripto) {
-            abort(404, 'El jugador no está inscripto en este torneo.');
+        // La cancelación administrativa se mantiene independiente del pago.
+        if ($validated['estado'] === 'cancelado') {
+            $inscripcion->update([
+                'estado' => 'cancelado',
+            ]);
+        } else {
+            // Solo se permite asignar pendiente o inscripto según los pagos.
+            $totalPagado = InscripcionTorneoPago::query()
+                ->where('inscripcion_torneo_id', $inscripcion->id)
+                ->where('estado', 'confirmado')
+                ->sum('monto');
+
+            $saldoPendiente = round(
+                (float) $inscripcion->monto_inscripcion
+                - (float) $totalPagado,
+                2
+            );
+
+            $estadoCalculado = $saldoPendiente <= 0
+                ? 'inscripto'
+                : 'pendiente';
+
+            $inscripcion->update([
+                'estado' => $estadoCalculado,
+            ]);
         }
-
-        // Actualizar solamente el estado de esta inscripción.
-        $torneo->jugadores()->updateExistingPivot(
-            $jugador->id,
-            ['estado' => $validated['estado']]
-        );
 
         return redirect()
             ->route('torneos.show', $torneo)
-            ->with('success', 'El estado de la inscripción se actualizó correctamente.');
+            ->with(
+                'success',
+                'El estado de la inscripción se actualizó correctamente.'
+            );
     }
 }
