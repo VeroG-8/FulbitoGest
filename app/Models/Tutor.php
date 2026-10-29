@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Tutor extends Model
 {
@@ -29,9 +30,13 @@ class Tutor extends Model
         return $this->belongsToMany(
             Jugador::class,
             'jugador_tutor'
-        )->withPivot(
-            'parentesco',
-            'es_tutor_principal'
-        )->withTimestamps();
+        )
+            ->withPivot('parentesco', 'es_tutor_principal')
+            ->withTimestamps();
+    }
+
+    public function usuario(): HasOne
+    {
+        return $this->hasOne(User::class, 'tutor_id');
     }
 }

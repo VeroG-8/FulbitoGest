@@ -1,5 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import { type PageProps } from '@/types';
 import {
     ArrowLeft,
     Search,
@@ -64,15 +65,17 @@ export default function InscribirJugador({ torneo, jugadores }: Props) {
             }
         );
     };
-    const { flash, errors } = usePage<{
-        flash: {
-            success?: string;
-            error?: string;
-        };
-        errors: {
-            jugador_id?: string;
-        };
-    }>().props;
+    const { flash, errors } = usePage<
+        PageProps<{
+            flash: {
+                success?: string;
+                error?: string;
+            };
+            errors: {
+                jugador_id?: string;
+            };
+        }>
+    >().props;
 
     return (
         <>

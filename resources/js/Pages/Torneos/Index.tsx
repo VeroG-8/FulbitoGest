@@ -14,6 +14,7 @@ import {
     AlertTriangle,
     X,
 } from 'lucide-react';
+import { type PageProps } from '@/types';
 
 // Tipos de datos
 interface Categoria {
@@ -56,9 +57,11 @@ interface FlashMessages {
     error?: string | null;
 }
 export default function Index({ torneos, filtros }: Props) {
-    const { flash } = usePage<{
-     flash: FlashMessages;
-        }>().props;
+    const { flash } = usePage<
+        PageProps<{
+            flash: FlashMessages;
+        }>
+    >().props;
     const [buscar, setBuscar] = useState(filtros.buscar ?? '');
 
     const buscarTorneos = (e: FormEvent<HTMLFormElement>) => {

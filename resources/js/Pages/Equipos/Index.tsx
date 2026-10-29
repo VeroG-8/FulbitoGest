@@ -11,6 +11,7 @@ import {
     AlertCircle,
 } from 'lucide-react';
 import { FormEvent, useState } from 'react';
+import { type PageProps } from '@/types';
 
 interface Club {
     id: number;
@@ -51,12 +52,14 @@ interface Props {
 
 export default function Index({ equipos, filtros }: Props) {
     const [buscar, setBuscar] = useState(filtros.buscar ?? '');
-    const { flash } = usePage<{
-        flash: {
-            success?: string;
-            error?: string;
-        };
-    }>().props;
+    const { flash } = usePage<
+        PageProps<{
+            flash: {
+                success?: string;
+                error?: string;
+            };
+        }>
+    >().props;
 
     const aplicarBusqueda = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();

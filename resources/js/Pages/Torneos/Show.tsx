@@ -1,5 +1,6 @@
 import { Head, Link,usePage,router } from '@inertiajs/react';
 import {useState} from 'react';
+import { type PageProps } from '@/types';
 import {
     Trophy,
     ArrowLeft,
@@ -81,12 +82,14 @@ export default function Show({ torneo }: Props) {
 
     const [filtroEstado, setFiltroEstado] = useState('todos');
     const [mostrarFiltro, setMostrarFiltro] = useState(false);
-    const { flash } = usePage<{
-        flash: {
-            success?: string | null;
-            error?: string | null;
-        };
-    }>().props;
+    const { flash } = usePage<
+        PageProps<{
+            flash: {
+                success?: string | null;
+                error?: string | null;
+            };
+        }>
+    >().props;
 
     const actualizarEstado = (
         jugadorId: number,

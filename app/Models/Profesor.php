@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Profesor extends Model
 {
@@ -31,5 +32,10 @@ class Profesor extends Model
             Categoria::class,
             'profesor_categoria'
         )->withTimestamps();
+    }
+
+    public function usuario(): HasOne
+    {
+        return $this->hasOne(User::class, 'profesor_id');
     }
 }
