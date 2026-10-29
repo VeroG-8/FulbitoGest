@@ -32,9 +32,11 @@ interface Equipo {
     categoria: Categoria | null;
 
     pivot: {
+        id: number;
         torneo_id: number;
         equipo_id: number;
         fecha_inscripcion: string;
+        monto_inscripcion: string | number;
         estado: boolean | number;
     };
 }
@@ -456,6 +458,9 @@ export default function Show({ torneo }: Props) {
                                                 <th className="px-4 py-3 font-semibold !text-slate-700">
                                                     Estado
                                                 </th>
+                                                <th className="px-4 py-3 font-semibold !text-slate-700">
+                                                    Acciones
+                                                </th>
                                             </tr>
                                         </thead>
 
@@ -505,6 +510,16 @@ export default function Show({ torneo }: Props) {
                                                                 Inactivo
                                                             </span>
                                                         )}
+                                                    </td>
+                                                    {/* ACCIONES */}
+                                                    <td className="px-4 py-4">
+                                                        <Link
+                                                            href={`/inscripciones-equipo/${equipo.pivot.id}/pagos`}
+                                                            className="inline-flex items-center justify-center gap-2 rounded-lg !bg-slate-900 px-3 py-2 text-xs font-semibold !text-white transition hover:!bg-slate-700"
+                                                        >
+                                                            <FileText size={15} />
+                                                            Ver pagos
+                                                        </Link>
                                                     </td>
 
                                                 </tr>

@@ -62,10 +62,12 @@ class Torneo extends Model
     /**
      * Equipos inscriptos en el torneo.
      */
+  
     public function equipos(): BelongsToMany
     {
         return $this->belongsToMany(Equipo::class, 'equipo_torneo')
-            ->withPivot('fecha_inscripcion', 'estado')
+            ->withPivot('id', 'fecha_inscripcion', 'monto_inscripcion', 'estado')
             ->withTimestamps();
     }
+
 }

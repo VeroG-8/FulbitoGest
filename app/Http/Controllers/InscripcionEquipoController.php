@@ -64,13 +64,13 @@ class InscripcionEquipoController extends Controller
 
         // 3. Verificar que el equipo pertenezca a una categoría
         // habilitada en el torneo
-        $categoriaHabilitada = $torneo->categorias()
+        $categoriaTorneo = $torneo->categorias()
             ->where('categorias.id', $equipo->categoria_id)
-            ->exists();
+            ->first();
 
-        if (!$categoriaHabilitada) {
-            throw ValidationException::withMessages([
-                'equipo_id' => 'La categoría de este equipo no está habilitada en el torneo.',
+        if (!$categoriaTorneo) {
+             throw ValidationException::withMessages([
+                'equipo_id' => 'La categoría del equipo no está habilitada para este torneo.',
             ]);
         }
 
@@ -88,6 +88,7 @@ class InscripcionEquipoController extends Controller
         // 5. Registrar la inscripción
         $torneo->equipos()->attach($equipo->id, [
             'fecha_inscripcion' => now()->toDateString(),
+            'monto_inscripcion' => $categoriaTorneo->pivot->monto_inscripcion,
             'estado' => true,
         ]);
 

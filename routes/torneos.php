@@ -5,6 +5,7 @@ use App\Http\Controllers\TorneoController;
 use App\Http\Controllers\InscripcionEquipoController;
 use App\Http\Controllers\InscripcionJugadorController;
 use App\Http\Controllers\InscripcionTorneoPagoController;
+use App\Http\Controllers\InscripcionEquipoPagoController;
 
 
 Route::resource('torneos', TorneoController::class);
@@ -44,3 +45,14 @@ Route::post(
     'inscripciones-torneo/{inscripcionTorneo}/pagos',
     [InscripcionTorneoPagoController::class, 'store']
 )->name('inscripciones-torneo.pagos.store');
+
+// PAGOS DE INSCRIPCIONES DE EQUIPOS
+Route::get(
+    'inscripciones-equipo/{inscripcionEquipo}/pagos',
+    [InscripcionEquipoPagoController::class, 'index']
+)->name('inscripciones-equipo.pagos.index');
+
+Route::post(
+    'inscripciones-equipo/{inscripcionEquipo}/pagos',
+    [InscripcionEquipoPagoController::class, 'store']
+)->name('inscripciones-equipo.pagos.store');
