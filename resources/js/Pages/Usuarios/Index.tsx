@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import {
     Users,
     UserPlus,
@@ -12,7 +12,7 @@ import {
 import PageHeader from '@/Components/Shared/PageHeader';
 import StatCard from '@/Components/Shared/StatCard';
 import StatusBadge from '@/Components/Shared/StatusBadge';
-
+import type { PageProps } from '@/types';
 interface Persona {
     id: number;
     nombre: string;
@@ -45,8 +45,13 @@ interface Paginator {
 interface Props {
     usuarios: Paginator;
 }
+interface Flash {
+    success?: string | null;
+    error?: string | null;
+}
 
 export default function Index({ usuarios }: Props) {
+    const { flash } = usePage<PageProps>().props;
     return (
         <>
             <Head title="Gestión de usuarios" />
@@ -68,6 +73,18 @@ export default function Index({ usuarios }: Props) {
                             </Link>
                         }
                     />
+                    {(flash.success || flash.error) && (
+                        <div
+                            className={`mb-6 rounded-xl border px-4 py-3 text-sm font-medium ${
+                                flash.success
+                                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                    : 'border-red-200 bg-red-50 text-red-700'
+                            }`}
+                            role="alert"
+                        >
+                            {flash.success || flash.error}
+                        </div>
+                    )}
 
                     <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <StatCard

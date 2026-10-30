@@ -181,6 +181,7 @@ export default function Create({ tutores, profesores }: Props) {
                                 <select
                                     id="persona"
                                     value={personaId}
+                                    required
                                     onChange={(event) =>
                                         setPersonaId(event.target.value)
                                     }
@@ -213,10 +214,15 @@ export default function Create({ tutores, profesores }: Props) {
                                 )}
 
                                 {personas.length === 0 && (
-                                    <p className="mt-2 text-sm text-amber-600">
-                                        No hay {rol}es disponibles para crear
-                                        una cuenta.
-                                    </p>
+                                    <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                                        <p className="text-sm font-medium text-amber-800">
+                                            No hay {rol === 'tutor' ? 'tutores' : 'profesores'} disponibles.
+                                        </p>
+                                        <p className="mt-1 text-xs text-amber-700">
+                                            Para crear una cuenta, primero debe existir una persona
+                                            activa y sin una cuenta de acceso asociada.
+                                        </p>
+                                    </div>
                                 )}
                             </div>
 
@@ -262,6 +268,7 @@ export default function Create({ tutores, profesores }: Props) {
                                             <input
                                                 id="email"
                                                 type="email"
+                                                required={!personaSeleccionada?.email}
                                                 value={data.email}
                                                 onChange={(event) =>
                                                     setData(
@@ -315,6 +322,7 @@ export default function Create({ tutores, profesores }: Props) {
                                             <input
                                                 id="password"
                                                 type="password"
+                                                required
                                                 value={data.password}
                                                 onChange={(event) =>
                                                     setData(
@@ -350,6 +358,7 @@ export default function Create({ tutores, profesores }: Props) {
                                             <input
                                                 id="password_confirmation"
                                                 type="password"
+                                                required
                                                 value={
                                                     data.password_confirmation
                                                 }
