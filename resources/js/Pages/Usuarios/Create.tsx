@@ -20,24 +20,30 @@ interface Persona {
     apellido: string;
     email: string | null;
 }
-
+type Rol = 'tutor' | 'profesor' | 'admin' | 'superadmin';
 interface Props {
     tutores: Persona[];
     profesores: Persona[];
+    rolesPermitidos: Rol[];
 }
 
-export default function Create({ tutores, profesores }: Props) {
-    const [rol, setRol] = useState<'tutor' | 'profesor'>('tutor');
+export default function Create({ tutores, profesores, rolesPermitidos, }: Props) {
+    const [rol, setRol] = useState<Rol>(rolesPermitidos[0]??'tutor') ;
     const [personaId, setPersonaId] = useState('');
+    const [erroresLocales, setErroresLocales] = useState<{
+        password?: string;
+        password_confirmation?: string;
+    }>({});
 
     const { data, setData, post, processing, errors, reset } = useForm({
-        rol: 'tutor',
-        tutor_id: '',
-        profesor_id: '',
-        email: '',
-        password: '',
-        password_confirmation: '',
-    });
+    rol: rolesPermitidos[0] ?? 'tutor',
+    tutor_id: '',
+    profesor_id: '',
+    name: '',
+    email: '',
+    password: '',
+    password_confirmation: '',
+});
 
     const personas = rol === 'tutor' ? tutores : profesores;
 
@@ -46,17 +52,23 @@ export default function Create({ tutores, profesores }: Props) {
     );
 
     useEffect(() => {
-        setPersonaId('');
-        setData({
-            ...data,
+    setPersonaId('');
+
+    setData((previous) => ({
+            ...previous,
             rol,
             tutor_id: '',
             profesor_id: '',
+            name: '',
             email: '',
-        });
+        }));
     }, [rol]);
 
     useEffect(() => {
+        if (rol !== 'tutor' && rol !== 'profesor') {
+            return;
+        }
+
         setData((previous) => ({
             ...previous,
             tutor_id: rol === 'tutor' ? personaId : '',
@@ -65,11 +77,50 @@ export default function Create({ tutores, profesores }: Props) {
         }));
     }, [personaId, personaSeleccionada, rol]);
 
-    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
+        const nuevosErrores: typeof erroresLocales = {};
+
+        // Validar contraseña
+        if (!data.password.trim()) {
+            nuevosErrores.password =
+                'La contraseña es obligatoria. Ingresá una contraseña para continuar.';
+        }
+
+        if (!data.password_confirmation.trim()) {
+            nuevosErrores.password_confirmation =
+                'Debés confirmar la contraseña.';
+        } else if (data.password !== data.password_confirmation) {
+            nuevosErrores.password_confirmation =
+                'Las contraseñas no coinciden. Verificá que ambas sean iguales.';
+        }
+
+        setErroresLocales(nuevosErrores);
+
+        if (Object.keys(nuevosErrores).length > 0) {
+            return;
+        }
+
+        // Validar datos de cuentas administrativas
+        if (rol === 'admin' || rol === 'superadmin') {
+            if (!data.name.trim() || !data.email.trim()) {
+                return;
+            }
+        }
+
+        // Validar selección de persona
+        if ((rol === 'tutor' || rol === 'profesor') && !personaId) {
+            return;
+        }
+
         post(route('usuarios.store'), {
-            onSuccess: () => reset(),
+            onSuccess: () => {
+                reset();
+                setRol(rolesPermitidos[0] ?? 'tutor');
+                setPersonaId('');
+                setErroresLocales({});
+            },
         });
     };
 
@@ -94,7 +145,7 @@ export default function Create({ tutores, profesores }: Props) {
                         }
                     />
 
-                    <form onSubmit={handleSubmit}>
+                    <form onSubmit={handleSubmit} noValidate>
                         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
                             <div className="mb-6">
                                 <h2 className="text-lg font-bold text-slate-900">
@@ -113,142 +164,163 @@ export default function Create({ tutores, profesores }: Props) {
                                 </label>
 
                                 <div className="grid gap-3 sm:grid-cols-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setRol('tutor')}
-                                        className={`flex items-center gap-3 rounded-xl border p-4 text-left transition ${
-                                            rol === 'tutor'
-                                                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-100'
-                                                : 'border-slate-200 hover:bg-slate-50'
-                                        }`}
-                                    >
-                                        <Users
-                                            size={24}
-                                            className={
-                                                rol === 'tutor'
-                                                    ? 'text-blue-600'
-                                                    : 'text-slate-400'
-                                            }
-                                        />
-                                        <div>
-                                            <p className="font-semibold text-slate-900">
-                                                Tutor
-                                            </p>
-                                            <p className="text-xs text-slate-500">
-                                                Cuenta para responsables.
-                                            </p>
-                                        </div>
-                                    </button>
+                                    {rolesPermitidos.map((tipoRol) => {
+                                        const opciones = {
+                                            tutor: {
+                                                titulo: 'Tutor',
+                                                descripcion: 'Cuenta para responsables.',
+                                                icono: Users,
+                                            },
+                                            profesor: {
+                                                titulo: 'Profesor',
+                                                descripcion: 'Cuenta para entrenadores.',
+                                                icono: GraduationCap,
+                                            },
+                                            admin: {
+                                                titulo: 'Administrador',
+                                                descripcion: 'Gestiona la administración.',
+                                                icono: User,
+                                            },
+                                            superadmin: {
+                                                titulo: 'Superadministrador',
+                                                descripcion: 'Acceso completo al sistema.',
+                                                icono: UserPlus,
+                                            },
+                                        };
 
-                                    <button
-                                        type="button"
-                                        onClick={() => setRol('profesor')}
-                                        className={`flex items-center gap-3 rounded-xl border p-4 text-left transition ${
-                                            rol === 'profesor'
-                                                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-100'
-                                                : 'border-slate-200 hover:bg-slate-50'
-                                        }`}
-                                    >
-                                        <GraduationCap
-                                            size={24}
-                                            className={
-                                                rol === 'profesor'
-                                                    ? 'text-blue-600'
-                                                    : 'text-slate-400'
-                                            }
-                                        />
-                                        <div>
-                                            <p className="font-semibold text-slate-900">
-                                                Profesor
-                                            </p>
-                                            <p className="text-xs text-slate-500">
-                                                Cuenta para entrenadores.
-                                            </p>
-                                        </div>
-                                    </button>
+                                        const opcion = opciones[tipoRol];
+                                        const Icono = opcion.icono;
+
+                                        return (
+                                            <button
+                                                key={tipoRol}
+                                                type="button"
+                                                onClick={() => setRol(tipoRol)}
+                                                className={`flex items-center gap-3 rounded-xl border p-4 text-left transition ${
+                                                    rol === tipoRol
+                                                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-100'
+                                                        : 'border-slate-200 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                <Icono
+                                                    size={24}
+                                                    className={
+                                                        rol === tipoRol
+                                                            ? 'text-blue-600'
+                                                            : 'text-slate-400'
+                                                    }
+                                                />
+
+                                                <div>
+                                                    <p className="font-semibold text-slate-900">
+                                                        {opcion.titulo}
+                                                    </p>
+                                                    <p className="text-xs text-slate-500">
+                                                        {opcion.descripcion}
+                                                    </p>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
-
                             {/* Selección de persona */}
-                            <div className="mb-6">
-                                <label
-                                    htmlFor="persona"
-                                    className="mb-2 block text-sm font-semibold text-slate-700"
-                                >
-                                    Seleccionar {rol}
-                                </label>
+                            {(rol === 'tutor' || rol === 'profesor') && (
+                                <div className="mb-6">
+                                    <label
+                                        htmlFor="persona"
+                                        className="mb-2 block text-sm font-semibold text-slate-700"
+                                    >
+                                        Seleccionar {rol}
+                                    </label>
 
-                                <select
-                                    id="persona"
-                                    value={personaId}
-                                    required
-                                    onChange={(event) =>
-                                        setPersonaId(event.target.value)
-                                    }
-                                    className="w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                >
-                                    <option value="">
-                                        Seleccioná una persona...
-                                    </option>
+                                    <select
+                                        id="persona"
+                                        value={personaId}
+                                        required
+                                        onChange={(event) => setPersonaId(event.target.value)}
+                                        className="w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    >
+                                        <option value="">Seleccioná una persona...</option>
 
-                                    {personas.map((persona) => (
-                                        <option
-                                            key={persona.id}
-                                            value={persona.id}
-                                        >
-                                            {persona.apellido}, {persona.nombre}
-                                        </option>
-                                    ))}
-                                </select>
+                                        {personas.map((persona) => (
+                                            <option key={persona.id} value={persona.id}>
+                                                {persona.apellido}, {persona.nombre}
+                                            </option>
+                                        ))}
+                                    </select>
 
-                                {errors.tutor_id && (
-                                    <p className="mt-1 text-sm text-red-600">
-                                        {errors.tutor_id}
-                                    </p>
-                                )}
-
-                                {errors.profesor_id && (
-                                    <p className="mt-1 text-sm text-red-600">
-                                        {errors.profesor_id}
-                                    </p>
-                                )}
-
-                                {personas.length === 0 && (
-                                    <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                                        <p className="text-sm font-medium text-amber-800">
-                                            No hay {rol === 'tutor' ? 'tutores' : 'profesores'} disponibles.
+                                    {errors.tutor_id && (
+                                        <p className="mt-1 text-sm text-red-600">
+                                            {errors.tutor_id}
                                         </p>
-                                        <p className="mt-1 text-xs text-amber-700">
-                                            Para crear una cuenta, primero debe existir una persona
-                                            activa y sin una cuenta de acceso asociada.
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
+                                    )}
 
+                                    {errors.profesor_id && (
+                                        <p className="mt-1 text-sm text-red-600">
+                                            {errors.profesor_id}
+                                        </p>
+                                    )}
+
+                                    {personas.length === 0 && (
+                                        <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                                            <p className="text-sm font-medium text-amber-800">
+                                                No hay {rol === 'tutor' ? 'tutores' : 'profesores'} disponibles.
+                                            </p>
+                                            <p className="mt-1 text-xs text-amber-700">
+                                                Para crear una cuenta, primero debe existir una persona
+                                                activa y sin una cuenta de acceso asociada.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             {/* Datos personales */}
                             <div className="mb-8 rounded-xl border border-slate-200 bg-slate-50 p-5">
                                 <h3 className="mb-4 text-sm font-bold text-slate-800">
-                                    Información de la persona
+                                    {rol === 'tutor' || rol === 'profesor'
+                                        ? 'Información de la persona'
+                                        : 'Datos del usuario'}
                                 </h3>
 
                                 <div className="grid gap-5 sm:grid-cols-2">
                                     <div>
-                                        <label className="mb-2 block text-sm font-medium text-slate-600">
+                                        <label
+                                            htmlFor="name"
+                                            className="mb-2 block text-sm font-medium text-slate-600"
+                                        >
                                             Nombre completo
                                         </label>
 
-                                        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3">
-                                            <User
-                                                size={18}
-                                                className="text-slate-400"
+                                        {rol === 'tutor' || rol === 'profesor' ? (
+                                            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3">
+                                                <User size={18} className="text-slate-400" />
+
+                                                <span className="text-sm text-slate-700">
+                                                    {personaSeleccionada
+                                                        ? `${personaSeleccionada.nombre} ${personaSeleccionada.apellido}`
+                                                        : 'Se completará al seleccionar'}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <input
+                                                id="name"
+                                                type="text"
+                                                required
+                                                value={data.name}
+                                                onChange={(event) =>
+                                                    setData('name', event.target.value)
+                                                }
+                                                placeholder="Nombre y apellido"
+                                                className="w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                             />
-                                            <span className="text-sm text-slate-700">
-                                                {personaSeleccionada
-                                                    ? `${personaSeleccionada.nombre} ${personaSeleccionada.apellido}`
-                                                    : 'Se completará al seleccionar'}
-                                            </span>
-                                        </div>
+                                        )}
+
+                                        {errors.name && (
+                                            <p className="mt-1 text-sm text-red-600">
+                                                {errors.name}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div>
@@ -268,15 +340,17 @@ export default function Create({ tutores, profesores }: Props) {
                                             <input
                                                 id="email"
                                                 type="email"
-                                                required={!personaSeleccionada?.email}
+                                                required={
+                                                    rol === 'admin' ||
+                                                    rol === 'superadmin' ||
+                                                    !personaSeleccionada?.email
+                                                }
                                                 value={data.email}
                                                 onChange={(event) =>
-                                                    setData(
-                                                        'email',
-                                                        event.target.value
-                                                    )
+                                                    setData('email', event.target.value)
                                                 }
                                                 disabled={
+                                                    (rol === 'tutor' || rol === 'profesor') &&
                                                     !!personaSeleccionada?.email
                                                 }
                                                 placeholder="correo@ejemplo.com"
@@ -291,14 +365,14 @@ export default function Create({ tutores, profesores }: Props) {
                                         )}
 
                                         <p className="mt-1 text-xs text-slate-500">
-                                            {personaSeleccionada?.email
+                                            {personaSeleccionada?.email &&
+                                            (rol === 'tutor' || rol === 'profesor')
                                                 ? 'Correo obtenido del registro personal.'
                                                 : 'Ingresá un correo para la cuenta de acceso.'}
                                         </p>
                                     </div>
                                 </div>
                             </div>
-
                             {/* Contraseña */}
                             <div className="mb-6">
                                 <h3 className="mb-4 text-sm font-bold text-slate-800">
@@ -324,21 +398,24 @@ export default function Create({ tutores, profesores }: Props) {
                                                 type="password"
                                                 required
                                                 value={data.password}
-                                                onChange={(event) =>
-                                                    setData(
-                                                        'password',
-                                                        event.target.value
-                                                    )
-                                                }
+                                               onChange={(event) => {
+                                                    setData('password', event.target.value);
+                                                    setErroresLocales((previous) => ({
+                                                        ...previous,
+                                                        password: undefined,
+                                                    }));
+                                                }}
                                                 autoComplete="new-password"
                                                 className="w-full rounded-xl border-slate-300 pl-10 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                             />
                                         </div>
 
-                                        {errors.password && (
-                                            <p className="mt-1 text-sm text-red-600">
-                                                {errors.password}
-                                            </p>
+                                        {(erroresLocales.password || errors.password) && (
+                                            <div className="mt-2 rounded-lg border border-red-200 bg-red-50 p-3">
+                                                <p className="text-sm font-medium text-red-700">
+                                                    {erroresLocales.password || errors.password}
+                                                </p>
+                                            </div>
                                         )}
                                     </div>
 
@@ -362,17 +439,26 @@ export default function Create({ tutores, profesores }: Props) {
                                                 value={
                                                     data.password_confirmation
                                                 }
-                                                onChange={(event) =>
-                                                    setData(
-                                                        'password_confirmation',
-                                                        event.target.value
-                                                    )
-                                                }
+                                                onChange={(event) => {
+                                                    setData('password_confirmation', event.target.value);
+                                                    setErroresLocales((previous) => ({
+                                                        ...previous,
+                                                        password_confirmation: undefined,
+                                                    }));
+                                                }}
                                                 autoComplete="new-password"
                                                 className="w-full rounded-xl border-slate-300 pl-10 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                             />
                                         </div>
+                                         {(erroresLocales.password_confirmation) && (
+                                            <div className="mt-2 rounded-lg border border-red-200 bg-red-50 p-3">
+                                                <p className="text-sm font-medium text-red-700">
+                                                    {erroresLocales.password_confirmation}
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
+                                   
                                 </div>
                             </div>
 
@@ -386,11 +472,12 @@ export default function Create({ tutores, profesores }: Props) {
 
                                 <PrimaryButton
                                     type="submit"
-                                    disabled={processing || !personaId}
+                                    disabled={
+                                        processing ||
+                                        ((rol === 'tutor' || rol === 'profesor') && !personaId)
+                                    }
                                 >
-                                    {processing
-                                        ? 'Creando cuenta...'
-                                        : 'Crear cuenta'}
+                                    {processing ? 'Creando cuenta...' : 'Crear cuenta'}
                                 </PrimaryButton>
                             </div>
                         </div>

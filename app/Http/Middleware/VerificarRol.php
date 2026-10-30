@@ -16,6 +16,11 @@ class VerificarRol
             abort(401, 'Debes iniciar sesión para acceder.');
         }
 
+        // El superadministrador también puede acceder a las rutas de admin.
+        if ($usuario->rol === 'superadmin' && in_array('admin', $roles, true)) {
+            return $next($request);
+        }
+
         if (!in_array($usuario->rol, $roles, true)) {
             abort(403, 'No tienes permisos para acceder a esta sección.');
         }

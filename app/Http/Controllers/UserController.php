@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
@@ -31,7 +33,7 @@ class UserController extends Controller
     /**
      * Mostrar el formulario para crear una cuenta.
      */
-    public function create(): Response
+        public function create(): Response
     {
         $tutores = Tutor::where('estado', true)
             ->whereDoesntHave('usuario')
@@ -45,23 +47,38 @@ class UserController extends Controller
             ->orderBy('nombre')
             ->get();
 
+        $rolesPermitidos = auth()->user()->rol === 'superadmin'
+            ? ['tutor', 'profesor', 'admin', 'superadmin']
+            : ['tutor', 'profesor'];
+
         return Inertia::render('Usuarios/Create', [
             'tutores' => $tutores,
             'profesores' => $profesores,
+            'rolesPermitidos' => $rolesPermitidos,
         ]);
     }
     /**
- * Crear una cuenta de acceso para un tutor o profesor.
- */
+     * Crear una cuenta de acceso para un tutor o profesor.
+     */
         public function store(Request $request): RedirectResponse
     {
+        $esSuperadmin = $request->user()->rol === 'superadmin';
+
+        $rolesPermitidos = $esSuperadmin
+            ? ['tutor', 'profesor', 'admin', 'superadmin']
+            : ['tutor', 'profesor'];
+
         $validated = $request->validate([
+            'rol' => ['required', Rule::in($rolesPermitidos)],
             'password' => ['required', 'confirmed', Password::defaults()],
-            'rol' => 'required|in:tutor,profesor',
-            'tutor_id' => 'nullable|exists:tutores,id',
-            'profesor_id' => 'nullable|exists:profesores,id',
-            'email' => 'nullable|string|email|max:255',
+            'tutor_id' => ['nullable', 'exists:tutores,id'],
+            'profesor_id' => ['nullable', 'exists:profesores,id'],
+            'name' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'string', 'email', 'max:255'],
         ]);
+
+        $tutorId = null;
+        $profesorId = null;
 
         if ($validated['rol'] === 'tutor') {
             if (empty($validated['tutor_id']) || !empty($validated['profesor_id'])) {
@@ -80,10 +97,11 @@ class UserController extends Controller
                 ]);
             }
 
+            $name = trim($persona->nombre . ' ' . $persona->apellido);
+            $email = $persona->email ?: ($validated['email'] ?? null);
             $tutorId = $persona->id;
-            $profesorId = null;
 
-        } else {
+        } elseif ($validated['rol'] === 'profesor') {
             if (empty($validated['profesor_id']) || !empty($validated['tutor_id'])) {
                 throw ValidationException::withMessages([
                     'profesor_id' => 'Debes seleccionar un profesor válido.',
@@ -100,18 +118,34 @@ class UserController extends Controller
                 ]);
             }
 
-            $tutorId = null;
+            $name = trim($persona->nombre . ' ' . $persona->apellido);
+            $email = $persona->email ?: ($validated['email'] ?? null);
             $profesorId = $persona->id;
-        }
 
-        // Priorizar el correo registrado en la ficha personal.
-        // Si no existe, utilizar el ingresado por el administrador.
-        $email = $persona->email ?: ($validated['email'] ?? null);
+        } else {
+            if (!$esSuperadmin) {
+                abort(403);
+            }
+
+            if (!empty($validated['tutor_id']) || !empty($validated['profesor_id'])) {
+                throw ValidationException::withMessages([
+                    'rol' => 'Las cuentas administrativas no deben vincularse a una ficha personal.',
+                ]);
+            }
+
+            $datos = $request->validate([
+                'name' => ['required', 'string', 'max:255'],
+                'email' => ['required', 'string', 'email', 'max:255'],
+            ]);
+
+            $name = trim($datos['name']);
+            $email = $datos['email'];
+        }
 
         $datosEmail = Validator::make(
             ['email' => $email],
             [
-                'email' => 'required|string|email|max:255|unique:users,email',
+                'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             ],
             [
                 'email.required' => 'Debes ingresar un correo electrónico para la cuenta.',
@@ -120,7 +154,7 @@ class UserController extends Controller
         )->validate();
 
         User::create([
-            'name' => trim($persona->nombre . ' ' . $persona->apellido),
+            'name' => $name,
             'email' => $datosEmail['email'],
             'password' => Hash::make($validated['password']),
             'rol' => $validated['rol'],
