@@ -14,22 +14,23 @@ use Illuminate\Validation\Rules\Password;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
     /**
      * Mostrar las cuentas de acceso registradas.
      */
-    public function index(): Response
-    {
-        $usuarios = User::with(['tutor', 'profesor'])
-            ->orderBy('name')
-            ->paginate(10);
+   public function index(): Response
+{
+    $usuarios = User::with(['tutor', 'profesor'])
+        ->orderBy('name')
+        ->paginate(10);
 
-        return Inertia::render('Usuarios/Index', [
-            'usuarios' => $usuarios,
-        ]);
-    }
+    return Inertia::render('Usuarios/Index', [
+        'usuarios' => $usuarios,
+    ]);
+}
     /**
      * Mostrar el formulario para crear una cuenta.
      */
@@ -165,5 +166,61 @@ class UserController extends Controller
         return redirect()
             ->route('usuarios.index')
             ->with('success', 'Cuenta creada correctamente.');
+    }
+    /**
+     * Habilitar o deshabilitar una cuenta sin eliminarla.
+     */
+        public function cambiarEstado(User $usuario): RedirectResponse
+    {
+        $usuarioActual = auth()->user();
+
+        if ($usuarioActual->id === $usuario->id) {
+            return back()->with('error', 'No puedes modificar el estado de tu propia cuenta.');
+        }
+
+        if (
+            $usuario->rol === 'superadmin' &&
+            $usuarioActual->rol !== 'superadmin'
+        ) {
+            abort(403, 'No tienes permisos para modificar esta cuenta.');
+        }
+
+        $nuevoEstado = DB::transaction(function () use ($usuario) {
+
+            // Bloquear las cuentas superadmin para evitar cambios simultáneos
+            // que puedan dejar el sistema sin superadministradores activos.
+            $superadmins = User::where('rol', 'superadmin')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            $cuenta = User::whereKey($usuario->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($cuenta->rol === 'superadmin' && $cuenta->activo) {
+                $cantidadActivos = $superadmins
+                    ->where('activo', true)
+                    ->count();
+
+                if ($cantidadActivos <= 1) {
+                    throw ValidationException::withMessages([
+                        'usuario' => 'No puedes deshabilitar al último superadministrador activo.',
+                    ]);
+                }
+            }
+
+            $cuenta->activo = !$cuenta->activo;
+            $cuenta->save();
+
+            return $cuenta->activo;
+        });
+
+        return back()->with(
+            'success',
+            $nuevoEstado
+                ? 'La cuenta fue habilitada correctamente.'
+                : 'La cuenta fue deshabilitada correctamente.'
+        );
     }
 }

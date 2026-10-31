@@ -15,4 +15,7 @@ Route::middleware('rol:admin')->group(function () {
 
     Route::post('/usuarios', [UserController::class, 'store'])
         ->name('usuarios.store');
+    // Cambiar el estado de una cuenta.
+    Route::patch('/usuarios/{usuario}/estado', [UserController::class, 'cambiarEstado'])
+        ->name('usuarios.estado');    
 });

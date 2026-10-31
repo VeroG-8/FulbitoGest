@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'rol',
     'tutor_id',
     'profesor_id',
+    'activo',
 ])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable

@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, usePage, router } from '@inertiajs/react';
 import {
     Users,
     UserPlus,
@@ -7,6 +7,7 @@ import {
     UserRound,
     ChevronLeft,
     ChevronRight,
+    Power,
 } from 'lucide-react';
 
 import PageHeader from '@/Components/Shared/PageHeader';
@@ -23,7 +24,8 @@ interface Usuario {
     id: number;
     name: string;
     email: string;
-    rol: 'admin' | 'tutor' | 'profesor';
+    rol: 'admin' |'superadmin' | 'tutor' | 'profesor';
+    activo: boolean;
     tutor?: Persona | null;
     profesor?: Persona | null;
 }
@@ -52,6 +54,17 @@ interface Flash {
 
 export default function Index({ usuarios }: Props) {
     const { flash } = usePage<PageProps>().props;
+    const cambiarEstado = (usuario: Usuario) => {
+    const accion = usuario.activo ? 'deshabilitar' : 'habilitar';
+
+        if (!confirm(`¿Estás segura de que deseas ${accion} esta cuenta?`)) {
+            return;
+        }
+
+        router.patch(route('usuarios.estado', usuario.id), {}, {
+            preserveScroll: true,
+        });
+    };
     return (
         <>
             <Head title="Gestión de usuarios" />
@@ -124,7 +137,13 @@ export default function Index({ usuarios }: Props) {
                                                 <th className="px-6 py-4 font-semibold">
                                                     Persona vinculada
                                                 </th>
-                                            </tr>
+                                                <th className="px-6 py-4 font-semibold">
+                                                    Estado
+                                                </th>
+                                                <th className="px-6 py-4 font-semibold text-center">
+                                                    Acciones
+                                                </th>
+                                                                                            </tr>
                                         </thead>
 
                                         <tbody className="divide-y divide-slate-100">
@@ -176,6 +195,25 @@ export default function Index({ usuarios }: Props) {
                                                                 : usuario.rol === 'admin'
                                                                     ? 'Cuenta administrativa'
                                                                     : 'Sin vinculación'}
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <StatusBadge
+                                                                status={usuario.activo ? 'Activo' : 'Deshabilitado'}
+                                                            />
+                                                        </td>
+                                                        <td className="px-6 py-4 text-center">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => cambiarEstado(usuario)}
+                                                                title={usuario.activo ? 'Deshabilitar cuenta' : 'Habilitar cuenta'}
+                                                                className={`inline-flex items-center justify-center rounded-lg p-2 transition-colors ${
+                                                                    usuario.activo
+                                                                        ? 'text-red-600 hover:bg-red-50'
+                                                                        : 'text-emerald-600 hover:bg-emerald-50'
+                                                                }`}
+                                                            >
+                                                                <Power className="h-5 w-5" />
+                                                            </button>
                                                         </td>
                                                     </tr>
                                                 );
