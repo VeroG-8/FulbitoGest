@@ -17,9 +17,25 @@ class EquipoController extends Controller
      */
     public function index(Request $request)
     {
+        $usuario = auth()->user();
         $buscar = trim($request->input('buscar', ''));
 
-        $equipos = Equipo::with(['club', 'categoria'])
+        $consulta = Equipo::with(['club', 'categoria']);
+
+        // El profesor solamente puede consultar equipos
+        // de las categorías que tiene asignadas.
+        if ($usuario->rol === 'profesor') {
+            $consulta->whereHas('categoria.profesores', function ($query) use ($usuario) {
+                $query->where('profesores.id', $usuario->profesor_id);
+            });
+        }
+
+        // El tutor no puede acceder al módulo de equipos.
+        if ($usuario->rol === 'tutor') {
+            abort(403, 'No tienes permiso para consultar los equipos.');
+        }
+
+        $equipos = $consulta
             ->when($buscar, function ($query, $buscar) {
                 $query->where(function ($query) use ($buscar) {
                     $query->where('nombre', 'like', "%{$buscar}%")
@@ -46,13 +62,14 @@ class EquipoController extends Controller
     /**
      * Mostrar el formulario para crear un equipo.
      */
-    public function create()
-    {
-        return Inertia::render('Equipos/Create', [
-            'clubes' => Club::orderBy('nombre')->get(['id', 'nombre']),
-            'categorias' => Categoria::orderBy('nombre')->get(['id', 'nombre']),
-        ]);
-    }
+  public function create()
+{
+    
+    return Inertia::render('Equipos/Create', [
+        'clubes' => Club::orderBy('nombre')->get(['id', 'nombre']),
+        'categorias' => Categoria::orderBy('nombre')->get(['id', 'nombre']),
+    ]);
+}
 
     /**
      * Guardar un equipo nuevo.
@@ -91,8 +108,31 @@ class EquipoController extends Controller
     /**
      * Mostrar los detalles de un equipo.
      */
-    public function show(Equipo $equipo)
+        public function show(Equipo $equipo)
     {
+        $usuario = auth()->user();
+
+        // El profesor solo puede consultar equipos
+        // de las categorías que tiene asignadas.
+        if ($usuario->rol === 'profesor') {
+            $tieneAcceso = $equipo->categoria()
+                ->whereHas('profesores', function ($query) use ($usuario) {
+                    $query->where('profesores.id', $usuario->profesor_id);
+                })
+                ->exists();
+
+            abort_unless(
+                $tieneAcceso,
+                403,
+                'No tienes permiso para consultar este equipo.'
+            );
+        }
+
+        // El tutor no tiene acceso al módulo de equipos.
+        if ($usuario->rol === 'tutor') {
+            abort(403, 'No tienes permiso para consultar equipos.');
+        }
+
         $equipo->load(['club', 'categoria']);
 
         return Inertia::render('Equipos/Show', [

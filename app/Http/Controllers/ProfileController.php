@@ -43,29 +43,14 @@ class ProfileController extends Controller
     /**
      * Delete the user's account.
      */
-        public function destroy(Request $request): RedirectResponse
-    {
-        $user = $request->user();
-
-        // Un superadministrador no puede eliminar su propia cuenta.
-        if ($user->rol === 'superadmin') {
-            return Redirect::route('profile.edit')
-                ->withErrors([
-                    'password' => 'No puedes eliminar tu cuenta de superadministrador.',
-                ]);
-        }
-
-        $request->validate([
-            'password' => ['required', 'current_password'],
+       /**
+ * Impedir la eliminación física de cuentas.
+ */
+public function destroy(Request $request): RedirectResponse
+{
+    return Redirect::route('profile.edit')
+        ->withErrors([
+            'password' => 'Las cuentas no pueden eliminarse desde el perfil. Si necesitas deshabilitar una cuenta, contacta al administrador.',
         ]);
-
-        Auth::logout();
-
-        $user->delete();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return Redirect::to('/');
-    }
+}
 }

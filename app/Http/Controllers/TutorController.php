@@ -11,7 +11,21 @@ class TutorController extends Controller
 {
     public function index()
     {
-        $tutores = Tutor::where('estado', true)
+        $usuario = auth()->user();
+
+        $consulta = Tutor::where('estado', true);
+
+        // El tutor solamente puede consultar su propia ficha.
+        if ($usuario->rol === 'tutor') {
+            $consulta->where('id', $usuario->tutor_id);
+        }
+
+        // El profesor no tiene acceso al listado de tutores.
+        if ($usuario->rol === 'profesor') {
+            abort(403, 'No tienes permiso para consultar el listado de tutores.');
+        }
+
+        $tutores = $consulta
             ->orderBy('apellido')
             ->orderBy('nombre')
             ->get();
@@ -20,7 +34,6 @@ class TutorController extends Controller
             'tutores' => $tutores,
         ]);
     }
-
     public function create()
     {
         return Inertia::render('Tutores/Create');
@@ -48,8 +61,24 @@ class TutorController extends Controller
             ->with('success', 'Tutor creado correctamente.');
     }
 
-    public function show(Tutor $tutor)
+        public function show(Tutor $tutor)
     {
+        $usuario = auth()->user();
+
+        // El tutor solamente puede consultar su propia ficha.
+        if ($usuario->rol === 'tutor') {
+            abort_unless(
+                $usuario->tutor_id === $tutor->id,
+                403,
+                'No tienes permiso para consultar este tutor.'
+            );
+        }
+
+        // El profesor no puede consultar fichas de tutores.
+        if ($usuario->rol === 'profesor') {
+            abort(403, 'No tienes permiso para consultar fichas de tutores.');
+        }
+
         $tutor->load('jugadores');
 
         return Inertia::render('Tutores/Show', [
@@ -93,10 +122,23 @@ class TutorController extends Controller
             ->with('success', 'Tutor deshabilitado correctamente.');
     }
 
-    public function historial()
+        public function historial()
     {
-        
-        $tutores = Tutor::where('estado', false)
+        $usuario = auth()->user();
+
+        $consulta = Tutor::where('estado', false);
+
+        // El tutor solamente puede consultar su propia ficha.
+        if ($usuario->rol === 'tutor') {
+            $consulta->where('id', $usuario->tutor_id);
+        }
+
+        // El profesor no tiene acceso al historial de tutores.
+        if ($usuario->rol === 'profesor') {
+            abort(403, 'No tienes permiso para consultar el historial de tutores.');
+        }
+
+        $tutores = $consulta
             ->orderBy('apellido')
             ->orderBy('nombre')
             ->get();

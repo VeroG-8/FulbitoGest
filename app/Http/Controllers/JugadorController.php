@@ -16,8 +16,24 @@ class JugadorController extends Controller
      */
     public function index()
     {
-        $jugadores = Jugador::with('categoria')
-            ->where('estado', true)
+        $usuario = auth()->user();
+
+        $consulta = Jugador::with('categoria')
+            ->where('estado', true);
+
+        if ($usuario->rol === 'profesor') {
+            $consulta->whereHas('categoria.profesores', function ($query) use ($usuario) {
+                $query->where('profesores.id', $usuario->profesor_id);
+            });
+        }
+
+        if ($usuario->rol === 'tutor') {
+            $consulta->whereHas('tutores', function ($query) use ($usuario) {
+                $query->where('tutores.id', $usuario->tutor_id);
+            });
+        }
+
+        $jugadores = $consulta
             ->orderBy('apellido')
             ->orderBy('nombre')
             ->get();
@@ -26,6 +42,7 @@ class JugadorController extends Controller
             'jugadores' => $jugadores,
         ]);
     }
+
 
     /**
      * Show the form for creating a new resource.
@@ -105,8 +122,30 @@ class JugadorController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Jugador $jugador)
+        public function show(Jugador $jugador)
     {
+        $usuario = auth()->user();
+
+        // Verificar el acceso del profesor.
+        if ($usuario->rol === 'profesor') {
+            $tieneAcceso = $jugador->categoria()
+                ->whereHas('profesores', function ($query) use ($usuario) {
+                    $query->where('profesores.id', $usuario->profesor_id);
+                })
+                ->exists();
+
+            abort_unless($tieneAcceso, 403, 'No tienes permiso para consultar este jugador.');
+        }
+
+        // Verificar el acceso del tutor.
+        if ($usuario->rol === 'tutor') {
+            $tieneAcceso = $jugador->tutores()
+                ->where('tutores.id', $usuario->tutor_id)
+                ->exists();
+
+            abort_unless($tieneAcceso, 403, 'No tienes permiso para consultar este jugador.');
+        }
+
         $jugador->load([
             'categoria',
             'tutores',
@@ -120,7 +159,6 @@ class JugadorController extends Controller
             'jugador' => $jugador,
         ]);
     }
-
      /**
      * Remove the specified resource from storage.
      */
@@ -137,8 +175,26 @@ class JugadorController extends Controller
 
     public function historial()
     {
-        $jugadores = Jugador::with('categoria')
-            ->where('estado', false)
+        $usuario = auth()->user();
+
+        $consulta = Jugador::with('categoria')
+            ->where('estado', false);
+
+        // Filtrar por las categorías asignadas al profesor.
+        if ($usuario->rol === 'profesor') {
+            $consulta->whereHas('categoria.profesores', function ($query) use ($usuario) {
+                $query->where('profesores.id', $usuario->profesor_id);
+            });
+        }
+
+        // Filtrar por los jugadores vinculados al tutor.
+        if ($usuario->rol === 'tutor') {
+            $consulta->whereHas('tutores', function ($query) use ($usuario) {
+                $query->where('tutores.id', $usuario->tutor_id);
+            });
+        }
+
+        $jugadores = $consulta
             ->orderBy('apellido')
             ->orderBy('nombre')
             ->get();
