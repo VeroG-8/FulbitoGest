@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 export default function Dashboard() {
-    const { auth } = usePage().props as any;
+    const { auth, estadisticas: datosEstadisticos } = usePage().props as any;
     const user = auth.user;
 
     const roles: Record<string, string> = {
@@ -150,6 +150,76 @@ export default function Dashboard() {
                 {/* Administrador */}
                 {esAdministrador && (
                     <>
+                    <section>
+                        <div className="mb-4">
+                            <h2 className="text-lg font-bold text-slate-800">
+                                Resumen de la institución
+                            </h2>
+                            <p className="text-sm text-slate-500">
+                                Estado actual de la escuela de fútbol.
+                            </p>
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                            {[
+                                {
+                                    titulo: 'Total de jugadores',
+                                    valor: datosEstadisticos.jugadores,
+                                    icono: <Users size={23} />,
+                                    color: 'bg-blue-100 text-blue-600',
+                                },
+                                {
+                                    titulo: 'Jugadores activos',
+                                    valor: datosEstadisticos.jugadoresActivos,
+                                    icono: <Users size={23} />,
+                                    color: 'bg-emerald-100 text-emerald-600',
+                                },
+                                {
+                                    titulo: 'Equipos activos',
+                                    valor: datosEstadisticos.equiposActivos,
+                                    icono: <ShieldCheck size={23} />,
+                                    color: 'bg-purple-100 text-purple-600',
+                                },
+                                {
+                                    titulo: 'Categorías activas',
+                                    valor: datosEstadisticos.categoriasActivas,
+                                    icono: <ClipboardList size={23} />,
+                                    color: 'bg-amber-100 text-amber-600',
+                                },
+                                {
+                                    titulo: 'Profesores activos',
+                                    valor: datosEstadisticos.profesoresActivos,
+                                    icono: <GraduationCap size={23} />,
+                                    color: 'bg-indigo-100 text-indigo-600',
+                                },
+                                {
+                                    titulo: 'Tutores activos',
+                                    valor: datosEstadisticos.tutoresActivos,
+                                    icono: <UserRound size={23} />,
+                                    color: 'bg-pink-100 text-pink-600',
+                                },
+                            ].map((item) => (
+                                <div
+                                    key={item.titulo}
+                                    className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${item.color}`}>
+                                            {item.icono}
+                                        </div>
+                                    </div>
+
+                                    <p className="mt-4 text-sm font-medium text-slate-500">
+                                        {item.titulo}
+                                    </p>
+
+                                    <p className="mt-1 text-2xl font-bold text-slate-800">
+                                        {item.valor ?? 0}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
                         <section>
                             <div className="mb-4">
                                 <h2 className="text-lg font-bold text-slate-800">
