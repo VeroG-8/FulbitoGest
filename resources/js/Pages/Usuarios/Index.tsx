@@ -9,7 +9,7 @@ import {
     ChevronRight,
     Power,
 } from 'lucide-react';
-
+import { useState } from 'react';
 import PageHeader from '@/Components/Shared/PageHeader';
 import StatCard from '@/Components/Shared/StatCard';
 import StatusBadge from '@/Components/Shared/StatusBadge';
@@ -53,18 +53,43 @@ interface Flash {
 }
 
 export default function Index({ usuarios }: Props) {
+    const [mensaje, setMensaje] = useState<{
+        texto: string;
+        tipo: 'success' | 'error';
+    } | null>(null);
+
     const { flash } = usePage<PageProps>().props;
+
+
     const cambiarEstado = (usuario: Usuario) => {
-    const accion = usuario.activo ? 'deshabilitar' : 'habilitar';
+        const accion = usuario.activo ? 'deshabilitar' : 'habilitar';
 
         if (!confirm(`¿Estás segura de que deseas ${accion} esta cuenta?`)) {
             return;
         }
 
+        setMensaje(null);
+
         router.patch(route('usuarios.estado', usuario.id), {}, {
             preserveScroll: true,
+            onSuccess: (page) => {
+                const flash = page.props.flash as Flash;
+
+                if (flash.error) {
+                    setMensaje({
+                        texto: flash.error,
+                        tipo: 'error',
+                    });
+                } else if (flash.success) {
+                    setMensaje({
+                        texto: flash.success,
+                        tipo: 'success',
+                    });
+                }
+            },
         });
     };
+
     return (
         <>
             <Head title="Gestión de usuarios" />
@@ -86,19 +111,19 @@ export default function Index({ usuarios }: Props) {
                             </Link>
                         }
                     />
-                    {(flash.success || flash.error) && (
+                    {mensaje && (
                         <div
                             className={`mb-6 rounded-xl border px-4 py-3 text-sm font-medium ${
-                                flash.success
+                                mensaje.tipo === 'success'
                                     ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
                                     : 'border-red-200 bg-red-50 text-red-700'
                             }`}
                             role="alert"
                         >
-                            {flash.success || flash.error}
+                            {mensaje.texto}
                         </div>
                     )}
-
+        
                     <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <StatCard
                             title="Total de cuentas"

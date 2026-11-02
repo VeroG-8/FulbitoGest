@@ -170,25 +170,37 @@ class UserController extends Controller
     /**
      * Habilitar o deshabilitar una cuenta sin eliminarla.
      */
-        public function cambiarEstado(User $usuario): RedirectResponse
+    /**
+     * Habilitar o deshabilitar una cuenta sin eliminarla.
+     */
+    public function cambiarEstado(User $usuario): RedirectResponse
     {
         $usuarioActual = auth()->user();
 
+        // No permitir modificar la propia cuenta.
         if ($usuarioActual->id === $usuario->id) {
-            return back()->with('error', 'No puedes modificar el estado de tu propia cuenta.');
+            return back()->with(
+                'error',
+                'No puedes modificar el estado de tu propia cuenta.'
+            )->with('error_timestamp', now()->timestamp);
         }
 
+        // Solo el superadmin puede modificar cuentas administrativas.
         if (
-            $usuario->rol === 'superadmin' &&
+            in_array($usuario->rol, ['admin', 'superadmin']) &&
             $usuarioActual->rol !== 'superadmin'
         ) {
             abort(403, 'No tienes permisos para modificar esta cuenta.');
         }
 
+        // Solo superadmin y admin pueden gestionar usuarios.
+        if (!in_array($usuarioActual->rol, ['superadmin', 'admin'])) {
+            abort(403, 'No tienes permisos para realizar esta acción.');
+        }
+
         $nuevoEstado = DB::transaction(function () use ($usuario) {
 
-            // Bloquear las cuentas superadmin para evitar cambios simultáneos
-            // que puedan dejar el sistema sin superadministradores activos.
+            // Bloquear las cuentas superadmin para evitar cambios simultáneos.
             $superadmins = User::where('rol', 'superadmin')
                 ->orderBy('id')
                 ->lockForUpdate()
@@ -198,6 +210,7 @@ class UserController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
+            // Evitar deshabilitar al último superadmin activo.
             if ($cuenta->rol === 'superadmin' && $cuenta->activo) {
                 $cantidadActivos = $superadmins
                     ->where('activo', true)
