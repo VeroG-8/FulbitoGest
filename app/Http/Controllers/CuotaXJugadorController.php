@@ -13,9 +13,10 @@ use Illuminate\Support\Facades\DB;
 class CuotaXJugadorController extends Controller
 {
         
-    public function index(Request $request)
+        public function index(Request $request)
     {
         $categoriaId = $request->input('categoria_id');
+        $buscar = trim((string) $request->input('buscar', ''));
 
         // Consulta base de asignaciones
         $consulta = CuotaXJugador::with([
@@ -23,14 +24,24 @@ class CuotaXJugadorController extends Controller
             'jugador.categoria',
         ]);
 
-        // Aplicar filtro por categoría, si fue seleccionado
+        // Aplicar filtro por categoría
         $consulta->when($categoriaId, function ($query) use ($categoriaId) {
             $query->whereHas('jugador', function ($q) use ($categoriaId) {
                 $q->where('categoria_id', $categoriaId);
             });
         });
 
-        // Estadísticas: respetan el filtro seleccionado
+        // Aplicar búsqueda por nombre o apellido
+        $consulta->when($buscar !== '', function ($query) use ($buscar) {
+            $query->whereHas('jugador', function ($q) use ($buscar) {
+                $q->where(function ($subquery) use ($buscar) {
+                    $subquery->where('nombre', 'like', "%{$buscar}%")
+                        ->orWhere('apellido', 'like', "%{$buscar}%");
+                });
+            });
+        });
+
+        // Estadísticas: respetan ambos filtros
         $estadisticas = [
             'total' => (clone $consulta)->count(),
             'pendientes' => (clone $consulta)->where('estado', 'pendiente')->count(),
@@ -52,12 +63,11 @@ class CuotaXJugadorController extends Controller
             'categorias' => $categorias,
             'filtros' => [
                 'categoria_id' => $categoriaId,
+                'buscar' => $buscar,
             ],
             'estadisticas' => $estadisticas,
         ]);
     }
-
-
     public function create()
     {
         $cuotas = \App\Models\Cuota::where('estado', true)

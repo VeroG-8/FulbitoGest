@@ -1,4 +1,4 @@
-
+import { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import PageHeader from '@/Components/Shared/PageHeader';
 import StatCard from '@/Components/Shared/StatCard';
@@ -12,6 +12,8 @@ import {
     ChevronLeft,
     ChevronRight,
     Filter,
+    Search,
+    X,
 } from 'lucide-react';
 
 interface Cuota {
@@ -60,6 +62,7 @@ interface Props {
     categorias: Categoria[];
     filtros: {
         categoria_id: string | null;
+        buscar: string;
     };
     estadisticas: {
         total: number;
@@ -74,6 +77,8 @@ export default function Index({
     filtros,
     estadisticas,
 }: Props) {
+    const [buscar, setBuscar] = useState(filtros.buscar ?? '');
+
     const formatearFecha = (fecha: string) => {
         if (!fecha) return '-';
 
@@ -89,16 +94,47 @@ export default function Index({
         });
     };
 
-    const cambiarCategoria = (categoriaId: string) => {
-        router.get(
-            '/cuotas/asignaciones',
-            categoriaId ? { categoria_id: categoriaId } : {},
-            {
-                preserveState: true,
-                preserveScroll: true,
-            },
-        );
+    // Aplicar búsqueda y categoría conjuntamente
+    const aplicarFiltros = (
+        categoriaId: string,
+        termino: string,
+    ) => {
+        const parametros: Record<string, string> = {};
+
+        if (categoriaId) {
+            parametros.categoria_id = categoriaId;
+        }
+
+        if (termino.trim()) {
+            parametros.buscar = termino.trim();
+        }
+
+        router.get('/cuotas/asignaciones', parametros, {
+            preserveState: true,
+            preserveScroll: true,
+        });
     };
+
+    const cambiarCategoria = (categoriaId: string) => {
+        aplicarFiltros(categoriaId, buscar);
+    };
+
+    const buscarJugador = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        aplicarFiltros(filtros.categoria_id ?? '', buscar);
+    };
+
+    const limpiarFiltros = () => {
+        setBuscar('');
+
+        router.get('/cuotas/asignaciones', {}, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    };
+
+    const hayFiltrosAplicados =
+        Boolean(filtros.categoria_id) || Boolean(filtros.buscar);
 
     return (
         <>
@@ -148,28 +184,90 @@ export default function Index({
                         />
                     </div>
 
-                    {/* Filtro */}
+                    {/* Filtros */}
                     <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                                <Filter className="h-5 w-5 text-slate-500" />
-                                Filtrar por categoría
+                        <div className="mb-4 flex items-center gap-2">
+                            <Filter className="h-5 w-5 text-slate-500" />
+                            <h2 className="font-semibold text-slate-800">
+                                Filtros de búsqueda
+                            </h2>
+                        </div>
+
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+
+                            {/* Filtro por categoría */}
+                            <div className="w-full lg:max-w-xs">
+                                <label className="mb-2 block text-sm font-medium text-slate-700">
+                                    Categoría
+                                </label>
+
+                                <select
+                                    value={filtros.categoria_id ?? ''}
+                                    onChange={(e) => cambiarCategoria(e.target.value)}
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                >
+                                    <option value="">Todas las categorías</option>
+
+                                    {categorias.map((categoria) => (
+                                        <option key={categoria.id} value={categoria.id}>
+                                            {categoria.nombre}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
 
-                            <select
-                                value={filtros.categoria_id ?? ''}
-                                onChange={(e) => cambiarCategoria(e.target.value)}
-                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:max-w-xs"
+                            {/* Búsqueda por jugador */}
+                            <form
+                                onSubmit={buscarJugador}
+                                className="flex w-full flex-col gap-2 sm:flex-row lg:flex-1"
                             >
-                                <option value="">Todas las categorías</option>
+                                <div className="w-full flex-1">
+                                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                                        Buscar jugador
+                                    </label>
 
-                                {categorias.map((categoria) => (
-                                    <option key={categoria.id} value={categoria.id}>
-                                        {categoria.nombre}
-                                    </option>
-                                ))}
-                            </select>
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
+                                        <input
+                                            type="text"
+                                            value={buscar}
+                                            onChange={(e) => setBuscar(e.target.value)}
+                                            placeholder="Ingresá nombre o apellido..."
+                                            className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex items-end gap-2">
+                                    <button
+                                        type="submit"
+                                        className="inline-flex h-[42px] items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                                    >
+                                        <Search className="h-4 w-4" />
+                                        Buscar
+                                    </button>
+
+                                    {hayFiltrosAplicados && (
+                                        <button
+                                            type="button"
+                                            onClick={limpiarFiltros}
+                                            className="inline-flex h-[42px] items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+                                        >
+                                            <X className="h-4 w-4" />
+                                            Limpiar
+                                        </button>
+                                    )}
+                                </div>
+                            </form>
                         </div>
+
+                        {hayFiltrosAplicados && (
+                            <p className="mt-4 text-xs text-slate-500">
+                                Los resultados y las estadísticas muestran las asignaciones
+                                que coinciden con los filtros aplicados.
+                            </p>
+                        )}
                     </div>
 
                     {/* Tabla */}
@@ -178,6 +276,7 @@ export default function Index({
                             <h2 className="text-lg font-bold text-slate-800">
                                 Listado de asignaciones
                             </h2>
+
                             <p className="mt-1 text-sm text-slate-500">
                                 Registro de cuotas correspondientes a cada jugador.
                             </p>
@@ -257,7 +356,8 @@ export default function Index({
                                                 </p>
 
                                                 <p className="mt-1 text-sm text-slate-500">
-                                                    No se encontraron cuotas asignadas para esta categoría.
+                                                    No se encontraron asignaciones que coincidan
+                                                    con los filtros seleccionados.
                                                 </p>
                                             </td>
                                         </tr>
@@ -275,8 +375,13 @@ export default function Index({
 
                                 <div className="flex flex-wrap items-center gap-1">
                                     {asignaciones.links.map((link, index) => {
-                                        const esAnterior = link.label.includes('Previous') || link.label.includes('&laquo;');
-                                        const esSiguiente = link.label.includes('Next') || link.label.includes('&raquo;');
+                                        const esAnterior =
+                                            link.label.includes('Previous') ||
+                                            link.label.includes('&laquo;');
+
+                                        const esSiguiente =
+                                            link.label.includes('Next') ||
+                                            link.label.includes('&raquo;');
 
                                         return (
                                             <button

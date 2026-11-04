@@ -4,18 +4,16 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProfesorController;
 
 // Consultas: cualquier usuario autenticado.
-// Más adelante limitaremos los resultados según el rol.
 Route::get('/profesores', [ProfesorController::class, 'index'])
     ->name('profesores.index');
 
 Route::get('/profesores/historial', [ProfesorController::class, 'historial'])
     ->name('profesores.historial');
 
-Route::get('/profesores/{profesor}', [ProfesorController::class, 'show'])
-    ->name('profesores.show');
-
-// Gestión de profesores: solo administradores.
+// Gestión de profesores: administradores y superadministradores.
 Route::middleware('rol:admin')->group(function () {
+
+    // Primero las rutas estáticas.
     Route::get('/profesores/create', [ProfesorController::class, 'create'])
         ->name('profesores.create');
 
@@ -25,6 +23,7 @@ Route::middleware('rol:admin')->group(function () {
     Route::put('/profesores/{profesor}/reactivar', [ProfesorController::class, 'reactivar'])
         ->name('profesores.reactivar');
 
+    // Después las rutas con parámetros.
     Route::get('/profesores/{profesor}/edit', [ProfesorController::class, 'edit'])
         ->name('profesores.edit');
 
@@ -34,3 +33,7 @@ Route::middleware('rol:admin')->group(function () {
     Route::delete('/profesores/{profesor}', [ProfesorController::class, 'destroy'])
         ->name('profesores.destroy');
 });
+
+
+Route::get('/profesores/{profesor}', [ProfesorController::class, 'show'])
+    ->name('profesores.show');

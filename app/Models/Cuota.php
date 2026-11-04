@@ -12,6 +12,7 @@ class Cuota extends Model
     protected $fillable = [
         'nombre',
         'descripcion',
+        'tipo',
         'monto',
         'periodo_mes',
         'periodo_anio',

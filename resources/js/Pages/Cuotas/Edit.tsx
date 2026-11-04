@@ -4,6 +4,7 @@ interface Cuota {
     id: number;
     nombre: string;
     descripcion: string | null;
+    tipo: 'cuota_mensual' | 'inscripcion_torneo';
     monto: string;
     periodo_mes: number | null;
     periodo_anio: number | null;
@@ -44,6 +45,7 @@ export default function Edit({ cuota }: Props) {
     const { data, setData, put, processing, errors } = useForm({
         nombre: cuota.nombre,
         descripcion: cuota.descripcion ?? '',
+        tipo: cuota.tipo,
         monto: cuota.monto,
         periodo_mes: cuota.periodo_mes ?? new Date().getMonth() + 1,
         periodo_anio: cuota.periodo_anio ?? anioActual,
@@ -52,7 +54,6 @@ export default function Edit({ cuota }: Props) {
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-
         put(`/cuotas/${cuota.id}`);
     };
 
@@ -60,7 +61,7 @@ export default function Edit({ cuota }: Props) {
         <>
             <Head title="Editar cuota" />
 
-            <div className="min-h-screen bg-gray-100 p-6">
+            <div className="min-h-screen bg-slate-50 p-6">
                 <div className="mx-auto max-w-2xl">
                     <div className="mb-6">
                         <Link
@@ -70,20 +71,54 @@ export default function Edit({ cuota }: Props) {
                             ← Volver a cuotas
                         </Link>
 
-                        <h1 className="mt-3 text-3xl font-bold text-blue-700">
+                        <h1 className="mt-3 text-3xl font-bold text-slate-900">
                             Editar cuota
                         </h1>
 
-                        <p className="mt-1 text-gray-600">
-                            Modificar los datos de la cuota.
+                        <p className="mt-1 text-slate-500">
+                            Modificar los datos del concepto de cobro.
                         </p>
                     </div>
 
-                    <div className="rounded-xl bg-white p-6 shadow">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                         <form onSubmit={submit} className="space-y-5">
+
+                            {/* Tipo de concepto */}
+                            <div>
+                                <label className="mb-1 block font-medium text-slate-700">
+                                    Tipo de concepto
+                                </label>
+
+                                <select
+                                    value={data.tipo}
+                                    onChange={(e) =>
+                                        setData(
+                                            'tipo',
+                                            e.target.value as
+                                                | 'cuota_mensual'
+                                                | 'inscripcion_torneo',
+                                        )
+                                    }
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                >
+                                    <option value="cuota_mensual">
+                                        Cuota mensual
+                                    </option>
+                                    <option value="inscripcion_torneo">
+                                        Inscripción
+                                    </option>
+                                </select>
+
+                                {errors.tipo && (
+                                    <p className="mt-1 text-sm text-red-600">
+                                        {errors.tipo}
+                                    </p>
+                                )}
+                            </div>
+
                             {/* Nombre */}
                             <div>
-                                <label className="mb-1 block font-medium text-gray-700">
+                                <label className="mb-1 block font-medium text-slate-700">
                                     Nombre
                                 </label>
 
@@ -93,7 +128,7 @@ export default function Edit({ cuota }: Props) {
                                     onChange={(e) =>
                                         setData('nombre', e.target.value)
                                     }
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
+                                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none"
                                 />
 
                                 {errors.nombre && (
@@ -105,7 +140,7 @@ export default function Edit({ cuota }: Props) {
 
                             {/* Descripción */}
                             <div>
-                                <label className="mb-1 block font-medium text-gray-700">
+                                <label className="mb-1 block font-medium text-slate-700">
                                     Descripción
                                 </label>
 
@@ -115,7 +150,7 @@ export default function Edit({ cuota }: Props) {
                                         setData('descripcion', e.target.value)
                                     }
                                     rows={3}
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
+                                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none"
                                 />
 
                                 {errors.descripcion && (
@@ -127,7 +162,7 @@ export default function Edit({ cuota }: Props) {
 
                             {/* Monto */}
                             <div>
-                                <label className="mb-1 block font-medium text-gray-700">
+                                <label className="mb-1 block font-medium text-slate-700">
                                     Monto
                                 </label>
 
@@ -139,7 +174,7 @@ export default function Edit({ cuota }: Props) {
                                     onChange={(e) =>
                                         setData('monto', e.target.value)
                                     }
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
+                                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none"
                                 />
 
                                 {errors.monto && (
@@ -151,17 +186,19 @@ export default function Edit({ cuota }: Props) {
 
                             {/* Período */}
                             <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4">
-                                <h3 className="mb-1 font-semibold text-gray-800">
-                                    Período de la cuota
+                                <h3 className="mb-1 font-semibold text-slate-800">
+                                    Período del concepto
                                 </h3>
 
-                                <p className="mb-4 text-sm text-gray-500">
-                                    Mes y año al que corresponde este cobro.
+                                <p className="mb-4 text-sm text-slate-500">
+                                    Mes y año al que corresponde este cobro,
+                                    independientemente de su fecha de
+                                    vencimiento.
                                 </p>
 
                                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                                     <div>
-                                        <label className="mb-1 block font-medium text-gray-700">
+                                        <label className="mb-1 block font-medium text-slate-700">
                                             Mes correspondiente
                                         </label>
 
@@ -173,7 +210,7 @@ export default function Edit({ cuota }: Props) {
                                                     Number(e.target.value),
                                                 )
                                             }
-                                            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 focus:border-blue-500 focus:outline-none"
+                                            className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 focus:border-blue-500 focus:outline-none"
                                         >
                                             {meses.map((mes) => (
                                                 <option
@@ -193,7 +230,7 @@ export default function Edit({ cuota }: Props) {
                                     </div>
 
                                     <div>
-                                        <label className="mb-1 block font-medium text-gray-700">
+                                        <label className="mb-1 block font-medium text-slate-700">
                                             Año correspondiente
                                         </label>
 
@@ -205,7 +242,7 @@ export default function Edit({ cuota }: Props) {
                                                     Number(e.target.value),
                                                 )
                                             }
-                                            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 focus:border-blue-500 focus:outline-none"
+                                            className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 focus:border-blue-500 focus:outline-none"
                                         >
                                             {anios.map((anio) => (
                                                 <option
@@ -228,7 +265,7 @@ export default function Edit({ cuota }: Props) {
 
                             {/* Fecha de vencimiento */}
                             <div>
-                                <label className="mb-1 block font-medium text-gray-700">
+                                <label className="mb-1 block font-medium text-slate-700">
                                     Fecha de vencimiento
                                 </label>
 
@@ -241,7 +278,7 @@ export default function Edit({ cuota }: Props) {
                                             e.target.value,
                                         )
                                     }
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
+                                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none"
                                 />
 
                                 {errors.fecha_vencimiento && (
@@ -252,10 +289,10 @@ export default function Edit({ cuota }: Props) {
                             </div>
 
                             {/* Botones */}
-                            <div className="flex justify-end gap-3 border-t pt-5">
+                            <div className="flex justify-end gap-3 border-t border-slate-200 pt-5">
                                 <Link
                                     href="/cuotas"
-                                    className="rounded-lg border border-gray-300 px-5 py-2 text-gray-700 hover:bg-gray-50"
+                                    className="rounded-lg border border-slate-300 px-5 py-2.5 text-slate-700 hover:bg-slate-50"
                                 >
                                     Cancelar
                                 </Link>
@@ -263,7 +300,7 @@ export default function Edit({ cuota }: Props) {
                                 <button
                                     type="submit"
                                     disabled={processing}
-                                    className="rounded-lg bg-blue-600 px-5 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                                    className="rounded-lg bg-slate-950 px-5 py-2.5 font-medium text-white transition hover:bg-slate-800 disabled:opacity-50"
                                 >
                                     {processing
                                         ? 'Guardando...'
