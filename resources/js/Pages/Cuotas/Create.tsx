@@ -1,10 +1,34 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 
+const meses = [
+    { valor: 1, nombre: 'Enero' },
+    { valor: 2, nombre: 'Febrero' },
+    { valor: 3, nombre: 'Marzo' },
+    { valor: 4, nombre: 'Abril' },
+    { valor: 5, nombre: 'Mayo' },
+    { valor: 6, nombre: 'Junio' },
+    { valor: 7, nombre: 'Julio' },
+    { valor: 8, nombre: 'Agosto' },
+    { valor: 9, nombre: 'Septiembre' },
+    { valor: 10, nombre: 'Octubre' },
+    { valor: 11, nombre: 'Noviembre' },
+    { valor: 12, nombre: 'Diciembre' },
+];
+
+const anioActual = new Date().getFullYear();
+
+const anios = Array.from(
+    { length: 7 },
+    (_, index) => anioActual - 1 + index,
+);
+
 export default function Create() {
     const { data, setData, post, processing, errors } = useForm({
         nombre: '',
         descripcion: '',
         monto: '',
+        periodo_mes: new Date().getMonth() + 1,
+        periodo_anio: new Date().getFullYear(),
         fecha_vencimiento: '',
     });
 
@@ -39,6 +63,7 @@ export default function Create() {
 
                     <div className="rounded-xl bg-white p-6 shadow">
                         <form onSubmit={submit} className="space-y-5">
+                            {/* Nombre */}
                             <div>
                                 <label className="mb-1 block font-medium text-gray-700">
                                     Nombre
@@ -51,7 +76,7 @@ export default function Create() {
                                         setData('nombre', e.target.value)
                                     }
                                     className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
-                                    placeholder="Ej. Cuota octubre 2026"
+                                    placeholder="Ej. Cuota mensual"
                                 />
 
                                 {errors.nombre && (
@@ -61,6 +86,7 @@ export default function Create() {
                                 )}
                             </div>
 
+                            {/* Descripción */}
                             <div>
                                 <label className="mb-1 block font-medium text-gray-700">
                                     Descripción
@@ -86,6 +112,7 @@ export default function Create() {
                                 )}
                             </div>
 
+                            {/* Monto */}
                             <div>
                                 <label className="mb-1 block font-medium text-gray-700">
                                     Monto
@@ -110,6 +137,85 @@ export default function Create() {
                                 )}
                             </div>
 
+                            {/* Período */}
+                            <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4">
+                                <h3 className="mb-1 font-semibold text-gray-800">
+                                    Período de la cuota
+                                </h3>
+
+                                <p className="mb-4 text-sm text-gray-500">
+                                    Indicá el mes y año al que corresponde este
+                                    cobro.
+                                </p>
+
+                                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                                    <div>
+                                        <label className="mb-1 block font-medium text-gray-700">
+                                            Mes correspondiente
+                                        </label>
+
+                                        <select
+                                            value={data.periodo_mes}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'periodo_mes',
+                                                    Number(e.target.value),
+                                                )
+                                            }
+                                            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 focus:border-blue-500 focus:outline-none"
+                                        >
+                                            {meses.map((mes) => (
+                                                <option
+                                                    key={mes.valor}
+                                                    value={mes.valor}
+                                                >
+                                                    {mes.nombre}
+                                                </option>
+                                            ))}
+                                        </select>
+
+                                        {errors.periodo_mes && (
+                                            <p className="mt-1 text-sm text-red-600">
+                                                {errors.periodo_mes}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <label className="mb-1 block font-medium text-gray-700">
+                                            Año correspondiente
+                                        </label>
+
+                                        <select
+                                            value={data.periodo_anio}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'periodo_anio',
+                                                    Number(e.target.value),
+                                                )
+                                            }
+                                            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 focus:border-blue-500 focus:outline-none"
+                                        >
+                                            {anios.map((anio) => (
+                                                <option
+                                                    key={anio}
+                                                    value={anio}
+                                                >
+                                                    {anio}
+                                                </option>
+                                            ))}
+                                        </select>
+
+                                        {errors.periodo_anio && (
+                                            <p className="mt-1 text-sm text-red-600">
+                                                {errors.periodo_anio}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Fecha de vencimiento */}
                             <div>
                                 <label className="mb-1 block font-medium text-gray-700">
                                     Fecha de vencimiento
@@ -134,6 +240,7 @@ export default function Create() {
                                 )}
                             </div>
 
+                            {/* Botones */}
                             <div className="flex justify-end gap-3 border-t pt-5">
                                 <Link
                                     href="/cuotas"

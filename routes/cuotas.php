@@ -6,7 +6,6 @@ use App\Http\Controllers\CuotaXJugadorController;
 use App\Http\Controllers\PagoController;
 
 // Consultas: cualquier usuario autenticado.
-// Más adelante limitaremos los resultados según el rol.
 Route::get('/cuotas', [CuotaController::class, 'index'])
     ->name('cuotas.index');
 
@@ -19,8 +18,17 @@ Route::get('/cuotas/asignaciones', [CuotaXJugadorController::class, 'index'])
 Route::get('/pagos', [PagoController::class, 'index'])
     ->name('pagos.index');
 
-// Gestión de cuotas y asignaciones: solo administradores.
+// Consultar los pagos de una cuota asignada.
+Route::get(
+    '/cuotas/asignaciones/{cuotaXJugador}/pagos',
+    [PagoController::class, 'show']
+)->name('cuotas.asignaciones.pagos.index');
+Route::get('/cuotas/seguimiento', [CuotaXJugadorController::class, 'seguimiento'])
+    ->name('cuotas.seguimiento');
+
+// Gestión: solo administradores.
 Route::middleware('rol:admin')->group(function () {
+
     Route::get('/cuotas/create', [CuotaController::class, 'create'])
         ->name('cuotas.create');
 
@@ -44,4 +52,19 @@ Route::middleware('rol:admin')->group(function () {
 
     Route::post('/cuotas/asignaciones', [CuotaXJugadorController::class, 'store'])
         ->name('cuotas.asignaciones.store');
+        Route::get(
+    '/cuotas/asignaciones/masivas/crear',
+    [CuotaXJugadorController::class, 'createMasivo']
+)->name('cuotas.asignaciones.masivas.create');
+
+    Route::post(
+        '/cuotas/asignaciones/masivas',
+        [CuotaXJugadorController::class, 'storeMasivo']
+    )->name('cuotas.asignaciones.masivas.store');    
+
+    // Registrar un pago.
+    Route::post(
+        '/cuotas/asignaciones/{cuotaXJugador}/pagos',
+        [PagoController::class, 'store']
+    )->name('cuotas.asignaciones.pagos.store');
 });

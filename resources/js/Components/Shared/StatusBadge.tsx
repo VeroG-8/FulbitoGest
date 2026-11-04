@@ -6,6 +6,7 @@ const statusStyles: Record<string, string> = {
     activo: 'bg-emerald-100 text-emerald-700 ring-emerald-600/20',
     activa: 'bg-emerald-100 text-emerald-700 ring-emerald-600/20',
     inscripto: 'bg-emerald-100 text-emerald-700 ring-emerald-600/20',
+    pagada: 'bg-emerald-100 text-emerald-700 ring-emerald-600/20',
     finalizado: 'bg-slate-100 text-slate-700 ring-slate-600/20',
 
     pendiente: 'bg-amber-100 text-amber-700 ring-amber-600/20',

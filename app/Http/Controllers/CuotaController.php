@@ -27,9 +27,11 @@ class CuotaController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'nombre' => 'required|string|max:100',
+            'nombre' => 'required|string|max:150',
             'descripcion' => 'nullable|string|max:255',
             'monto' => 'required|numeric|min:0',
+            'periodo_mes' => 'required|integer|between:1,12',
+            'periodo_anio' => 'required|integer|min:2020|max:2100',
             'fecha_vencimiento' => 'required|date',
         ]);
 
@@ -53,9 +55,11 @@ class CuotaController extends Controller
     public function update(Request $request, Cuota $cuota)
     {
         $validated = $request->validate([
-            'nombre' => 'required|string|max:100',
+            'nombre' => 'required|string|max:150',
             'descripcion' => 'nullable|string|max:255',
             'monto' => 'required|numeric|min:0',
+            'periodo_mes' => 'required|integer|between:1,12',
+            'periodo_anio' => 'required|integer|min:2020|max:2100',
             'fecha_vencimiento' => 'required|date',
         ]);
 

@@ -261,31 +261,54 @@ export default function Dashboard() {
                         </section>
 
                         <section>
-                            <h2 className="mb-4 text-lg font-bold text-slate-800">
-                                Administración
-                            </h2>
+                            <div className="mb-4">
+                                <h2 className="text-lg font-bold text-slate-800">
+                                    Administración
+                                </h2>
+
+                                <p className="text-sm text-slate-500">
+                                    Gestioná las cuotas, asignaciones, pagos y recursos económicos
+                                    de la institución.
+                                </p>
+                            </div>
 
                             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+
                                 <AccesoRapido
                                     titulo="Tutores"
-                                    descripcion="Gestionar responsables de jugadores"
+                                    descripcion="Gestionar responsables de los jugadores"
                                     ruta="tutores.index"
                                     icono={<UserRound size={22} />}
                                 />
 
                                 <AccesoRapido
                                     titulo="Cuotas"
-                                    descripcion="Administrar cuotas de la institución"
+                                    descripcion="Crear y administrar cuotas institucionales"
                                     ruta="cuotas.index"
                                     icono={<CreditCard size={22} />}
                                 />
 
                                 <AccesoRapido
+                                    titulo="Asignaciones"
+                                    descripcion="Asignar cuotas a jugadores y categorías"
+                                    ruta="cuotas.asignaciones.index"
+                                    icono={<ClipboardList size={22} />}
+                                />
+
+                                <AccesoRapido
                                     titulo="Pagos"
-                                    descripcion="Consultar pagos registrados"
+                                    descripcion="Consultar pagos e historial de cobros"
                                     ruta="pagos.index"
                                     icono={<Wallet size={22} />}
                                 />
+
+                                <AccesoRapido
+                                    titulo="Reportes y estadísticas"
+                                    descripcion="Consultar recaudación, deudas e indicadores"
+                                    ruta="reportes.index"
+                                    icono={<CalendarDays size={22} />}
+                                />
+
                             </div>
                         </section>
                     </>

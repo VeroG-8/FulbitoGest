@@ -5,6 +5,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ReporteController;
 
 // Página de inicio
 Route::get('/', function () {
@@ -40,7 +41,9 @@ Route::middleware('auth')->group(function () {
     require __DIR__ . '/clubes.php';
     require __DIR__ . '/equipos.php';
     require __DIR__ . '/torneos.php';
+    require __DIR__ . '/reportes.php';
     require __DIR__ . '/usuarios.php';
+    
 });
 
 // Rutas de carnets: incluye la consulta pública por QR

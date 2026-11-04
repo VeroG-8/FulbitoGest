@@ -13,12 +13,16 @@ class Cuota extends Model
         'nombre',
         'descripcion',
         'monto',
+        'periodo_mes',
+        'periodo_anio',
         'fecha_vencimiento',
         'estado',
     ];
 
     protected $casts = [
         'monto' => 'decimal:2',
+        'periodo_mes' => 'integer',
+        'periodo_anio' => 'integer',
         'fecha_vencimiento' => 'date',
         'estado' => 'boolean',
     ];
