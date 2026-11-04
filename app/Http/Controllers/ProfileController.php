@@ -6,7 +6,6 @@ use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -29,28 +28,37 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        $user->fill($request->validated());
+
+        $emailChanged = $user->isDirty('email');
+
+        if ($emailChanged) {
+            $user->email_verified_at = null;
         }
 
-        $request->user()->save();
+        $user->save();
 
-        return Redirect::route('profile.edit');
+        if ($emailChanged) {
+            $user->sendEmailVerificationNotification();
+
+            return Redirect::route('profile.edit')
+                ->with('status', 'verification-link-sent');
+        }
+
+        return Redirect::route('profile.edit')
+            ->with('status', 'profile-updated');
     }
 
     /**
-     * Delete the user's account.
+     * Impedir la eliminación física de cuentas.
      */
-       /**
- * Impedir la eliminación física de cuentas.
- */
-public function destroy(Request $request): RedirectResponse
-{
-    return Redirect::route('profile.edit')
-        ->withErrors([
-            'password' => 'Las cuentas no pueden eliminarse desde el perfil. Si necesitas deshabilitar una cuenta, contacta al administrador.',
-        ]);
-}
+    public function destroy(Request $request): RedirectResponse
+    {
+        return Redirect::route('profile.edit')
+            ->withErrors([
+                'password' => 'Las cuentas no pueden eliminarse desde el perfil. Si necesitas deshabilitar una cuenta, contacta al administrador.',
+            ]);
+    }
 }

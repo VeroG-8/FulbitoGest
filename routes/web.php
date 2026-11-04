@@ -31,7 +31,7 @@ Route::middleware('auth')->group(function () {
 });
 
 // Rutas por módulo de FulbitoGest
-Route::middleware('auth')->group(function () {
+Route::middleware('auth', 'verified')->group(function () {
     require __DIR__ . '/jugadores.php';
     require __DIR__ . '/tutores.php';
     require __DIR__ . '/profesores.php';
