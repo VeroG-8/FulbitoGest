@@ -14,7 +14,6 @@ interface Props {
 export default function Create({ jugadores }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         jugador_id: '',
-        codigo: '',
         fecha_emision: '',
         fecha_vencimiento: '',
         estado: 'activo',
@@ -22,7 +21,6 @@ export default function Create({ jugadores }: Props) {
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-
         post('/carnets');
     };
 
@@ -60,6 +58,7 @@ export default function Create({ jugadores }: Props) {
                                 onChange={(e) =>
                                     setData('jugador_id', e.target.value)
                                 }
+                                required
                                 className="w-full rounded border px-3 py-2"
                             >
                                 <option value="">
@@ -84,28 +83,6 @@ export default function Create({ jugadores }: Props) {
                             )}
                         </div>
 
-                        <div className="mb-4">
-                            <label className="mb-1 block font-medium text-gray-700">
-                                Código
-                            </label>
-
-                            <input
-                                type="text"
-                                value={data.codigo}
-                                onChange={(e) =>
-                                    setData('codigo', e.target.value)
-                                }
-                                className="w-full rounded border px-3 py-2"
-                                placeholder="Ej. CAR-2026-001"
-                            />
-
-                            {errors.codigo && (
-                                <p className="mt-1 text-sm text-red-600">
-                                    {errors.codigo}
-                                </p>
-                            )}
-                        </div>
-
                         <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
                                 <label className="mb-1 block font-medium text-gray-700">
@@ -116,11 +93,9 @@ export default function Create({ jugadores }: Props) {
                                     type="date"
                                     value={data.fecha_emision}
                                     onChange={(e) =>
-                                        setData(
-                                            'fecha_emision',
-                                            e.target.value
-                                        )
+                                        setData('fecha_emision', e.target.value)
                                     }
+                                    required
                                     className="w-full rounded border px-3 py-2"
                                 />
 
@@ -140,11 +115,9 @@ export default function Create({ jugadores }: Props) {
                                     type="date"
                                     value={data.fecha_vencimiento}
                                     onChange={(e) =>
-                                        setData(
-                                            'fecha_vencimiento',
-                                            e.target.value
-                                        )
+                                        setData('fecha_vencimiento', e.target.value)
                                     }
+                                    required
                                     className="w-full rounded border px-3 py-2"
                                 />
 
@@ -164,13 +137,7 @@ export default function Create({ jugadores }: Props) {
                             <select
                                 value={data.estado}
                                 onChange={(e) =>
-                                    setData(
-                                        'estado',
-                                        e.target.value as
-                                            | 'activo'
-                                            | 'vencido'
-                                            | 'anulado'
-                                    )
+                                    setData('estado', e.target.value)
                                 }
                                 className="w-full rounded border px-3 py-2"
                             >
@@ -189,7 +156,7 @@ export default function Create({ jugadores }: Props) {
                         <div className="flex justify-end">
                             <button
                                 type="submit"
-                                disabled={processing}
+                                disabled={processing || jugadores.length === 0}
                                 className="rounded bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
                             >
                                 {processing
@@ -198,7 +165,6 @@ export default function Create({ jugadores }: Props) {
                             </button>
                         </div>
                     </form>
-
                 </div>
             </div>
         </>

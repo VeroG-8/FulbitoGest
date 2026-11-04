@@ -33,26 +33,28 @@ class CarnetController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+        public function store(Request $request)
     {
         $validated = $request->validate([
             'jugador_id' => 'required|exists:jugadores,id',
-            'codigo' => 'required|string|max:50|unique:carnets,codigo',
             'fecha_emision' => 'required|date',
             'fecha_vencimiento' => 'required|date|after_or_equal:fecha_emision',
             'estado' => 'required|in:activo,vencido,anulado',
         ]);
 
-        Carnet::create([
+        $carnet = Carnet::create([
             ...$validated,
             'qr_token' => Str::random(40),
+        ]);
+
+        $carnet->update([
+            'codigo' => 'CAR-' . str_pad($carnet->id, 6, '0', STR_PAD_LEFT),
         ]);
 
         return redirect()
             ->route('carnets.index')
             ->with('success', 'Carnet creado correctamente.');
     }
-
     public function show(Carnet $carnet)
     {
         $carnet->load('jugador');
@@ -79,7 +81,6 @@ class CarnetController extends Controller
     {
         $validated = $request->validate([
             'jugador_id' => 'required|exists:jugadores,id',
-            'codigo' => 'required|string|max:50|unique:carnets,codigo,' . $carnet->id,
             'fecha_emision' => 'required|date',
             'fecha_vencimiento' => 'required|date|after_or_equal:fecha_emision',
             'estado' => 'required|in:activo,vencido,anulado',

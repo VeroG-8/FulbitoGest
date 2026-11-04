@@ -28,17 +28,13 @@ export default function Edit({ carnet, jugadores }: Props) {
 
     const { data, setData, put, processing, errors } = useForm({
         jugador_id: String(carnet.jugador_id),
-        codigo: carnet.codigo,
         fecha_emision: formatearFechaInput(carnet.fecha_emision),
-        fecha_vencimiento: formatearFechaInput(
-            carnet.fecha_vencimiento
-        ),
+        fecha_vencimiento: formatearFechaInput(carnet.fecha_vencimiento),
         estado: carnet.estado,
     });
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-
         put(`/carnets/${carnet.id}`);
     };
 
@@ -66,6 +62,24 @@ export default function Edit({ carnet, jugadores }: Props) {
                         onSubmit={submit}
                         className="rounded-lg bg-white p-6 shadow"
                     >
+                        {/* Código del carnet: solo lectura */}
+                        <div className="mb-4">
+                            <label className="mb-1 block font-medium text-gray-700">
+                                Código del carnet
+                            </label>
+
+                            <input
+                                type="text"
+                                value={carnet.codigo}
+                                readOnly
+                                className="w-full cursor-not-allowed rounded border border-gray-300 bg-gray-100 px-3 py-2 text-gray-600"
+                            />
+
+                            <p className="mt-1 text-xs text-gray-500">
+                                El código es generado automáticamente y no puede modificarse.
+                            </p>
+                        </div>
+
                         <div className="mb-4">
                             <label className="mb-1 block font-medium text-gray-700">
                                 Jugador
@@ -96,27 +110,6 @@ export default function Edit({ carnet, jugadores }: Props) {
                             )}
                         </div>
 
-                        <div className="mb-4">
-                            <label className="mb-1 block font-medium text-gray-700">
-                                Código
-                            </label>
-
-                            <input
-                                type="text"
-                                value={data.codigo}
-                                onChange={(e) =>
-                                    setData('codigo', e.target.value)
-                                }
-                                className="w-full rounded border px-3 py-2"
-                            />
-
-                            {errors.codigo && (
-                                <p className="mt-1 text-sm text-red-600">
-                                    {errors.codigo}
-                                </p>
-                            )}
-                        </div>
-
                         <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
                                 <label className="mb-1 block font-medium text-gray-700">
@@ -127,10 +120,7 @@ export default function Edit({ carnet, jugadores }: Props) {
                                     type="date"
                                     value={data.fecha_emision}
                                     onChange={(e) =>
-                                        setData(
-                                            'fecha_emision',
-                                            e.target.value
-                                        )
+                                        setData('fecha_emision', e.target.value)
                                     }
                                     className="w-full rounded border px-3 py-2"
                                 />
@@ -151,10 +141,7 @@ export default function Edit({ carnet, jugadores }: Props) {
                                     type="date"
                                     value={data.fecha_vencimiento}
                                     onChange={(e) =>
-                                        setData(
-                                            'fecha_vencimiento',
-                                            e.target.value
-                                        )
+                                        setData('fecha_vencimiento', e.target.value)
                                     }
                                     className="w-full rounded border px-3 py-2"
                                 />
@@ -175,13 +162,10 @@ export default function Edit({ carnet, jugadores }: Props) {
                             <select
                                 value={data.estado}
                                 onChange={(e) =>
-                                    setData(
-                                        'estado',
-                                        e.target.value as
-                                            | 'activo'
-                                            | 'vencido'
-                                            | 'anulado'
-                                    )
+                                    setData('estado', e.target.value as
+                                        | 'activo'
+                                        | 'vencido'
+                                        | 'anulado')
                                 }
                                 className="w-full rounded border px-3 py-2"
                             >
@@ -209,7 +193,6 @@ export default function Edit({ carnet, jugadores }: Props) {
                             </button>
                         </div>
                     </form>
-
                 </div>
             </div>
         </>

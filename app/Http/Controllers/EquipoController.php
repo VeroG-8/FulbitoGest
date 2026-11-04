@@ -22,15 +22,12 @@ class EquipoController extends Controller
 
         $consulta = Equipo::with(['club', 'categoria']);
 
-        // El profesor solamente puede consultar equipos
-        // de las categorías que tiene asignadas.
         if ($usuario->rol === 'profesor') {
             $consulta->whereHas('categoria.profesores', function ($query) use ($usuario) {
                 $query->where('profesores.id', $usuario->profesor_id);
             });
         }
 
-        // El tutor no puede acceder al módulo de equipos.
         if ($usuario->rol === 'tutor') {
             abort(403, 'No tienes permiso para consultar los equipos.');
         }
@@ -62,14 +59,13 @@ class EquipoController extends Controller
     /**
      * Mostrar el formulario para crear un equipo.
      */
-  public function create()
-{
-    
-    return Inertia::render('Equipos/Create', [
-        'clubes' => Club::orderBy('nombre')->get(['id', 'nombre']),
-        'categorias' => Categoria::orderBy('nombre')->get(['id', 'nombre']),
-    ]);
-}
+    public function create()
+    {
+        return Inertia::render('Equipos/Create', [
+            'clubes' => Club::orderBy('nombre')->get(['id', 'nombre']),
+            'categorias' => Categoria::orderBy('nombre')->get(['id', 'nombre']),
+        ]);
+    }
 
     /**
      * Guardar un equipo nuevo.
@@ -91,11 +87,17 @@ class EquipoController extends Controller
                 'required',
                 'string',
                 'max:255',
+                Rule::unique('equipos', 'nombre')
+                    ->where(fn ($query) => $query
+                        ->where('club_id', $request->input('club_id'))
+                        ->where('categoria_id', $request->input('categoria_id'))),
             ],
             'estado' => [
                 'required',
                 'boolean',
             ],
+        ], [
+            'nombre.unique' => 'Ya existe un equipo con ese nombre para el club y la categoría seleccionados.',
         ]);
 
         Equipo::create($datos);
@@ -108,12 +110,10 @@ class EquipoController extends Controller
     /**
      * Mostrar los detalles de un equipo.
      */
-        public function show(Equipo $equipo)
+    public function show(Equipo $equipo)
     {
         $usuario = auth()->user();
 
-        // El profesor solo puede consultar equipos
-        // de las categorías que tiene asignadas.
         if ($usuario->rol === 'profesor') {
             $tieneAcceso = $equipo->categoria()
                 ->whereHas('profesores', function ($query) use ($usuario) {
@@ -128,7 +128,6 @@ class EquipoController extends Controller
             );
         }
 
-        // El tutor no tiene acceso al módulo de equipos.
         if ($usuario->rol === 'tutor') {
             abort(403, 'No tienes permiso para consultar equipos.');
         }
@@ -141,11 +140,8 @@ class EquipoController extends Controller
     }
 
     /**
-     * Mostrar el formulario de edición.
+     * Mostrar el formulario para editar un equipo.
      */
-   /**
- * Mostrar el formulario para editar un equipo.
- */
     public function edit(Equipo $equipo)
     {
         return Inertia::render('Equipos/Edit', [
@@ -177,11 +173,18 @@ class EquipoController extends Controller
                 'required',
                 'string',
                 'max:255',
+                Rule::unique('equipos', 'nombre')
+                    ->where(fn ($query) => $query
+                        ->where('club_id', $request->input('club_id'))
+                        ->where('categoria_id', $request->input('categoria_id')))
+                    ->ignore($equipo->id),
             ],
             'estado' => [
                 'required',
                 'boolean',
             ],
+        ], [
+            'nombre.unique' => 'Ya existe otro equipo con ese nombre para el club y la categoría seleccionados.',
         ]);
 
         $equipo->update($datos);
@@ -194,18 +197,13 @@ class EquipoController extends Controller
     /**
      * Eliminar un equipo.
      */
-    /**
- * Eliminar un equipo.
- */
     public function destroy(Equipo $equipo)
     {
-        // Verificar si tiene partidos como local o visitante
         $tienePartidos = DB::table('partidos')
             ->where('equipo_local_id', $equipo->id)
             ->orWhere('equipo_visitante_id', $equipo->id)
             ->exists();
 
-        // Impedir la eliminación si tiene partidos registrados
         if ($tienePartidos) {
             return redirect()
                 ->route('equipos.index')
@@ -215,7 +213,6 @@ class EquipoController extends Controller
                 );
         }
 
-        // Eliminar el equipo
         $equipo->delete();
 
         return redirect()
