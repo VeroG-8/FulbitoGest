@@ -57,13 +57,21 @@ class JugadorController extends Controller
             });
         }
 
-        // Filtro por categoría.
-        $categoria = $request->input('categoria');
+      // Filtro por múltiples categorías.
+        $categoria = $request->input('categoria', []);
 
-        if ($categoria) {
-            $consulta->where('categoria_id', $categoria);
+        if (!is_array($categoria)) {
+            $categoria = $categoria !== '' ? [$categoria] : [];
         }
 
+        $categoria = array_values(array_filter(
+            $categoria,
+            fn ($id) => filter_var($id, FILTER_VALIDATE_INT) !== false
+        ));
+
+        if (!empty($categoria)) {
+            $consulta->whereIn('categoria_id', $categoria);
+        }
         // Ordenamiento seguro: solo se permiten estos campos.
         $orden = $request->input('orden', 'apellido');
         $direccion = $request->input('direccion', 'asc');

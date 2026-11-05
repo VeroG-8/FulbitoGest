@@ -13,7 +13,6 @@ import StatusBadge from '@/Components/Shared/StatusBadge';
 
 interface Categoria {
     id: number;
-    nombre: string;
     anio?: number;
 }
 
@@ -141,7 +140,7 @@ export default function Historial({ jugadores }: Props) {
 
                                                 <td className="px-5 py-4">
                                                     <span className="rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700">
-                                                        {jugador.categoria?.nombre ?? 'Sin categoría'}
+                                                        {jugador.categoria?.anio ?? 'Sin categoría'}
                                                     </span>
                                                 </td>
 

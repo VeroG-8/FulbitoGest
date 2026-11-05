@@ -8,8 +8,10 @@ import {
     Eye,
     Pencil,
     Ban,
+    Check,
     ChevronLeft,
     ChevronRight,
+    ChevronDown,
     UserX,
     ArrowUp,
     ArrowDown,
@@ -71,8 +73,12 @@ export default function Index({
     totalInactivos
 }: Props) {
     const [buscar, setBuscar] = useState(filtros.buscar ?? '');
-    const [categoria, setCategoria] = useState(
-        filtros.categoria?.toString() ?? '',
+    const [categoria, setCategoria] = useState<string[]>(
+        Array.isArray(filtros.categoria)
+            ? filtros.categoria.map(String)
+            : filtros.categoria
+            ? [String(filtros.categoria)]
+            : [],
     );
     const [orden, setOrden] = useState(filtros.orden ?? 'apellido');
     const [direccion, setDireccion] = useState(
@@ -83,7 +89,15 @@ export default function Index({
         useState<Jugador | null>(null);
 
     const [procesando, setProcesando] = useState(false);
+    const [categoriasAbiertas, setCategoriasAbiertas] = useState(false);
 
+    const toggleCategoria = (id: string) => {
+        setCategoria((actuales) =>
+            actuales.includes(id)
+                ? actuales.filter((item) => item !== id)
+                : [...actuales, id]
+        );
+    };
     // Aplicar búsqueda y filtros.
     const aplicarFiltros = (e?: FormEvent<HTMLFormElement>) => {
         e?.preventDefault();
@@ -240,20 +254,64 @@ export default function Index({
                         </div>
 
                         {/* Categoría */}
-                        <div className="sm:w-40">
-                            <select
-                                value={categoria}
-                                onChange={(e) => setCategoria(e.target.value)}
-                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        <div className="sm:w-35">
+                        <div className="relative w-full">
+                            <button
+                                type="button"
+                                onClick={() => setCategoriasAbiertas(!categoriasAbiertas)}
+                                className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 transition hover:border-blue-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                             >
-                                <option value="">Categorías</option>
+                                <span>
+                                    {categoria.length === 0
+                                        ? 'Categorías'
+                                        : `${categoria.length} categorías seleccionadas`}
+                                </span>
 
-                                {categorias.map((item) => (
-                                    <option key={item.id} value={item.id}>
-                                        {item.nombre} ({item.anio})
-                                    </option>
-                                ))}
-                            </select>
+                                <ChevronDown
+                                    size={18}
+                                    className={`transition-transform ${
+                                        categoriasAbiertas ? 'rotate-180' : ''
+                                    }`}
+                                />
+                            </button>
+
+                            {categoriasAbiertas && (
+                                <div className="absolute left-0 top-full z-50 mt-2 w-full min-w-[220px] rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                                    <div className="mb-2 flex items-center justify-between border-b border-slate-100 px-2 pb-2">
+                                    
+                                        <button
+                                            type="button"
+                                            onClick={() => setCategoria([])}
+                                            className="text-xs font-medium text-blue-600 hover:text-blue-800"
+                                        >
+                                            Limpiar
+                                        </button>
+                                    </div>
+
+                                    <div className="max-h-52 space-y-1 overflow-y-auto">
+                                        {categorias.map((item) => (
+                                            <label
+                                                key={item.id}
+                                                className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 transition hover:bg-blue-50"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={categoria.includes(String(item.id))}
+                                                    onChange={() =>
+                                                        toggleCategoria(String(item.id))
+                                                    }
+                                                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                />
+
+                                                <span>
+                                                    {item.anio}
+                                                </span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                         </div>
 
                         {/* Buscar */}
@@ -270,7 +328,7 @@ export default function Index({
                             type="button"
                             onClick={() => {
                                 setBuscar('');
-                                setCategoria('');
+                                setCategoria([]);
                                 setOrden('apellido');
                                 setDireccion('asc');
 

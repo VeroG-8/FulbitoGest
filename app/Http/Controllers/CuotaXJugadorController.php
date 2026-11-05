@@ -21,7 +21,7 @@ class CuotaXJugadorController extends Controller
         // Consulta base de asignaciones
         $consulta = CuotaXJugador::with([
             'cuota',
-            'jugador.categoria',
+            'jugador.categoria:id,anio',
         ]);
 
         // Aplicar filtro por categoría
@@ -55,8 +55,8 @@ class CuotaXJugadorController extends Controller
             ->withQueryString();
 
         // Categorías disponibles para el filtro
-        $categorias = Categoria::orderBy('nombre')
-            ->get(['id', 'nombre']);
+        $categorias = Categoria::orderBy('anio')
+            ->get(['id', 'anio']);
 
         return Inertia::render('Cuotas/Asignaciones/Index', [
             'asignaciones' => $asignaciones,
@@ -171,8 +171,8 @@ class CuotaXJugadorController extends Controller
             ->orderBy('nombre')
             ->get(['id', 'nombre', 'monto']);
 
-        $categorias = Categoria::orderBy('nombre')
-            ->get(['id', 'nombre']);
+        $categorias = Categoria::orderBy('anio')
+            ->get(['id', 'anio']);
 
         return Inertia::render('Cuotas/Asignaciones/CreateMasivo', [
             'cuotas' => $cuotas,
@@ -193,8 +193,8 @@ class CuotaXJugadorController extends Controller
         $categoriaId = $request->input('categoria_id');
 
         // Categorías disponibles para el filtro.
-        $categorias = Categoria::orderBy('nombre')
-            ->get(['id', 'nombre']);
+        $categorias = Categoria::orderBy('anio')
+            ->get(['id', 'anio']);
 
         // Jugadores activos y sus asignaciones correspondientes al año.
         $jugadores = Jugador::where('estado', true)
@@ -202,7 +202,7 @@ class CuotaXJugadorController extends Controller
                 $query->where('categoria_id', $categoriaId);
             })
             ->with([
-                'categoria:id,nombre',
+                'categoria:id,anio',
 
                 'cuotaXJugadores' => function ($query) use ($anio) {
                     $query->whereHas('cuota', function ($q) use ($anio) {
@@ -288,7 +288,7 @@ class CuotaXJugadorController extends Controller
                 'id' => $jugador->id,
                 'apellido' => $jugador->apellido,
                 'nombre' => $jugador->nombre,
-                'categoria' => $jugador->categoria?->nombre,
+                'categoria' => $jugador->categoria?->anio,
                 'meses' => $meses,
             ];
         });

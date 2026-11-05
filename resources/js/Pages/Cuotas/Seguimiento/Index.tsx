@@ -20,13 +20,13 @@ interface Jugador {
     id: number;
     apellido: string;
     nombre: string;
-    categoria: string | null;
+    categoria: number | null;
     meses: Record<number, Mes>;
 }
 
 interface Categoria {
     id: number;
-    nombre: string;
+    anio: number;
 }
 
 interface Props {
@@ -210,7 +210,7 @@ export default function Index({
                                             key={categoria.id}
                                             value={categoria.id}
                                         >
-                                            {categoria.nombre}
+                                            {categoria.anio}
                                         </option>
                                     ))}
                                 </select>

@@ -24,14 +24,17 @@ interface Cuota {
 
 interface Categoria {
     id: number;
-    nombre: string;
+    anio: number;
 }
 
 interface Jugador {
     id: number;
     nombre: string;
     apellido: string;
-    categoria?: Categoria;
+    categoria?: {
+        id: number;
+        anio: number;
+    };
 }
 
 interface Asignacion {
@@ -138,6 +141,7 @@ export default function Index({
 
     return (
         <>
+        
             <Head title="Asignaciones de cuotas" />
 
             <div className="min-h-screen bg-slate-50 p-6">
@@ -210,7 +214,7 @@ export default function Index({
 
                                     {categorias.map((categoria) => (
                                         <option key={categoria.id} value={categoria.id}>
-                                            {categoria.nombre}
+                                            {categoria.anio}
                                         </option>
                                     ))}
                                 </select>
@@ -308,7 +312,7 @@ export default function Index({
                                             </td>
 
                                             <td className="whitespace-nowrap px-6 py-4 text-slate-600">
-                                                {asignacion.jugador.categoria?.nombre ?? '-'}
+                                                {asignacion.jugador.categoria?.anio ?? '-'}
                                             </td>
 
                                             <td className="whitespace-nowrap px-6 py-4 text-slate-600">
