@@ -1,4 +1,19 @@
 import { Head, Link, useForm } from '@inertiajs/react';
+import type { FormEvent } from 'react';
+import {
+    UserRound,
+    Users,
+    ArrowLeft,
+    Save,
+    IdCard,
+    CalendarDays,
+    Phone,
+    MapPin,
+    MapPinned,
+    ShieldCheck,
+} from 'lucide-react';
+
+import PageHeader from '@/Components/Shared/PageHeader';
 
 interface Categoria {
     id: number;
@@ -8,6 +23,86 @@ interface Categoria {
 
 interface Props {
     categorias: Categoria[];
+}
+
+const inputStyles =
+    'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100';
+
+interface CampoProps {
+    label: string;
+    value: string;
+    error?: string;
+    type?: string;
+    placeholder?: string;
+    onChange: (value: string) => void;
+}
+
+function Campo({
+    label,
+    value,
+    error,
+    type = 'text',
+    placeholder,
+    onChange,
+}: CampoProps) {
+    return (
+        <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                {label}
+            </label>
+
+            <input
+                type={type}
+                value={value}
+                placeholder={placeholder}
+                onChange={(e) => onChange(e.target.value)}
+                className={`${inputStyles} ${
+                    error
+                        ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
+                        : ''
+                }`}
+            />
+
+            {error && (
+                <p className="mt-1.5 text-xs font-medium text-red-600">
+                    {error}
+                </p>
+            )}
+        </div>
+    );
+}
+
+interface SeccionProps {
+    titulo: string;
+    descripcion: string;
+    icono: React.ReactNode;
+    children: React.ReactNode;
+}
+
+function Seccion({
+    titulo,
+    descripcion,
+    icono,
+    children,
+}: SeccionProps) {
+    return (
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center gap-3 border-b border-slate-100 px-6 py-5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                    {icono}
+                </div>
+
+                <div>
+                    <h2 className="font-bold text-slate-800">{titulo}</h2>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                        {descripcion}
+                    </p>
+                </div>
+            </div>
+
+            <div className="p-6">{children}</div>
+        </section>
+    );
 }
 
 export default function Create({ categorias }: Props) {
@@ -23,7 +118,7 @@ export default function Create({ categorias }: Props) {
         categoria_id: '',
     });
 
-    const submit = (e: React.FormEvent) => {
+    const submit = (e: FormEvent) => {
         e.preventDefault();
 
         post('/jugadores');
@@ -33,255 +128,185 @@ export default function Create({ categorias }: Props) {
         <>
             <Head title="Nuevo jugador" />
 
-            <div className="p-6">
-                <h1 className="mb-6 text-3xl font-bold text-blue-600">
-                    Nuevo jugador
-                </h1>
-
-                <form
-                    onSubmit={submit}
-                    className="max-w-2xl space-y-4"
-                >
-                    {/* DNI */}
-                    <div>
-                        <label className="mb-1 block font-medium">
-                            DNI
-                        </label>
-
-                        <input
-                            type="text"
-                            name="dni"
-                            value={data.dni}
-                            onChange={(e) =>
-                                setData('dni', e.target.value)
-                            }
-                            className="w-full rounded border border-gray-300 px-3 py-2"
-                        />
-
-                        {errors.dni && (
-                            <p className="mt-1 text-sm text-red-600">
-                                {errors.dni}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Nombre */}
-                    <div>
-                        <label className="mb-1 block font-medium">
-                            Nombre
-                        </label>
-
-                        <input
-                            type="text"
-                            name="nombre"
-                            value={data.nombre}
-                            onChange={(e) =>
-                                setData('nombre', e.target.value)
-                            }
-                            className="w-full rounded border border-gray-300 px-3 py-2"
-                        />
-
-                        {errors.nombre && (
-                            <p className="mt-1 text-sm text-red-600">
-                                {errors.nombre}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Apellido */}
-                    <div>
-                        <label className="mb-1 block font-medium">
-                            Apellido
-                        </label>
-
-                        <input
-                            type="text"
-                            name="apellido"
-                            value={data.apellido}
-                            onChange={(e) =>
-                                setData('apellido', e.target.value)
-                            }
-                            className="w-full rounded border border-gray-300 px-3 py-2"
-                        />
-
-                        {errors.apellido && (
-                            <p className="mt-1 text-sm text-red-600">
-                                {errors.apellido}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Nacionalidad */}
-                    <div>
-                        <label className="mb-1 block font-medium">
-                            Nacionalidad
-                        </label>
-
-                        <input
-                            type="text"
-                            name="nacionalidad"
-                            value={data.nacionalidad}
-                            onChange={(e) =>
-                                setData('nacionalidad', e.target.value)
-                            }
-                            className="w-full rounded border border-gray-300 px-3 py-2"
-                        />
-
-                        {errors.nacionalidad && (
-                            <p className="mt-1 text-sm text-red-600">
-                                {errors.nacionalidad}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Fecha de nacimiento */}
-                    <div>
-                        <label className="mb-1 block font-medium">
-                            Fecha de nacimiento
-                        </label>
-
-                        <input
-                            type="date"
-                            name="fecha_nacimiento"
-                            value={data.fecha_nacimiento}
-                            onChange={(e) =>
-                                setData(
-                                    'fecha_nacimiento',
-                                    e.target.value,
-                                )
-                            }
-                            className="w-full rounded border border-gray-300 px-3 py-2"
-                        />
-
-                        {errors.fecha_nacimiento && (
-                            <p className="mt-1 text-sm text-red-600">
-                                {errors.fecha_nacimiento}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Teléfono */}
-                    <div>
-                        <label className="mb-1 block font-medium">
-                            Teléfono
-                        </label>
-
-                        <input
-                            type="text"
-                            name="telefono"
-                            value={data.telefono}
-                            onChange={(e) =>
-                                setData('telefono', e.target.value)
-                            }
-                            className="w-full rounded border border-gray-300 px-3 py-2"
-                        />
-
-                        {errors.telefono && (
-                            <p className="mt-1 text-sm text-red-600">
-                                {errors.telefono}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Dirección */}
-                    <div>
-                        <label className="mb-1 block font-medium">
-                            Dirección
-                        </label>
-
-                        <input
-                            type="text"
-                            name="direccion"
-                            value={data.direccion}
-                            onChange={(e) =>
-                                setData('direccion', e.target.value)
-                            }
-                            className="w-full rounded border border-gray-300 px-3 py-2"
-                        />
-
-                        {errors.direccion && (
-                            <p className="mt-1 text-sm text-red-600">
-                                {errors.direccion}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Localidad */}
-                    <div>
-                        <label className="mb-1 block font-medium">
-                            Localidad
-                        </label>
-
-                        <input
-                            type="text"
-                            name="localidad"
-                            value={data.localidad}
-                            onChange={(e) =>
-                                setData('localidad', e.target.value)
-                            }
-                            className="w-full rounded border border-gray-300 px-3 py-2"
-                        />
-
-                        {errors.localidad && (
-                            <p className="mt-1 text-sm text-red-600">
-                                {errors.localidad}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Categoría */}
-                    <div>
-                        <label className="mb-1 block font-medium">
-                            Categoría
-                        </label>
-
-                        <select
-                            name="categoria_id"
-                            value={data.categoria_id}
-                            onChange={(e) =>
-                                setData('categoria_id', e.target.value)
-                            }
-                            className="w-full rounded border border-gray-300 px-3 py-2"
+            <div className="space-y-6">
+                {/* Encabezado */}
+                <PageHeader
+                    title="Nuevo jugador"
+                    description="Registrá los datos personales y deportivos del jugador."
+                    icon={<UserRound size={28} />}
+                    actions={
+                        <Link
+                            href="/jugadores"
+                            className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
                         >
-                            <option value="">
-                                Seleccionar categoría
-                            </option>
+                            <ArrowLeft size={17} />
+                            Volver
+                        </Link>
+                    }
+                />
 
-                            {categorias.map((categoria) => (
-                                <option
-                                    key={categoria.id}
-                                    value={categoria.id}
-                                >
-                                    {categoria.nombre}
+                <form onSubmit={submit} className="space-y-6">
+                    {/* Datos personales */}
+                    <Seccion
+                        titulo="Datos personales"
+                        descripcion="Información de identificación del jugador."
+                        icono={<IdCard size={21} />}
+                    >
+                        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                            <Campo
+                                label="DNI"
+                                value={data.dni}
+                                error={errors.dni}
+                                placeholder="Ingresar DNI"
+                                onChange={(value) => setData('dni', value)}
+                            />
+
+                            <Campo
+                                label="Nombre"
+                                value={data.nombre}
+                                error={errors.nombre}
+                                placeholder="Ingresar nombre"
+                                onChange={(value) => setData('nombre', value)}
+                            />
+
+                            <Campo
+                                label="Apellido"
+                                value={data.apellido}
+                                error={errors.apellido}
+                                placeholder="Ingresar apellido"
+                                onChange={(value) => setData('apellido', value)}
+                            />
+
+                            <Campo
+                                label="Nacionalidad"
+                                value={data.nacionalidad}
+                                error={errors.nacionalidad}
+                                placeholder="Ej. Argentina"
+                                onChange={(value) =>
+                                    setData('nacionalidad', value)
+                                }
+                            />
+
+                            <Campo
+                                label="Fecha de nacimiento"
+                                type="date"
+                                value={data.fecha_nacimiento}
+                                error={errors.fecha_nacimiento}
+                                onChange={(value) =>
+                                    setData('fecha_nacimiento', value)
+                                }
+                            />
+                        </div>
+                    </Seccion>
+
+                    {/* Datos de contacto */}
+                    <Seccion
+                        titulo="Datos de contacto"
+                        descripcion="Información de comunicación y domicilio."
+                        icono={<MapPin size={21} />}
+                    >
+                        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                            <Campo
+                                label="Teléfono"
+                                value={data.telefono}
+                                error={errors.telefono}
+                                placeholder="Ingresar teléfono"
+                                onChange={(value) =>
+                                    setData('telefono', value)
+                                }
+                            />
+
+                            <Campo
+                                label="Localidad"
+                                value={data.localidad}
+                                error={errors.localidad}
+                                placeholder="Ingresar localidad"
+                                onChange={(value) =>
+                                    setData('localidad', value)
+                                }
+                            />
+
+                            <Campo
+                                label="Dirección"
+                                value={data.direccion}
+                                error={errors.direccion}
+                                placeholder="Ingresar dirección"
+                                onChange={(value) =>
+                                    setData('direccion', value)
+                                }
+                            />
+                        </div>
+                    </Seccion>
+
+                    {/* Asignación deportiva */}
+                    <Seccion
+                        titulo="Asignación deportiva"
+                        descripcion="Seleccioná la categoría a la que pertenece el jugador."
+                        icono={<ShieldCheck size={21} />}
+                    >
+                        <div className="max-w-xl">
+                            <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                                Categoría
+                            </label>
+
+                            <select
+                                value={data.categoria_id}
+                                onChange={(e) =>
+                                    setData('categoria_id', e.target.value)
+                                }
+                                className={`${inputStyles} ${
+                                    errors.categoria_id
+                                        ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
+                                        : ''
+                                }`}
+                            >
+                                <option value="">
+                                    Seleccionar categoría
                                 </option>
-                            ))}
-                        </select>
 
-                        {errors.categoria_id && (
-                            <p className="mt-1 text-sm text-red-600">
-                                {errors.categoria_id}
-                            </p>
-                        )}
-                    </div>
+                                {categorias.map((categoria) => (
+                                    <option
+                                        key={categoria.id}
+                                        value={categoria.id}
+                                    >
+                                        {categoria.nombre} - {categoria.anio}
+                                    </option>
+                                ))}
+                            </select>
+
+                            {errors.categoria_id && (
+                                <p className="mt-1.5 text-xs font-medium text-red-600">
+                                    {errors.categoria_id}
+                                </p>
+                            )}
+
+                            {categorias.length === 0 && (
+                                <p className="mt-2 text-xs text-amber-600">
+                                    No hay categorías disponibles para asignar.
+                                </p>
+                            )}
+                        </div>
+                    </Seccion>
 
                     {/* Botones */}
-                    <div className="flex gap-3 pt-4">
+                    <div className="flex flex-col-reverse justify-end gap-3 border-t border-slate-200 pt-5 sm:flex-row">
+                        <Link
+                            href="/jugadores"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                        >
+                            Cancelar
+                        </Link>
+
                         <button
                             type="submit"
                             disabled={processing}
-                            className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
+                            <Save size={17} />
                             {processing
                                 ? 'Guardando...'
                                 : 'Guardar jugador'}
                         </button>
-
-                        <Link
-                            href="/jugadores"
-                            className="rounded bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
-                        >
-                            Cancelar
-                        </Link>
                     </div>
                 </form>
             </div>

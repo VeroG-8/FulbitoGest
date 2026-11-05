@@ -9,11 +9,12 @@ use Illuminate\Support\Facades\Validator;
 
 class TutorController extends Controller
 {
-    public function index()
+        public function index()
     {
         $usuario = auth()->user();
 
-        $consulta = Tutor::where('estado', true);
+        // Consulta base de tutores.
+        $consulta = Tutor::query();
 
         // El tutor solamente puede consultar su propia ficha.
         if ($usuario->rol === 'tutor') {
@@ -25,13 +26,26 @@ class TutorController extends Controller
             abort(403, 'No tienes permiso para consultar el listado de tutores.');
         }
 
-        $tutores = $consulta
+        // Estadísticas antes de aplicar el filtro de activos.
+        $totalActivos = (clone $consulta)
+            ->where('estado', true)
+            ->count();
+
+        $totalInactivos = (clone $consulta)
+            ->where('estado', false)
+            ->count();
+
+        // Listado de tutores activos.
+        $tutores = (clone $consulta)
+            ->where('estado', true)
             ->orderBy('apellido')
             ->orderBy('nombre')
             ->get();
 
         return Inertia::render('Tutores/Index', [
             'tutores' => $tutores,
+            'totalActivos' => $totalActivos,
+            'totalInactivos' => $totalInactivos,
         ]);
     }
     public function create()

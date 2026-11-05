@@ -70,7 +70,7 @@ class EquipoController extends Controller
     /**
      * Guardar un equipo nuevo.
      */
-    public function store(Request $request)
+        public function store(Request $request)
     {
         $datos = $request->validate([
             'club_id' => [
@@ -88,15 +88,21 @@ class EquipoController extends Controller
                 'string',
                 'max:255',
                 Rule::unique('equipos', 'nombre')
-                    ->where(fn ($query) => $query
-                        ->where('club_id', $request->input('club_id'))
-                        ->where('categoria_id', $request->input('categoria_id'))),
+                    ->where(function ($query) use ($request) {
+                        $query->where('club_id', $request->input('club_id'))
+                            ->where('categoria_id', $request->input('categoria_id'));
+                    }),
             ],
             'estado' => [
                 'required',
                 'boolean',
             ],
         ], [
+            'club_id.required' => 'Debés seleccionar un club.',
+            'club_id.exists' => 'El club seleccionado no existe.',
+            'categoria_id.required' => 'Debés seleccionar una categoría.',
+            'categoria_id.exists' => 'La categoría seleccionada no existe.',
+            'nombre.required' => 'El nombre del equipo es obligatorio.',
             'nombre.unique' => 'Ya existe un equipo con ese nombre para el club y la categoría seleccionados.',
         ]);
 

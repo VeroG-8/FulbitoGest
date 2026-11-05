@@ -1,46 +1,36 @@
 import { Head, Link } from '@inertiajs/react';
+import {
+    ArrowLeft,
+    Pencil,
+    UserRound,
+    Users,
+    Phone,
+    Mail,
+    MapPin,
+    CalendarDays,
+    IdCard,
+    ShieldCheck,
+    UserCheck,
+} from 'lucide-react';
 
 interface Categoria {
     id: number;
     nombre: string;
-    anio: number;
 }
 
 interface Tutor {
     id: number;
+    dni: string;
     nombre: string;
     apellido: string;
-    telefono: string | null;
     email: string | null;
-}
-
-interface Carnet {
-    id: number;
-    codigo: string;
-    qr_token: string;
-    fecha_emision: string;
-    fecha_vencimiento: string;
-    estado: string;
-}
-
-interface Torneo {
-    id: number;
-    nombre: string;
-    fecha_inicio: string;
-    fecha_fin: string;
-}
-
-interface Viaje {
-    id: number;
-    destino: string;
-    fecha_salida: string;
-    fecha_regreso: string;
-}
-
-interface Pase {
-    id: number;
-    fecha: string;
-    estado: string;
+    telefono: string | null;
+    direccion: string | null;
+    localidad: string | null;
+    pivot: {
+        parentesco: string | null;
+        es_tutor_principal: boolean | number;
+    };
 }
 
 interface Jugador {
@@ -49,348 +39,326 @@ interface Jugador {
     nombre: string;
     apellido: string;
     nacionalidad: string | null;
-    fecha_nacimiento: string;
+    fecha_nacimiento: string | null;
     telefono: string | null;
     direccion: string | null;
     localidad: string | null;
     estado: boolean;
-    categoria: Categoria;
+    categoria: Categoria | null;
     tutores: Tutor[];
-    carnets: Carnet[];
-    torneos: Torneo[];
-    viajes: Viaje[];
-    pases: Pase[];
 }
 
 interface Props {
     jugador: Jugador;
 }
 
+function mostrarDato(valor: string | number | null | undefined): string {
+    if (valor === null || valor === undefined || valor === '') {
+        return 'No especificado';
+    }
+
+    return String(valor);
+}
+
+function formatearFecha(fecha: string | null): string {
+    if (!fecha) return 'No especificada';
+
+    const partes = fecha.substring(0, 10).split('-');
+
+    if (partes.length !== 3) return fecha;
+
+    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+}
+
+function Dato({
+    etiqueta,
+    valor,
+    icono,
+}: {
+    etiqueta: string;
+    valor: string | number | null | undefined;
+    icono?: React.ReactNode;
+}) {
+    return (
+        <div className="flex items-start gap-3">
+            {icono && (
+                <div className="mt-1 text-slate-400">
+                    {icono}
+                </div>
+            )}
+
+            <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                    {etiqueta}
+                </p>
+
+                <p className="mt-1 font-medium text-slate-700">
+                    {mostrarDato(valor)}
+                </p>
+            </div>
+        </div>
+    );
+}
+
 export default function Show({ jugador }: Props) {
+    const tutores = jugador.tutores ?? [];
+
     return (
         <>
             <Head title={`Jugador - ${jugador.nombre} ${jugador.apellido}`} />
 
-            <div className="min-h-screen bg-gray-100 p-6">
-                <div className="mx-auto max-w-6xl">
+            <div className="w-full space-y-6">
 
                     {/* Encabezado */}
-                    <div className="mb-6 flex items-center justify-between">
+                    <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                         <div>
-                            <h1 className="text-3xl font-bold text-blue-600">
+                            <h1 className="text-2xl font-bold text-slate-900">
                                 Ficha del jugador
                             </h1>
 
-                            <p className="mt-1 text-gray-600">
-                                {jugador.apellido}, {jugador.nombre}
+                            <p className="mt-1 text-sm text-slate-500">
+                                Información personal y responsables asociados.
                             </p>
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                             <Link
                                 href="/jugadores"
-                                className="rounded bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
+                                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
                             >
+                                <ArrowLeft size={17} />
                                 Volver
                             </Link>
 
                             <Link
                                 href={`/jugadores/${jugador.id}/edit`}
-                                className="rounded bg-yellow-500 px-4 py-2 text-white hover:bg-yellow-600"
+                                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
                             >
-                                Editar
+                                <Pencil size={17} />
+                                Editar jugador
                             </Link>
                         </div>
                     </div>
 
-                    {/* Datos personales */}
-                    <div className="mb-6 rounded-lg bg-white p-6 shadow">
-                        <h2 className="mb-4 border-b pb-2 text-xl font-bold text-gray-700">
-                            Datos personales
-                        </h2>
+                    {/* Identificación del jugador */}
+                    <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div className="flex flex-col justify-between gap-4 bg-slate-950 p-6 text-white sm:flex-row sm:items-center">
+                            <div className="flex items-center gap-4">
+                                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10">
+                                    <UserRound size={30} />
+                                </div>
 
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                <div>
+                                    <h2 className="text-xl font-bold">
+                                        {jugador.nombre} {jugador.apellido}
+                                    </h2>
 
-                            <div>
-                                <p className="text-sm text-gray-500">DNI</p>
-                                <p className="font-semibold">{jugador.dni}</p>
+                                    <p className="mt-1 text-sm text-slate-300">
+                                        DNI: {jugador.dni}
+                                    </p>
+                                </div>
                             </div>
 
-                            <div>
-                                <p className="text-sm text-gray-500">Apellido</p>
-                                <p className="font-semibold">
-                                    {jugador.apellido}
-                                </p>
-                            </div>
-
-                            <div>
-                                <p className="text-sm text-gray-500">Nombre</p>
-                                <p className="font-semibold">
-                                    {jugador.nombre}
-                                </p>
-                            </div>
-
-                            <div>
-                                <p className="text-sm text-gray-500">
-                                    Nacionalidad
-                                </p>
-                                <p className="font-semibold">
-                                    {jugador.nacionalidad ?? 'No especificada'}
-                                </p>
-                            </div>
-
-                            <div>
-                                <p className="text-sm text-gray-500">
-                                    Fecha de nacimiento
-                                </p>
-                                <p className="font-semibold">
-                                    {jugador.fecha_nacimiento
-                                        ? jugador.fecha_nacimiento.substring(0, 10).split('-').reverse().join('/')
-                                        : 'No especificada'
-                                    }
-                                </p>
-                            </div>
-
-                            <div>
-                                <p className="text-sm text-gray-500">
-                                    Categoría
-                                </p>
-                                <p className="font-semibold">
-                                    {jugador.categoria?.nombre} -{' '}
-                                    {jugador.categoria?.anio}
-                                </p>
-                            </div>
-
-                            <div>
-                                <p className="text-sm text-gray-500">
-                                    Estado
-                                </p>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-slate-200">
+                                    {mostrarDato(jugador.categoria?.nombre)}
+                                </span>
 
                                 <span
-                                    className={`inline-block rounded px-3 py-1 text-sm font-semibold ${
+                                    className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
                                         jugador.estado
-                                            ? 'bg-green-100 text-green-700'
-                                            : 'bg-red-100 text-red-700'
+                                            ? 'bg-emerald-400/20 text-emerald-300'
+                                            : 'bg-red-400/20 text-red-300'
                                     }`}
                                 >
-                                    {jugador.estado
-                                        ? 'Activo'
-                                        : 'Deshabilitado'}
+                                    {jugador.estado ? 'Activo' : 'Inactivo'}
                                 </span>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Contacto */}
-                    <div className="mb-6 rounded-lg bg-white p-6 shadow">
-                        <h2 className="mb-4 border-b pb-2 text-xl font-bold text-gray-700">
-                            Datos de contacto
-                        </h2>
+                        {/* Datos personales */}
+                        <div className="p-6">
+                            <div className="mb-5 flex items-center gap-2">
+                                <IdCard className="text-blue-600" size={21} />
 
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-
-                            <div>
-                                <p className="text-sm text-gray-500">
-                                    Teléfono
-                                </p>
-                                <p className="font-semibold">
-                                    {jugador.telefono ?? 'No especificado'}
-                                </p>
+                                <h3 className="font-semibold text-slate-800">
+                                    Datos personales
+                                </h3>
                             </div>
 
-                            <div>
-                                <p className="text-sm text-gray-500">
-                                    Dirección
-                                </p>
-                                <p className="font-semibold">
-                                    {jugador.direccion ?? 'No especificada'}
-                                </p>
+                            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                                <Dato
+                                    etiqueta="Nombre"
+                                    valor={jugador.nombre}
+                                    icono={<UserRound size={18} />}
+                                />
+
+                                <Dato
+                                    etiqueta="Apellido"
+                                    valor={jugador.apellido}
+                                    icono={<UserRound size={18} />}
+                                />
+
+                                <Dato
+                                    etiqueta="DNI"
+                                    valor={jugador.dni}
+                                    icono={<IdCard size={18} />}
+                                />
+
+                                <Dato
+                                    etiqueta="Nacionalidad"
+                                    valor={jugador.nacionalidad}
+                                />
+
+                                <Dato
+                                    etiqueta="Fecha de nacimiento"
+                                    valor={formatearFecha(jugador.fecha_nacimiento)}
+                                    icono={<CalendarDays size={18} />}
+                                />
+
+                                <Dato
+                                    etiqueta="Categoría"
+                                    valor={jugador.categoria?.nombre}
+                                    icono={<ShieldCheck size={18} />}
+                                />
                             </div>
 
-                            <div>
-                                <p className="text-sm text-gray-500">
-                                    Localidad
-                                </p>
-                                <p className="font-semibold">
-                                    {jugador.localidad ?? 'No especificada'}
-                                </p>
+                            <div className="my-6 border-t border-slate-100" />
+
+                            <div className="mb-5 flex items-center gap-2">
+                                <MapPin className="text-blue-600" size={21} />
+
+                                <h3 className="font-semibold text-slate-800">
+                                    Datos de contacto
+                                </h3>
                             </div>
 
+                            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                                <Dato
+                                    etiqueta="Teléfono"
+                                    valor={jugador.telefono}
+                                    icono={<Phone size={18} />}
+                                />
+
+                                <Dato
+                                    etiqueta="Dirección"
+                                    valor={jugador.direccion}
+                                    icono={<MapPin size={18} />}
+                                />
+
+                                <Dato
+                                    etiqueta="Localidad"
+                                    valor={jugador.localidad}
+                                />
+                            </div>
                         </div>
                     </div>
 
-                    {/* Tutores */}
-                    <div className="mb-6 rounded-lg bg-white p-6 shadow">
-                        <h2 className="mb-4 border-b pb-2 text-xl font-bold text-gray-700">
-                            Tutores
-                        </h2>
+                    {/* Tutores asociados */}
+                    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-100 p-6">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                                    <Users size={23} />
+                                </div>
 
-                        {jugador.tutores.length === 0 ? (
-                            <p className="text-gray-500">
-                                No hay tutores asociados.
-                            </p>
+                                <div>
+                                    <h3 className="font-semibold text-slate-800">
+                                        Tutores asociados
+                                    </h3>
+
+                                    <p className="text-sm text-slate-500">
+                                        Responsables del jugador.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <span className="rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
+                                {tutores.length} {tutores.length === 1 ? 'tutor' : 'tutores'}
+                            </span>
+                        </div>
+
+                        {tutores.length > 0 ? (
+                            <div className="grid grid-cols-1 gap-4 p-6 lg:grid-cols-2">
+                                {tutores.map((tutor) => (
+                                    <div
+                                        key={tutor.id}
+                                        className="rounded-xl border border-slate-200 p-5 transition hover:border-blue-200"
+                                    >
+                                        <div className="mb-4 flex items-start justify-between gap-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                                                    <UserRound size={22} />
+                                                </div>
+
+                                                <div>
+                                                    <h4 className="font-semibold text-slate-800">
+                                                        {tutor.nombre} {tutor.apellido}
+                                                    </h4>
+
+                                                    <p className="text-sm text-slate-500">
+                                                        DNI: {mostrarDato(tutor.dni)}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {Boolean(tutor.pivot?.es_tutor_principal) && (
+                                                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                                                    <UserCheck size={14} />
+                                                    Principal
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-3 border-t border-slate-100 pt-4">
+                                            <Dato
+                                                etiqueta="Parentesco"
+                                                valor={tutor.pivot?.parentesco}
+                                            />
+
+                                            <Dato
+                                                etiqueta="Teléfono"
+                                                valor={tutor.telefono}
+                                                icono={<Phone size={17} />}
+                                            />
+
+                                            <Dato
+                                                etiqueta="Correo electrónico"
+                                                valor={tutor.email}
+                                                icono={<Mail size={17} />}
+                                            />
+
+                                            <Dato
+                                                etiqueta="Dirección"
+                                                valor={tutor.direccion}
+                                                icono={<MapPin size={17} />}
+                                            />
+
+                                            <Dato
+                                                etiqueta="Localidad"
+                                                valor={tutor.localidad}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full border-collapse border border-gray-300">
-                                    <thead>
-                                        <tr className="bg-gray-100">
-                                            <th className="border p-2 text-left">
-                                                Nombre
-                                            </th>
-                                            <th className="border p-2 text-left">
-                                                Teléfono
-                                            </th>
-                                            <th className="border p-2 text-left">
-                                                Email
-                                            </th>
-                                        </tr>
-                                    </thead>
+                            <div className="p-10 text-center">
+                                <Users
+                                    size={38}
+                                    className="mx-auto mb-3 text-slate-300"
+                                />
 
-                                    <tbody>
-                                        {jugador.tutores.map((tutor) => (
-                                            <tr key={tutor.id}>
-                                                <td className="border p-2">
-                                                    {tutor.apellido},{' '}
-                                                    {tutor.nombre}
-                                                </td>
+                                <p className="font-medium text-slate-600">
+                                    No hay tutores asociados.
+                                </p>
 
-                                                <td className="border p-2">
-                                                    {tutor.telefono ??
-                                                        'No especificado'}
-                                                </td>
-
-                                                <td className="border p-2">
-                                                    {tutor.email ??
-                                                        'No especificado'}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                <p className="mt-1 text-sm text-slate-400">
+                                    Este jugador todavía no tiene responsables registrados.
+                                </p>
                             </div>
                         )}
                     </div>
-
-                    {/* Carnets */}
-                    <div className="mb-6 rounded-lg bg-white p-6 shadow">
-                        <h2 className="mb-4 border-b pb-2 text-xl font-bold text-gray-700">
-                            Carnets
-                        </h2>
-
-                        {jugador.carnets.length === 0 ? (
-                            <p className="text-gray-500">
-                                No hay carnets registrados.
-                            </p>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full border-collapse border border-gray-300">
-                                    <thead>
-                                        <tr className="bg-gray-100">
-                                            <th className="border p-2 text-left">
-                                                Código
-                                            </th>
-                                            <th className="border p-2 text-left">
-                                                Emisión
-                                            </th>
-                                            <th className="border p-2 text-left">
-                                                Vencimiento
-                                            </th>
-                                            <th className="border p-2 text-left">
-                                                Estado
-                                            </th>
-                                        </tr>
-                                    </thead>
-
-                                    <tbody>
-                                        {jugador.carnets.map((carnet) => (
-                                            <tr key={carnet.id}>
-                                                <td className="border p-2">
-                                                    {carnet.codigo}
-                                                </td>
-
-                                                <td className="border p-2">
-                                                    {carnet.fecha_emision}
-                                                </td>
-
-                                                <td className="border p-2">
-                                                    {carnet.fecha_vencimiento}
-                                                </td>
-
-                                                <td className="border p-2">
-                                                    {carnet.estado}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Torneos */}
-                    <div className="mb-6 rounded-lg bg-white p-6 shadow">
-                        <h2 className="mb-4 border-b pb-2 text-xl font-bold text-gray-700">
-                            Torneos
-                        </h2>
-
-                        {jugador.torneos.length === 0 ? (
-                            <p className="text-gray-500">
-                                No hay torneos registrados.
-                            </p>
-                        ) : (
-                            <ul className="list-inside list-disc space-y-2">
-                                {jugador.torneos.map((torneo) => (
-                                    <li key={torneo.id}>
-                                        {torneo.nombre}
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
-
-                    {/* Viajes */}
-                    <div className="mb-6 rounded-lg bg-white p-6 shadow">
-                        <h2 className="mb-4 border-b pb-2 text-xl font-bold text-gray-700">
-                            Viajes
-                        </h2>
-
-                        {jugador.viajes.length === 0 ? (
-                            <p className="text-gray-500">
-                                No hay viajes registrados.
-                            </p>
-                        ) : (
-                            <ul className="list-inside list-disc space-y-2">
-                                {jugador.viajes.map((viaje) => (
-                                    <li key={viaje.id}>
-                                        {viaje.destino}
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
-
-                    {/* Pases */}
-                    <div className="mb-6 rounded-lg bg-white p-6 shadow">
-                        <h2 className="mb-4 border-b pb-2 text-xl font-bold text-gray-700">
-                            Pases
-                        </h2>
-
-                        {jugador.pases.length === 0 ? (
-                            <p className="text-gray-500">
-                                No hay pases registrados.
-                            </p>
-                        ) : (
-                            <ul className="list-inside list-disc space-y-2">
-                                {jugador.pases.map((pase) => (
-                                    <li key={pase.id}>
-                                        {pase.fecha} — {pase.estado}
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
-
-                </div>
             </div>
         </>
     );

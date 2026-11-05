@@ -243,9 +243,10 @@ export default function Authenticated({
                     href={route('logout')}
                     method="post"
                     as="button"
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-red-300 transition hover:bg-red-500/10 hover:text-red-200"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
                 >
-                    <LogOut size={18} />
+                    <LogOut size={17} />
                     Cerrar sesión
                 </Link>
             </div>
@@ -283,7 +284,7 @@ export default function Authenticated({
             {/* Contenido principal */}
             <div className="min-h-screen lg:pl-72">
                 {/* Barra superior */}
-                <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-5 shadow-sm sm:px-8">
+                <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 shadow-sm sm:px-6">
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => setSidebarOpen(true)}
@@ -341,12 +342,12 @@ export default function Authenticated({
 
                 {/* Encabezado de página */}
                 {header && (
-                    <div className="px-5 pt-7 sm:px-8">
+                    <div className="px-4 pt-5 sm:px-6">
                         {header}
                     </div>
                 )}
 
-                <main className="p-5 sm:p-8">
+                <main className="px-4 py-5 sm:px-6 sm:py-6">
                     {children}
                 </main>
             </div>

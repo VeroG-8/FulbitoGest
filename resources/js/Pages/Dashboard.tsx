@@ -1,4 +1,4 @@
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+
 import { Head, usePage, Link } from '@inertiajs/react';
 import {
     Users,
@@ -149,7 +149,7 @@ export default function Dashboard() {
     ];
 
     return (
-        <AuthenticatedLayout>
+        <>
             <Head title="Dashboard" />
 
             <div className="mx-auto max-w-7xl space-y-8">
@@ -809,7 +809,7 @@ export default function Dashboard() {
                     </p>
                 </div>
             </div>
-        </AuthenticatedLayout>
+        </>
     );
 }
 

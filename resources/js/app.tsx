@@ -1,15 +1,17 @@
 import '../css/app.css';
 
-
 import { createInertiaApp } from '@inertiajs/react';
-import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+import AuthenticatedLayout from './Layouts/AuthenticatedLayout';
+
+
+const appName = import.meta.env.VITE_APP_NAME || 'FulbitoGest';
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
+
     resolve: async (name) => {
         const pages = import.meta.glob('./Pages/**/*.tsx');
         const loadPage = pages[`./Pages/${name}.tsx`];
@@ -19,16 +21,38 @@ createInertiaApp({
         }
 
         const module = (await loadPage()) as {
-            default: ComponentType;
+            default: ComponentType & {
+                layout?: (page: ReactNode) => ReactNode;
+            };
         };
 
-        return module.default;
+        const page = module.default;
+
+            const paginasPublicas = [
+                'Auth/Login',
+                'Auth/VerifyEmail',
+                'Auth/ForgotPassword',
+                'Auth/ResetPassword',
+            ];
+
+            if (!paginasPublicas.includes(name)) {
+                page.layout =
+                    page.layout ??
+                    ((pageContent) => (
+                        <AuthenticatedLayout>
+                            {pageContent}
+                        </AuthenticatedLayout>
+                    ));
+            }
+
+            return page;
     },
-        setup({ el, App, props }) {
-        const root = createRoot(el);
-        root.render(<App {...props} />);
+
+    setup({ el, App, props }) {
+        createRoot(el).render(<App {...props} />);
     },
+
     progress: {
-        color: '#4B5563',
+        color: '#10B981',
     },
 });
