@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import {
     UserRound,
@@ -8,6 +9,11 @@ import {
     Phone,
     MapPin,
     BriefcaseBusiness,
+    Layers,
+    ChevronDown,
+    Search,
+    Check,
+    X,
 } from 'lucide-react';
 
 import PageHeader from '@/Components/Shared/PageHeader';
@@ -24,8 +30,15 @@ interface Profesor {
     especialidad: string | null;
 }
 
+interface Categoria {
+    id: number;
+    anio: number;
+}
+
 interface Props {
     profesor: Profesor;
+    categorias: Categoria[];
+    categoria_ids: number[];
 }
 
 interface ProfesorForm {
@@ -37,9 +50,17 @@ interface ProfesorForm {
     direccion: string;
     localidad: string;
     especialidad: string;
+    categoria_ids: number[];
 }
 
-export default function Edit({ profesor }: Props) {
+export default function Edit({
+    profesor,
+    categorias,
+    categoria_ids,
+}: Props) {
+    const [selectorAbierto, setSelectorAbierto] = useState(false);
+    const [busquedaCategoria, setBusquedaCategoria] = useState('');
+
     const { data, setData, put, processing, errors } =
         useForm<ProfesorForm>({
             dni: profesor.dni ?? '',
@@ -50,12 +71,36 @@ export default function Edit({ profesor }: Props) {
             direccion: profesor.direccion ?? '',
             localidad: profesor.localidad ?? '',
             especialidad: profesor.especialidad ?? '',
+            categoria_ids: categoria_ids ?? [],
         });
 
     function submit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         put(`/profesores/${profesor.id}`);
     }
+
+    function toggleCategoria(id: number) {
+        const seleccionadas = data.categoria_ids.includes(id)
+            ? data.categoria_ids.filter((categoriaId) => categoriaId !== id)
+            : [...data.categoria_ids, id];
+
+        setData('categoria_ids', seleccionadas);
+    }
+
+    function quitarCategoria(id: number) {
+        setData(
+            'categoria_ids',
+            data.categoria_ids.filter((categoriaId) => categoriaId !== id),
+        );
+    }
+
+    const categoriasFiltradas = categorias.filter((categoria) =>
+        String(categoria.anio).includes(busquedaCategoria.trim()),
+    );
+
+    const categoriasSeleccionadas = categorias.filter((categoria) =>
+        data.categoria_ids.includes(categoria.id),
+    );
 
     const inputClass =
         'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100';
@@ -307,6 +352,199 @@ export default function Edit({ profesor }: Props) {
                                     </p>
                                 )}
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Categorías asignadas */}
+                    <div className="overflow-visible rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div className="flex items-center gap-3 rounded-t-2xl border-b border-slate-100 px-6 py-5">
+                            <div className="rounded-xl bg-blue-50 p-2.5 text-blue-600">
+                                <Layers size={21} />
+                            </div>
+
+                            <div>
+                                <h2 className="font-bold text-slate-800">
+                                    Categorías asignadas
+                                </h2>
+                                <p className="mt-0.5 text-sm text-slate-500">
+                                    Seleccioná las categorías a cargo de este
+                                    profesor.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 p-6">
+                            <div className="relative max-w-xl">
+                                <label className={labelClass}>
+                                    Categorías
+                                </label>
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setSelectorAbierto(!selectorAbierto)
+                                    }
+                                    className={`flex w-full items-center justify-between rounded-xl border bg-white px-4 py-2.5 text-left text-sm transition ${
+                                        selectorAbierto
+                                            ? 'border-blue-500 ring-2 ring-blue-100'
+                                            : 'border-slate-200 hover:border-slate-300'
+                                    }`}
+                                >
+                                    <span className="text-slate-600">
+                                        {data.categoria_ids.length > 0
+                                            ? `${data.categoria_ids.length} ${
+                                                  data.categoria_ids.length === 1
+                                                      ? 'categoría seleccionada'
+                                                      : 'categorías seleccionadas'
+                                              }`
+                                            : 'Seleccionar categorías'}
+                                    </span>
+
+                                    <ChevronDown
+                                        size={18}
+                                        className={`text-slate-400 transition ${
+                                            selectorAbierto ? 'rotate-180' : ''
+                                        }`}
+                                    />
+                                </button>
+
+                                {selectorAbierto && (
+                                    <div className="absolute top-full right-0 left-0 z-30 mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                                        <div className="border-b border-slate-100 p-3">
+                                            <div className="relative">
+                                                <Search
+                                                    size={16}
+                                                    className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400"
+                                                />
+
+                                                <input
+                                                    type="text"
+                                                    value={busquedaCategoria}
+                                                    onChange={(e) =>
+                                                        setBusquedaCategoria(
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="Buscar por año..."
+                                                    className="w-full rounded-lg border border-slate-200 py-2 pr-3 pl-9 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="max-h-60 overflow-y-auto p-2">
+                                            {categoriasFiltradas.length > 0 ? (
+                                                categoriasFiltradas.map(
+                                                    (categoria) => {
+                                                        const seleccionada =
+                                                            data.categoria_ids.includes(
+                                                                categoria.id,
+                                                            );
+
+                                                        return (
+                                                            <button
+                                                                key={
+                                                                    categoria.id
+                                                                }
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    toggleCategoria(
+                                                                        categoria.id,
+                                                                    )
+                                                                }
+                                                                className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm transition ${
+                                                                    seleccionada
+                                                                        ? 'bg-blue-50 text-blue-700'
+                                                                        : 'text-slate-600 hover:bg-slate-50'
+                                                                }`}
+                                                            >
+                                                                <span>
+                                                                    Categoría{' '}
+                                                                    {
+                                                                        categoria.anio
+                                                                    }
+                                                                </span>
+
+                                                                {seleccionada && (
+                                                                    <Check
+                                                                        size={
+                                                                            17
+                                                                        }
+                                                                        className="text-blue-600"
+                                                                    />
+                                                                )}
+                                                            </button>
+                                                        );
+                                                    },
+                                                )
+                                            ) : (
+                                                <p className="px-3 py-4 text-center text-sm text-slate-400">
+                                                    No se encontraron categorías
+                                                    disponibles.
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Categorías seleccionadas */}
+                            {categoriasSeleccionadas.length > 0 ? (
+                                <div>
+                                    <p className="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                                        Categorías seleccionadas
+                                    </p>
+
+                                    <div className="flex flex-wrap gap-2">
+                                        {categoriasSeleccionadas.map(
+                                            (categoria) => (
+                                                <span
+                                                    key={categoria.id}
+                                                    className="inline-flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700"
+                                                >
+                                                    Categoría {categoria.anio}
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            quitarCategoria(
+                                                                categoria.id,
+                                                            )
+                                                        }
+                                                        className="rounded-full p-0.5 transition hover:bg-blue-100"
+                                                        title="Quitar categoría"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </span>
+                                            ),
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-slate-400">
+                                    Este profesor todavía no tiene categorías
+                                    asignadas.
+                                </p>
+                            )}
+
+                            {errors.categoria_ids && (
+                                <p className={errorClass}>
+                                    {errors.categoria_ids}
+                                </p>
+                            )}
+
+                            {errors['categoria_ids.0'] && (
+                                <p className={errorClass}>
+                                    {errors['categoria_ids.0']}
+                                </p>
+                            )}
+
+                            <p className="text-xs text-slate-500">
+                                Cada categoría puede tener un solo profesor
+                                responsable. Al guardar los cambios, los
+                                horarios de las categorías se actualizarán
+                                automáticamente.
+                            </p>
                         </div>
                     </div>
 

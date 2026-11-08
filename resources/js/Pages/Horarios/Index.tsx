@@ -12,6 +12,7 @@ import {
     Filter,
     CalendarCheck,
     ChevronDown,
+    Ban,
 } from 'lucide-react';
 
 import themePlugin from '@fullcalendar/react/themes/breezy';
@@ -155,6 +156,49 @@ export default function Index({ horarios }: Props) {
         });
     }, [horarios, categoriaSeleccionada, predioSeleccionado]);
 
+    const rangoHorario = useMemo(() => {
+    if (horariosFiltrados.length === 0) {
+        return {
+            inicio: '07:00:00',
+            fin: '22:00:00',
+        };
+    }
+
+    const horasInicio = horariosFiltrados.map((horario) =>
+        horario.hora_inicio.slice(0, 8),
+    );
+
+    const horasFin = horariosFiltrados.map((horario) =>
+        horario.hora_fin.slice(0, 8),
+    );
+
+    const inicio = horasInicio.reduce((menor, actual) =>
+        actual < menor ? actual : menor,
+    );
+
+    const ultimaHora = horasFin.reduce((mayor, actual) =>
+    actual > mayor ? actual : mayor,
+    );
+
+    // Agregar 30 minutos al último horario.
+    const [horas, minutos] = ultimaHora.split(':').map(Number);
+
+    const fechaFin = new Date(2000, 0, 1, horas, minutos);
+    fechaFin.setMinutes(fechaFin.getMinutes() + 30);
+
+    const fin = [
+        String(fechaFin.getHours()).padStart(2, '0'),
+        String(fechaFin.getMinutes()).padStart(2, '0'),
+        '00',
+    ].join(':');
+
+        return {
+            inicio,
+            fin,
+        };
+    }, [horariosFiltrados]);
+
+
     const eventos = useMemo<EventoCalendario[]>(() => {
     const resultado: EventoCalendario[] = [];
 
@@ -198,6 +242,11 @@ export default function Index({ horarios }: Props) {
         setCategoriaSeleccionada('todas');
         setPredioSeleccionado('todos');
     };
+    const deshabilitarHorario = (id: number) => {
+        if (confirm('¿Estás seguro de que deseas deshabilitar este horario?')) {
+            router.delete(`/horarios/${id}`);
+        }
+    };
 
     return (
         <>
@@ -222,14 +271,25 @@ export default function Index({ horarios }: Props) {
                             </div>
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={() => router.visit('/horarios/create')}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
-                        >
-                            <CalendarCheck size={18} />
-                            Nuevo horario
-                        </button>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={() => router.visit('/horarios/historial')}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
+                            >
+                                <Clock3 size={18} />
+                                Historial
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => router.visit('/horarios/create')}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
+                            >
+                                <CalendarCheck size={18} />
+                                Nuevo horario
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -424,6 +484,8 @@ export default function Index({ horarios }: Props) {
                             interactionPlugin,
                         ]}
                             initialView="timeGridWeek"
+                            slotMinTime={rangoHorario.inicio}
+                            slotMaxTime={rangoHorario.fin}
                             headerToolbar={{
                                 left: 'prev,next today',
                                 center: 'title',
@@ -462,13 +524,26 @@ export default function Index({ horarios }: Props) {
                                 );
                             }}
                             eventContent={(info) => {
-                                const horario = info.event.extendedProps
-                                    .horario as Horario;
+                                const horario = info.event.extendedProps.horario as Horario;
 
                                 return (
                                     <div className="h-full overflow-hidden px-1 py-0.5 text-left leading-tight">
-                                        <div className="truncate text-xs font-bold">
-                                            Categoría {horario.categoria?.anio}
+                                        <div className="flex items-center justify-between gap-1">
+                                            <div className="truncate text-xs font-bold">
+                                                Categoría {horario.categoria?.anio}
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                title="Deshabilitar horario"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    deshabilitarHorario(horario.id);
+                                                }}
+                                                className="shrink-0 rounded p-0.5 text-slate-700 transition hover:bg-white/60 hover:text-red-600"
+                                            >
+                                                <Ban size={14} />
+                                            </button>
                                         </div>
 
                                         <div className="mt-1 truncate text-[11px]">

@@ -1,5 +1,5 @@
 import { useForm, Link } from '@inertiajs/react';
-import type { FormEvent, ReactNode } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import {
     CalendarDays,
     Clock3,
@@ -9,6 +9,7 @@ import {
     ArrowLeft,
     Save,
     Info,
+    CheckCircle2,
 } from 'lucide-react';
 
 import PageHeader from '@/Components/Shared/PageHeader';
@@ -33,7 +34,6 @@ interface Predio {
 interface Cancha {
     id: number;
     nombre: string;
-    predio_id: number;
     predio: Predio;
 }
 
@@ -44,18 +44,11 @@ interface Props {
 
 interface HorarioForm {
     categoria_id: string;
-    profesor_id: string;
     cancha_id: string;
     dia_semana: string;
     hora_inicio: string;
     hora_fin: string;
 }
-
-const inputStyles =
-    'w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10';
-
-const labelStyles =
-    'mb-2 block text-sm font-semibold text-slate-700';
 
 const diasSemana = [
     { value: 'lunes', label: 'Lunes' },
@@ -65,18 +58,27 @@ const diasSemana = [
     { value: 'viernes', label: 'Viernes' },
 ];
 
-interface FormFieldProps {
+const inputStyles =
+    'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100';
+
+const labelStyles =
+    'mb-2 block text-sm font-semibold text-slate-700';
+
+function FormField({
+    label,
+    icon,
+    children,
+    error,
+}: {
     label: string;
     icon: ReactNode;
-    error?: string;
     children: ReactNode;
-}
-
-function FormField({ label, icon, error, children }: FormFieldProps) {
+    error?: string;
+}) {
     return (
         <div>
             <label className={labelStyles}>
-                <span className="flex items-center gap-2">
+                <span className="mb-2 flex items-center gap-2">
                     <span className="text-slate-400">{icon}</span>
                     {label}
                 </span>
@@ -85,7 +87,7 @@ function FormField({ label, icon, error, children }: FormFieldProps) {
             {children}
 
             {error && (
-                <p className="mt-2 text-sm font-medium text-red-600">
+                <p className="mt-1.5 text-xs font-medium text-red-600">
                     {error}
                 </p>
             )}
@@ -97,23 +99,29 @@ export default function Create({ categorias, canchas }: Props) {
     const { data, setData, post, processing, errors } =
         useForm<HorarioForm>({
             categoria_id: '',
-            profesor_id: '',
             cancha_id: '',
             dia_semana: '',
             hora_inicio: '',
             hora_fin: '',
         });
 
-    const categoriaSeleccionada = categorias.find(
-        (categoria) => String(categoria.id) === data.categoria_id,
-    );
+    const [categoriaSeleccionada, setCategoriaSeleccionada] =
+        useState<Categoria | null>(null);
 
-    const profesoresDisponibles =
-        categoriaSeleccionada?.profesores ?? [];
+    const profesorResponsable =
+        categoriaSeleccionada?.profesores?.[0] ?? null;
+
+    const seleccionarCategoria = (valor: string) => {
+        setData('categoria_id', valor);
+
+        const categoria =
+            categorias.find((item) => item.id === Number(valor)) ?? null;
+
+        setCategoriaSeleccionada(categoria);
+    };
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
-
         post('/horarios');
     };
 
@@ -121,55 +129,48 @@ export default function Create({ categorias, canchas }: Props) {
         <>
             <PageHeader
                 title="Nuevo horario"
-                description="Asigná días, horarios, profesores y canchas para los entrenamientos."
-                icon={<CalendarDays size={28} />}
-                actions={
-                    <Link
-                        href="/horarios"
-                        className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20"
-                    >
-                        <ArrowLeft size={17} />
-                        Volver
-                    </Link>
-                }
+                description="Configurá los días y horarios de entrenamiento."
+                icon={<CalendarDays size={24} />}
             />
 
-            <div className="space-y-6">
+            <div className="mx-auto max-w-5xl space-y-6">
                 <form onSubmit={submit} className="space-y-6">
-                    {/* Información del entrenamiento */}
-                    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                        <div className="flex items-center gap-3 border-b border-slate-100 px-6 py-5">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                                <Users size={20} />
-                            </div>
+                    {/* Categoría y profesor */}
+                    <section className="overflow-visible rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div className="border-b border-slate-100 px-6 py-5">
+                            <div className="flex items-center gap-3">
+                                <div className="rounded-xl bg-blue-50 p-2.5 text-blue-600">
+                                    <Users size={21} />
+                                </div>
 
-                            <div>
-                                <h2 className="font-semibold text-slate-900">
-                                    Información del entrenamiento
-                                </h2>
-                                <p className="text-sm text-slate-500">
-                                    Seleccioná la categoría y su profesor responsable.
-                                </p>
+                                <div>
+                                    <h2 className="font-semibold text-slate-900">
+                                        Asignación del horario
+                                    </h2>
+                                    <p className="mt-0.5 text-sm text-slate-500">
+                                        Seleccioná la categoría y consultá su
+                                        profesor responsable.
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 gap-5 p-6 sm:grid-cols-2">
+                        <div className="grid gap-5 p-6 md:grid-cols-2">
                             <FormField
                                 label="Categoría"
-                                icon={<Users size={17} />}
+                                icon={<Users size={16} />}
                                 error={errors.categoria_id}
                             >
                                 <select
                                     value={data.categoria_id}
-                                    onChange={(e) => {
-                                        setData('categoria_id', e.target.value);
-                                        setData('profesor_id', '');
-                                    }}
+                                    onChange={(e) =>
+                                        seleccionarCategoria(e.target.value)
+                                    }
                                     className={inputStyles}
                                     required
                                 >
                                     <option value="">
-                                        Seleccioná una categoría
+                                        Seleccionar categoría
                                     </option>
 
                                     {categorias.map((categoria) => (
@@ -185,66 +186,78 @@ export default function Create({ categorias, canchas }: Props) {
 
                             <FormField
                                 label="Profesor responsable"
-                                icon={<UserRound size={17} />}
-                                error={errors.profesor_id}
+                                icon={<UserRound size={16} />}
                             >
-                                <select
-                                    value={data.profesor_id}
-                                    onChange={(e) =>
-                                        setData('profesor_id', e.target.value)
-                                    }
-                                    className={inputStyles}
-                                    disabled={!data.categoria_id}
-                                    required
+                                <div
+                                    className={`flex min-h-[43px] items-center gap-3 rounded-xl border px-4 py-2.5 ${
+                                        profesorResponsable
+                                            ? 'border-emerald-200 bg-emerald-50'
+                                            : 'border-slate-200 bg-slate-50'
+                                    }`}
                                 >
-                                    <option value="">
-                                        {!data.categoria_id
-                                            ? 'Primero seleccioná una categoría'
-                                            : profesoresDisponibles.length === 0
-                                              ? 'No hay profesores asignados'
-                                              : 'Seleccioná un profesor'}
-                                    </option>
+                                    {profesorResponsable ? (
+                                        <>
+                                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                                                <UserRound size={16} />
+                                            </div>
 
-                                    {profesoresDisponibles.map((profesor) => (
-                                        <option
-                                            key={profesor.id}
-                                            value={profesor.id}
-                                        >
-                                            {profesor.apellido}, {profesor.nombre}
-                                        </option>
-                                    ))}
-                                </select>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-semibold text-slate-800">
+                                                    {profesorResponsable.apellido},{' '}
+                                                    {profesorResponsable.nombre}
+                                                </p>
+                                                <p className="text-xs text-emerald-700">
+                                                    Profesor asignado
+                                                </p>
+                                            </div>
 
-                                {data.categoria_id && (
-                                    <p className="mt-2 text-xs text-slate-500">
-                                        Solo se muestran los profesores asignados a esta categoría.
-                                    </p>
-                                )}
+                                            <CheckCircle2
+                                                size={18}
+                                                className="ml-auto shrink-0 text-emerald-600"
+                                            />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Info
+                                                size={18}
+                                                className="shrink-0 text-slate-400"
+                                            />
+                                            <p className="text-sm text-slate-500">
+                                                {data.categoria_id
+                                                    ? 'Sin profesor asignado'
+                                                    : 'Seleccioná una categoría'}
+                                            </p>
+                                        </>
+                                    )}
+                                </div>
                             </FormField>
                         </div>
                     </section>
 
                     {/* Ubicación */}
-                    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                        <div className="flex items-center gap-3 border-b border-slate-100 px-6 py-5">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                                <MapPin size={20} />
-                            </div>
+                    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div className="border-b border-slate-100 px-6 py-5">
+                            <div className="flex items-center gap-3">
+                                <div className="rounded-xl bg-emerald-50 p-2.5 text-emerald-600">
+                                    <MapPin size={21} />
+                                </div>
 
-                            <div>
-                                <h2 className="font-semibold text-slate-900">
-                                    Ubicación
-                                </h2>
-                                <p className="text-sm text-slate-500">
-                                    Indicá dónde se realizará el entrenamiento.
-                                </p>
+                                <div>
+                                    <h2 className="font-semibold text-slate-900">
+                                        Ubicación
+                                    </h2>
+                                    <p className="mt-0.5 text-sm text-slate-500">
+                                        Indicá la cancha donde se realizará el
+                                        entrenamiento.
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
                         <div className="p-6">
                             <FormField
                                 label="Cancha"
-                                icon={<MapPin size={17} />}
+                                icon={<MapPin size={16} />}
                                 error={errors.cancha_id}
                             >
                                 <select
@@ -256,7 +269,7 @@ export default function Create({ categorias, canchas }: Props) {
                                     required
                                 >
                                     <option value="">
-                                        Seleccioná una cancha
+                                        Seleccionar cancha
                                     </option>
 
                                     {canchas.map((cancha) => (
@@ -264,7 +277,8 @@ export default function Create({ categorias, canchas }: Props) {
                                             key={cancha.id}
                                             value={cancha.id}
                                         >
-                                            {cancha.predio?.nombre ?? 'Predio'} — {cancha.nombre}
+                                            {cancha.nombre} —{' '}
+                                            {cancha.predio?.nombre ?? 'Sin predio'}
                                         </option>
                                     ))}
                                 </select>
@@ -273,26 +287,29 @@ export default function Create({ categorias, canchas }: Props) {
                     </section>
 
                     {/* Día y horario */}
-                    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                        <div className="flex items-center gap-3 border-b border-slate-100 px-6 py-5">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
-                                <Clock3 size={20} />
-                            </div>
+                    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div className="border-b border-slate-100 px-6 py-5">
+                            <div className="flex items-center gap-3">
+                                <div className="rounded-xl bg-violet-50 p-2.5 text-violet-600">
+                                    <Clock3 size={21} />
+                                </div>
 
-                            <div>
-                                <h2 className="font-semibold text-slate-900">
-                                    Día y horario
-                                </h2>
-                                <p className="text-sm text-slate-500">
-                                    Definí cuándo se realizará el entrenamiento.
-                                </p>
+                                <div>
+                                    <h2 className="font-semibold text-slate-900">
+                                        Día y horario
+                                    </h2>
+                                    <p className="mt-0.5 text-sm text-slate-500">
+                                        Definí el día y la duración del
+                                        entrenamiento.
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 gap-5 p-6 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="grid gap-5 p-6 md:grid-cols-3">
                             <FormField
                                 label="Día de la semana"
-                                icon={<CalendarDays size={17} />}
+                                icon={<CalendarDays size={16} />}
                                 error={errors.dia_semana}
                             >
                                 <select
@@ -303,9 +320,7 @@ export default function Create({ categorias, canchas }: Props) {
                                     className={inputStyles}
                                     required
                                 >
-                                    <option value="">
-                                        Seleccioná un día
-                                    </option>
+                                    <option value="">Seleccionar día</option>
 
                                     {diasSemana.map((dia) => (
                                         <option
@@ -320,7 +335,7 @@ export default function Create({ categorias, canchas }: Props) {
 
                             <FormField
                                 label="Hora de inicio"
-                                icon={<Clock3 size={17} />}
+                                icon={<Clock3 size={16} />}
                                 error={errors.hora_inicio}
                             >
                                 <input
@@ -336,7 +351,7 @@ export default function Create({ categorias, canchas }: Props) {
 
                             <FormField
                                 label="Hora de finalización"
-                                icon={<Clock3 size={17} />}
+                                icon={<Clock3 size={16} />}
                                 error={errors.hora_fin}
                             >
                                 <input
@@ -353,37 +368,38 @@ export default function Create({ categorias, canchas }: Props) {
                     </section>
 
                     {/* Información */}
-                    <div className="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 px-5 py-4">
+                    <div className="flex gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3.5">
                         <Info
-                            size={20}
+                            size={19}
                             className="mt-0.5 shrink-0 text-blue-600"
                         />
 
                         <p className="text-sm leading-relaxed text-blue-800">
-                            Los horarios se asignan de lunes a viernes.
-                            El sistema verifica que no existan superposiciones
-                            para la misma categoría, profesor o cancha.
+                            El profesor se asignará automáticamente según la
+                            categoría seleccionada. Si la categoría todavía no
+                            tiene profesor responsable, el horario podrá
+                            crearse igualmente y se actualizará cuando se
+                            realice la asignación.
                         </p>
                     </div>
 
-                    {/* Botones */}
-                    <div className="flex flex-col-reverse justify-end gap-3 border-t border-slate-200 pt-5 sm:flex-row">
+                    {/* Acciones */}
+                    <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row">
                         <Link
                             href="/horarios"
-                            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
                         >
+                            <ArrowLeft size={17} />
                             Cancelar
                         </Link>
 
                         <button
                             type="submit"
                             disabled={processing}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                            <Save size={18} />
-                            {processing
-                                ? 'Guardando...'
-                                : 'Guardar horario'}
+                            <Save size={17} />
+                            {processing ? 'Guardando...' : 'Guardar horario'}
                         </button>
                     </div>
                 </form>

@@ -9,6 +9,7 @@ import {
     ArrowLeft,
     Save,
     Info,
+    CheckCircle2,
 } from 'lucide-react';
 
 import PageHeader from '@/Components/Shared/PageHeader';
@@ -40,7 +41,7 @@ interface Cancha {
 interface Horario {
     id: number;
     categoria_id: number;
-    profesor_id: number;
+    profesor_id: number | null;
     cancha_id: number;
     dia_semana: string;
     hora_inicio: string;
@@ -55,7 +56,6 @@ interface Props {
 
 interface HorarioForm {
     categoria_id: string;
-    profesor_id: string;
     cancha_id: string;
     dia_semana: string;
     hora_inicio: string;
@@ -119,7 +119,6 @@ export default function Edit({
     const { data, setData, put, processing, errors } =
         useForm<HorarioForm>({
             categoria_id: String(horario.categoria_id),
-            profesor_id: String(horario.profesor_id),
             cancha_id: String(horario.cancha_id),
             dia_semana: normalizarDia(horario.dia_semana),
             hora_inicio: horario.hora_inicio.slice(0, 5),
@@ -130,8 +129,8 @@ export default function Edit({
         (categoria) => String(categoria.id) === data.categoria_id,
     );
 
-    const profesoresDisponibles =
-        categoriaSeleccionada?.profesores ?? [];
+    const profesorResponsable =
+        categoriaSeleccionada?.profesores?.[0] ?? null;
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
@@ -143,7 +142,7 @@ export default function Edit({
         <>
             <PageHeader
                 title="Editar horario"
-                description="Modificá los días, horarios, profesores o canchas del entrenamiento."
+                description="Modificá los días, horarios o cancha del entrenamiento."
                 icon={<CalendarDays size={28} />}
                 actions={
                     <Link
@@ -170,8 +169,9 @@ export default function Edit({
                                 <h2 className="font-semibold text-slate-900">
                                     Información del entrenamiento
                                 </h2>
+
                                 <p className="text-sm text-slate-500">
-                                    Modificá la categoría y su profesor responsable.
+                                    Modificá la categoría y consultá su profesor responsable.
                                 </p>
                             </div>
                         </div>
@@ -184,10 +184,9 @@ export default function Edit({
                             >
                                 <select
                                     value={data.categoria_id}
-                                    onChange={(e) => {
-                                        setData('categoria_id', e.target.value);
-                                        setData('profesor_id', '');
-                                    }}
+                                    onChange={(e) =>
+                                        setData('categoria_id', e.target.value)
+                                    }
                                     className={inputStyles}
                                     required
                                 >
@@ -209,40 +208,51 @@ export default function Edit({
                             <FormField
                                 label="Profesor responsable"
                                 icon={<UserRound size={17} />}
-                                error={errors.profesor_id}
                             >
-                                <select
-                                    value={data.profesor_id}
-                                    onChange={(e) =>
-                                        setData('profesor_id', e.target.value)
-                                    }
-                                    className={inputStyles}
-                                    disabled={!data.categoria_id}
-                                    required
+                                <div
+                                    className={`flex min-h-[49px] items-center gap-3 rounded-xl border px-4 py-2.5 ${
+                                        profesorResponsable
+                                            ? 'border-emerald-200 bg-emerald-50'
+                                            : 'border-slate-200 bg-slate-50'
+                                    }`}
                                 >
-                                    <option value="">
-                                        {!data.categoria_id
-                                            ? 'Primero seleccioná una categoría'
-                                            : profesoresDisponibles.length === 0
-                                              ? 'No hay profesores asignados'
-                                              : 'Seleccioná un profesor'}
-                                    </option>
+                                    {profesorResponsable ? (
+                                        <>
+                                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                                                <UserRound size={16} />
+                                            </div>
 
-                                    {profesoresDisponibles.map((profesor) => (
-                                        <option
-                                            key={profesor.id}
-                                            value={profesor.id}
-                                        >
-                                            {profesor.apellido}, {profesor.nombre}
-                                        </option>
-                                    ))}
-                                </select>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-semibold text-slate-800">
+                                                    {profesorResponsable.apellido},{' '}
+                                                    {profesorResponsable.nombre}
+                                                </p>
 
-                                {data.categoria_id && (
-                                    <p className="mt-2 text-xs text-slate-500">
-                                        Solo se muestran los profesores asignados a esta categoría.
-                                    </p>
-                                )}
+                                                <p className="text-xs text-emerald-700">
+                                                    Profesor asignado
+                                                </p>
+                                            </div>
+
+                                            <CheckCircle2
+                                                size={18}
+                                                className="ml-auto shrink-0 text-emerald-600"
+                                            />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Info
+                                                size={18}
+                                                className="shrink-0 text-slate-400"
+                                            />
+
+                                            <p className="text-sm text-slate-500">
+                                                {data.categoria_id
+                                                    ? 'Sin profesor asignado'
+                                                    : 'Seleccioná una categoría'}
+                                            </p>
+                                        </>
+                                    )}
+                                </div>
                             </FormField>
                         </div>
                     </section>
@@ -258,6 +268,7 @@ export default function Edit({
                                 <h2 className="font-semibold text-slate-900">
                                     Ubicación
                                 </h2>
+
                                 <p className="text-sm text-slate-500">
                                     Modificá el lugar donde se realizará el entrenamiento.
                                 </p>
@@ -287,7 +298,8 @@ export default function Edit({
                                             key={cancha.id}
                                             value={cancha.id}
                                         >
-                                            {cancha.predio?.nombre ?? 'Predio'} — {cancha.nombre}
+                                            {cancha.predio?.nombre ?? 'Predio'} —{' '}
+                                            {cancha.nombre}
                                         </option>
                                     ))}
                                 </select>
@@ -306,6 +318,7 @@ export default function Edit({
                                 <h2 className="font-semibold text-slate-900">
                                     Día y horario
                                 </h2>
+
                                 <p className="text-sm text-slate-500">
                                     Modificá cuándo se realizará el entrenamiento.
                                 </p>
@@ -383,9 +396,10 @@ export default function Edit({
                         />
 
                         <p className="text-sm leading-relaxed text-blue-800">
-                            Los horarios se asignan de lunes a viernes.
-                            El sistema verifica que no existan superposiciones
-                            para la misma categoría, profesor o cancha.
+                            El profesor se obtiene automáticamente de la
+                            categoría seleccionada. El sistema verifica que
+                            no existan superposiciones para la misma categoría,
+                            profesor o cancha.
                         </p>
                     </div>
 
