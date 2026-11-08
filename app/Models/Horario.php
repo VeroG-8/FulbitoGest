@@ -11,10 +11,11 @@ class Horario extends Model
 
     protected $fillable = [
         'categoria_id',
+        'profesor_id',
+        'cancha_id',
         'dia_semana',
         'hora_inicio',
         'hora_fin',
-        'lugar',
         'estado',
     ];
 
@@ -25,5 +26,15 @@ class Horario extends Model
     public function categoria(): BelongsTo
     {
         return $this->belongsTo(Categoria::class);
+    }
+
+    public function profesor(): BelongsTo
+    {
+        return $this->belongsTo(Profesor::class);
+    }
+
+    public function cancha(): BelongsTo
+    {
+        return $this->belongsTo(Cancha::class);
     }
 }

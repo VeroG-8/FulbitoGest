@@ -28,8 +28,10 @@
         "@laravel/multiplex": "^0.4.1"
     },
     "dependencies": {
+        "@fullcalendar/react": "^7.1.4",
         "@inertiajs/react": "^3.7.1",
         "lucide-react": "^1.57.0",
-        "react-qr-code": "^2.2.0"
+        "react-qr-code": "^2.2.0",
+        "temporal-polyfill": "^1.0.8"
     }
 }

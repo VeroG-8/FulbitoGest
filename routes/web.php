@@ -36,6 +36,8 @@ Route::middleware('auth', 'verified')->group(function () {
     require __DIR__ . '/tutores.php';
     require __DIR__ . '/profesores.php';
     require __DIR__ . '/horarios.php';
+    require __DIR__ . '/predios.php';
+    require __DIR__ . '/canchas.php';
 
     require __DIR__ . '/cuotas.php';
     require __DIR__ . '/clubes.php';
