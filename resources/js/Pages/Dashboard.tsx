@@ -1,5 +1,7 @@
 
 import { Head, usePage, Link } from '@inertiajs/react';
+import StatCard from '@/Components/Shared/StatCard';
+import StatusBadge from '@/Components/Shared/StatusBadge';
 import {
     Users,
     GraduationCap,
@@ -39,34 +41,6 @@ const obtenerPeriodo = (mes: number | null, anio: number | null) => {
 
     return `${nombresMeses[mes] ?? ''} ${anio}`;
 };
-
-function EstadoBadge({ estado }: { estado: string }) {
-    const estilos: Record<string, string> = {
-        pendiente: 'bg-amber-100 text-amber-700',
-        parcial: 'bg-blue-100 text-blue-700',
-        abonado: 'bg-emerald-100 text-emerald-700',
-        inscripto: 'bg-emerald-100 text-emerald-700',
-        cancelado: 'bg-red-100 text-red-700',
-    };
-
-    const etiquetas: Record<string, string> = {
-        pendiente: 'Pendiente',
-        parcial: 'Pago parcial',
-        abonado: 'Abonado',
-        inscripto: 'Inscripto',
-        cancelado: 'Cancelado',
-    };
-
-    return (
-        <span
-            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                estilos[estado] ?? 'bg-slate-100 text-slate-600'
-            }`}
-        >
-            {etiquetas[estado] ?? estado}
-        </span>
-    );
-}
 
 export default function Dashboard() {
     const {
@@ -224,62 +198,31 @@ export default function Dashboard() {
                                 </p>
                             </div>
 
-                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                                {[
-                                    {
-                                        titulo: 'Total de jugadores',
-                                        valor: datosEstadisticos?.jugadores,
-                                        icono: <Users size={23} />,
-                                        color: 'bg-blue-100 text-blue-600',
-                                    },
-                                    {
-                                        titulo: 'Jugadores activos',
-                                        valor: datosEstadisticos?.jugadoresActivos,
-                                        icono: <Users size={23} />,
-                                        color: 'bg-emerald-100 text-emerald-600',
-                                    },
-                                    {
-                                        titulo: 'Equipos activos',
-                                        valor: datosEstadisticos?.equiposActivos,
-                                        icono: <ShieldCheck size={23} />,
-                                        color: 'bg-purple-100 text-purple-600',
-                                    },
-                                    {
-                                        titulo: 'Categorías activas',
-                                        valor: datosEstadisticos?.categoriasActivas,
-                                        icono: <ClipboardList size={23} />,
-                                        color: 'bg-amber-100 text-amber-600',
-                                    },
-                                    {
-                                        titulo: 'Profesores activos',
-                                        valor: datosEstadisticos?.profesoresActivos,
-                                        icono: <GraduationCap size={23} />,
-                                        color: 'bg-indigo-100 text-indigo-600',
-                                    },
-                                    {
-                                        titulo: 'Tutores activos',
-                                        valor: datosEstadisticos?.tutoresActivos,
-                                        icono: <UserRound size={23} />,
-                                        color: 'bg-pink-100 text-pink-600',
-                                    },
-                                ].map((item) => (
-                                    <div
-                                        key={item.titulo}
-                                        className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-                                    >
-                                        <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${item.color}`}>
-                                            {item.icono}
-                                        </div>
-
-                                        <p className="mt-4 text-sm font-medium text-slate-500">
-                                            {item.titulo}
-                                        </p>
-
-                                        <p className="mt-1 text-2xl font-bold text-slate-800">
-                                            {item.valor ?? 0}
-                                        </p>
-                                    </div>
-                                ))}
+                            <div className="grid gap-3 sm:grid-cols-4 xl:grid-cols-1">
+                              
+                                <StatCard
+                                    title="Jugadores activos"
+                                    value={datosEstadisticos?.jugadoresActivos ?? 0}
+                                    description="Jugadores en actividad"
+                                    icon={<Users size={23} />}
+                                    color="emerald"
+                                />
+                                
+                                <StatCard
+                                    title="Categorías activas"
+                                    value={datosEstadisticos?.categoriasActivas ?? 0}
+                                    description="Categorías disponibles"
+                                    icon={<ClipboardList size={23} />}
+                                    color="amber"
+                                />
+                                <StatCard
+                                    title="Profesores activos"
+                                    value={datosEstadisticos?.profesoresActivos ?? 0}
+                                    description="Profesores registrados"
+                                    icon={<GraduationCap size={23} />}
+                                    color="violet"
+                                />
+                              
                             </div>
                         </section>
 
@@ -401,18 +344,20 @@ export default function Dashboard() {
                             </div>
 
                             <div className="grid gap-4 sm:grid-cols-2">
-                                <TarjetaResumen
-                                    titulo="Mis categorías"
-                                    valor={datosProfesor?.total_categorias ?? 0}
-                                    icono={<ClipboardList size={23} />}
-                                    color="bg-purple-100 text-purple-700"
+                                <StatCard
+                                    title="Mis categorías"
+                                    value={datosProfesor?.total_categorias ?? 0}
+                                    description="Categorías asignadas"
+                                    icon={<ClipboardList size={23} />}
+                                    color="violet"
                                 />
 
-                                <TarjetaResumen
-                                    titulo="Jugadores a cargo"
-                                    valor={datosProfesor?.total_jugadores ?? 0}
-                                    icono={<Users size={23} />}
-                                    color="bg-blue-100 text-blue-700"
+                                <StatCard
+                                    title="Jugadores a cargo"
+                                    value={datosProfesor?.total_jugadores ?? 0}
+                                    description="Jugadores de mis categorías"
+                                    icon={<Users size={23} />}
+                                    color="blue"
                                 />
                             </div>
                         </section>
@@ -437,11 +382,8 @@ export default function Dashboard() {
                                             <div className="flex flex-col justify-between gap-3 border-b border-slate-200 bg-slate-50 p-5 sm:flex-row sm:items-center">
                                                 <div>
                                                     <h3 className="font-bold text-slate-800">
-                                                        {categoria.nombre}
+                                                        Categoría {categoria.anio ?? 'Sin año'}
                                                     </h3>
-                                                    <p className="text-sm text-slate-500">
-                                                        Año: {categoria.anio ?? 'No especificado'}
-                                                    </p>
                                                 </div>
 
                                                 <span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-700">
@@ -515,46 +457,52 @@ export default function Dashboard() {
                                     </div>
 
                                     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                                        <TarjetaResumen
-                                            titulo="Jugadores a cargo"
-                                            valor={datosTutor.total_jugadores}
-                                            icono={<Users size={23} />}
-                                            color="bg-blue-100 text-blue-700"
+                                        <StatCard
+                                            title="Jugadores a cargo"
+                                            value={datosTutor.total_jugadores ?? 0}
+                                            description="Jugadores vinculados"
+                                            icon={<Users size={23} />}
+                                            color="blue"
                                         />
 
-                                        <TarjetaResumen
-                                            titulo="Cuotas pendientes"
-                                            valor={datosTutor.total_cuotas_pendientes}
-                                            icono={<Clock3 size={23} />}
-                                            color="bg-amber-100 text-amber-700"
+                                        <StatCard
+                                            title="Cuotas pendientes"
+                                            value={datosTutor.total_cuotas_pendientes ?? 0}
+                                            description="Cuotas sin cancelar"
+                                            icon={<Clock3 size={23} />}
+                                            color="amber"
                                         />
 
-                                        <TarjetaResumen
-                                            titulo="Cuotas parciales"
-                                            valor={datosTutor.total_cuotas_parciales}
-                                            icono={<AlertCircle size={23} />}
-                                            color="bg-blue-100 text-blue-700"
+                                        <StatCard
+                                            title="Cuotas parciales"
+                                            value={datosTutor.total_cuotas_parciales ?? 0}
+                                            description="Cuotas con pagos parciales"
+                                            icon={<AlertCircle size={23} />}
+                                            color="blue"
                                         />
 
-                                        <TarjetaResumen
-                                            titulo="Cuotas abonadas"
-                                            valor={datosTutor.total_cuotas_abonadas}
-                                            icono={<CheckCircle2 size={23} />}
-                                            color="bg-emerald-100 text-emerald-700"
+                                        <StatCard
+                                            title="Cuotas abonadas"
+                                            value={datosTutor.total_cuotas_abonadas ?? 0}
+                                            description="Cuotas pagadas"
+                                            icon={<CheckCircle2 size={23} />}
+                                            color="emerald"
                                         />
 
-                                        <TarjetaResumen
-                                            titulo="Total abonado"
-                                            valor={formatoMoneda(datosTutor.monto_abonado)}
-                                            icono={<Banknote size={23} />}
-                                            color="bg-emerald-100 text-emerald-700"
+                                        <StatCard
+                                            title="Total abonado"
+                                            value={formatoMoneda(datosTutor.monto_abonado)}
+                                            description="Importe pagado"
+                                            icon={<Banknote size={23} />}
+                                            color="emerald"
                                         />
 
-                                        <TarjetaResumen
-                                            titulo="Saldo pendiente"
-                                            valor={formatoMoneda(datosTutor.saldo_pendiente)}
-                                            icono={<Wallet size={23} />}
-                                            color="bg-red-100 text-red-700"
+                                        <StatCard
+                                            title="Saldo pendiente"
+                                            value={formatoMoneda(datosTutor.saldo_pendiente)}
+                                            description="Importe pendiente de pago"
+                                            icon={<Wallet size={23} />}
+                                            color="rose"
                                         />
                                     </div>
                                 </section>
@@ -683,7 +631,7 @@ export default function Dashboard() {
                                                                                 </td>
 
                                                                                 <td className="px-4 py-3">
-                                                                                    <EstadoBadge estado={cuota.estado} />
+                                                                                    <StatusBadge status={cuota.estado} />
                                                                                 </td>
                                                                             </tr>
                                                                         ))}
@@ -732,7 +680,7 @@ export default function Dashboard() {
                                                                                 {formatoMoneda(inscripcion.monto)}
                                                                             </p>
 
-                                                                            <EstadoBadge estado={inscripcion.estado} />
+                                                                            <StatusBadge status={inscripcion.estado} />
                                                                         </div>
                                                                     </div>
                                                                 ))}
@@ -816,34 +764,6 @@ export default function Dashboard() {
 /* ================================================== */
 /* COMPONENTES REUTILIZABLES */
 /* ================================================== */
-
-function TarjetaResumen({
-    titulo,
-    valor,
-    icono,
-    color,
-}: {
-    titulo: string;
-    valor: string | number;
-    icono: React.ReactNode;
-    color: string;
-}) {
-    return (
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${color}`}>
-                {icono}
-            </div>
-
-            <p className="mt-4 text-sm font-medium text-slate-500">
-                {titulo}
-            </p>
-
-            <p className="mt-1 text-2xl font-bold text-slate-800">
-                {valor}
-            </p>
-        </div>
-    );
-}
 
 function MensajeVacio({ mensaje }: { mensaje: string }) {
     return (

@@ -3,18 +3,26 @@ interface StatusBadgeProps {
 }
 
 const statusStyles: Record<string, string> = {
+    // Estados positivos
     activo: 'bg-emerald-100 text-emerald-700 ring-emerald-600/20',
     activa: 'bg-emerald-100 text-emerald-700 ring-emerald-600/20',
     inscripto: 'bg-emerald-100 text-emerald-700 ring-emerald-600/20',
     pagada: 'bg-emerald-100 text-emerald-700 ring-emerald-600/20',
-    finalizado: 'bg-slate-100 text-slate-700 ring-slate-600/20',
+    abonado: 'bg-emerald-100 text-emerald-700 ring-emerald-600/20',
 
+    // Estados pendientes
     pendiente: 'bg-amber-100 text-amber-700 ring-amber-600/20',
 
+    // Estados parciales
+    parcial: 'bg-blue-100 text-blue-700 ring-blue-600/20',
+
+    // Estados negativos
     inactivo: 'bg-red-100 text-red-700 ring-red-600/20',
     inactiva: 'bg-red-100 text-red-700 ring-red-600/20',
     cancelado: 'bg-red-100 text-red-700 ring-red-600/20',
 
+    // Otros estados
+    finalizado: 'bg-slate-100 text-slate-700 ring-slate-600/20',
     en_curso: 'bg-blue-100 text-blue-700 ring-blue-600/20',
     programado: 'bg-violet-100 text-violet-700 ring-violet-600/20',
 };
