@@ -33,6 +33,22 @@ interface RecaudacionMensual {
     mes: string;
     total: number;
 }
+interface PeriodoRecaudacion {
+    value: string;
+    label: string;
+    inicio: string;
+    fin: string;
+}
+
+interface CategoriaRecaudacion {
+    id: number;
+    anio: number;
+}
+
+interface FiltrosRecaudacion {
+    categoriaId: number | null;
+    concepto: string | null;
+}
 
 interface ReporteCategoria {
     categoriaId: number;
@@ -79,6 +95,11 @@ interface Props {
     detalleDeudas: DetalleDeuda[];
     anioSeleccionado: number;
     aniosDisponibles: number[];
+    totalRecaudacionMensual: number;
+    periodosRecaudacion: PeriodoRecaudacion[];
+    periodoRecaudacionSeleccionado: string | null;
+    categoriasRecaudacion: CategoriaRecaudacion[];
+    filtrosRecaudacion: FiltrosRecaudacion;
 }
 
 const MESES = [
@@ -104,6 +125,11 @@ export default function Index({
     detalleDeudas,
     anioSeleccionado,
     aniosDisponibles,
+    totalRecaudacionMensual,
+    periodosRecaudacion,
+    periodoRecaudacionSeleccionado,
+    categoriasRecaudacion,
+    filtrosRecaudacion,
 }: Props) {
     type CampoOrdenDeuda = 'jugador' | 'categoria' | 'concepto';
 
@@ -153,7 +179,12 @@ export default function Index({
     const cambiarAnio = (anio: number) => {
         router.get(
             '/reportes',
-            { anio },
+            {
+                anio,
+                periodo: periodoRecaudacionSeleccionado,
+                categoriaId: filtrosRecaudacion.categoriaId,
+                concepto: filtrosRecaudacion.concepto,
+            },
             {
                 preserveState: true,
                 preserveScroll: true,
@@ -284,6 +315,57 @@ export default function Index({
         }
 
         return `${mesesEconomicosSeleccionados.length} meses seleccionados`;
+    };
+    const cambiarFiltrosRecaudacion = (
+        filtros: {
+            periodo?: string | null;
+            categoriaId?: number | null;
+            concepto?: string | null;
+        },
+    ) => {
+        router.get(
+            '/reportes',
+            {
+                anio: anioSeleccionado,
+                periodo: filtros.periodo !== undefined
+                    ? filtros.periodo
+                    : periodoRecaudacionSeleccionado,
+                categoriaId: filtros.categoriaId !== undefined
+                    ? filtros.categoriaId
+                    : filtrosRecaudacion.categoriaId,
+                concepto: filtros.concepto !== undefined
+                    ? filtros.concepto
+                    : filtrosRecaudacion.concepto,
+            },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            },
+        );
+    };
+
+    const urlExportacion = () => {
+        const parametros = new URLSearchParams({
+            anio: String(anioSeleccionado),
+        });
+
+        if (periodoRecaudacionSeleccionado) {
+            parametros.set('periodo', periodoRecaudacionSeleccionado);
+        }
+
+        if (filtrosRecaudacion.categoriaId !== null) {
+            parametros.set(
+                'categoriaId',
+                String(filtrosRecaudacion.categoriaId),
+            );
+        }
+
+        if (filtrosRecaudacion.concepto) {
+            parametros.set('concepto', filtrosRecaudacion.concepto);
+        }
+
+        return `/reportes/exportar?${parametros.toString()}`;
     };
 
     const estadisticasCards = [
@@ -1197,7 +1279,111 @@ export default function Index({
                                 </div>
                             </div>
                         </div>
+                        <div className="flex flex-wrap items-end gap-4">
+                            <div className="w-full sm:w-64">
+                                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                                    Período de recaudación
+                                </label>
 
+                                <select
+                                    value={periodoRecaudacionSeleccionado ?? ''}
+                                    onChange={(e) =>
+                                        cambiarFiltrosRecaudacion({
+                                            periodo: e.target.value || null,
+                                        })
+                                    }
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                                >
+                                    {periodosRecaudacion.map((periodo) => (
+                                        <option key={periodo.value} value={periodo.value}>
+                                            {periodo.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4 border-b border-slate-100 p-5 sm:grid-cols-3 sm:p-6">
+
+                            {/* PERÍODO */}
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-slate-700">
+                                    Período
+                                </label>
+
+                                <select
+                                    value={periodoRecaudacionSeleccionado ?? ''}
+                                    onChange={(e) =>
+                                        cambiarFiltrosRecaudacion({
+                                            periodo: e.target.value || null,
+                                        })
+                                    }
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                                >
+                                    {periodosRecaudacion.length === 0 ? (
+                                        <option value="">Sin períodos disponibles</option>
+                                    ) : (
+                                        periodosRecaudacion.map((periodo) => (
+                                            <option key={periodo.value} value={periodo.value}>
+                                                {periodo.label}
+                                            </option>
+                                        ))
+                                    )}
+                                </select>
+                            </div>
+
+                            {/* CATEGORÍA */}
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-slate-700">
+                                    Categoría
+                                </label>
+
+                                <select
+                                    value={filtrosRecaudacion.categoriaId ?? ''}
+                                    onChange={(e) =>
+                                        cambiarFiltrosRecaudacion({
+                                            categoriaId: e.target.value
+                                                ? Number(e.target.value)
+                                                : null,
+                                        })
+                                    }
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                                >
+                                    <option value="">Todas las categorías</option>
+
+                                    {[...categoriasRecaudacion]
+                                        .sort((a, b) => a.anio - b.anio)
+                                        .map((categoria) => (
+                                            <option key={categoria.id} value={categoria.id}>
+                                                Categoría {categoria.anio}
+                                            </option>
+                                        ))}
+                                </select>
+                            </div>
+
+                            {/* CONCEPTO */}
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-slate-700">
+                                    Concepto
+                                </label>
+
+                                <select
+                                    value={filtrosRecaudacion.concepto ?? ''}
+                                    onChange={(e) =>
+                                        cambiarFiltrosRecaudacion({
+                                            concepto: e.target.value || null,
+                                        })
+                                    }
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                                >
+                                    <option value="">Todos los conceptos</option>
+                                    <option value="cuota_mensual">Cuotas mensuales</option>
+                                    <option value="inscripcion_torneo">Inscripciones a torneos</option>
+                                    <option value="inscripcion_escuelita">
+                                        Inscripciones a la escuelita
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
                         <div className="p-5 sm:p-6">
                             {recaudacionMensual.length === 0 ? (
                                 <div className="py-12 text-center text-slate-500">
@@ -1212,12 +1398,7 @@ export default function Index({
                                             </p>
 
                                             <p className="mt-1 text-2xl font-bold text-slate-900">
-                                                {formatearMoneda(
-                                                    recaudacionMensual.reduce(
-                                                        (total, item) => total + item.total,
-                                                        0,
-                                                    ),
-                                                )}
+                                                {formatearMoneda(totalRecaudacionMensual)}
                                             </p>
                                         </div>
 
@@ -1265,6 +1446,35 @@ export default function Index({
                         </div>
                     </section>
                 </div>
+                {/* EXPORTACIÓN DE REPORTES */}
+                <section className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <FileSpreadsheet
+                                size={21}
+                                className="text-emerald-600"
+                            />
+
+                            <h2 className="font-bold text-slate-900">
+                                Exportar reportes
+                            </h2>
+                        </div>
+
+                        <p className="mt-2 text-sm text-slate-500">
+                            El archivo Excel se generará con el año, período,
+                            categoría y concepto seleccionados. Los demás
+                            indicadores conservarán sus criterios generales.
+                        </p>
+                    </div>
+
+                    <a
+                        href={urlExportacion()}
+                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2"
+                    >
+                        <FileSpreadsheet size={19} />
+                        Exportar Excel
+                    </a>
+                </section>
             </div>
         </>
     );

@@ -17,32 +17,73 @@ class ReporteController extends Controller
         $this->reporteService = $reporteService;
     }
 
+    /**
+     * Muestra los reportes y estadísticas.
+     */
     public function index(Request $request)
     {
-        $request->validate([
-            'anio' => ['nullable', 'integer', 'between:2020,2100'],
-        ]);
+        $filtros = $this->validarFiltros($request);
 
-        $anio = (int) $request->input('anio', now()->year);
-
-        $datos = $this->reporteService->obtenerDatos($anio);
+        $datos = $this->reporteService->obtenerDatos(
+            (int) ($filtros['anio'] ?? now()->year),
+            $filtros['periodo'] ?? null,
+            isset($filtros['categoriaId'])
+                ? (int) $filtros['categoriaId']
+                : null,
+            $filtros['concepto'] ?? null
+        );
 
         return Inertia::render('Reportes/Index', $datos);
     }
 
+    /**
+     * Exporta los reportes a Excel.
+     */
     public function exportar(Request $request)
     {
-        $request->validate([
-            'anio' => ['nullable', 'integer', 'between:2020,2100'],
-        ]);
+        $filtros = $this->validarFiltros($request);
 
-        $anio = (int) $request->input('anio', now()->year);
+        $anio = (int) ($filtros['anio'] ?? now()->year);
 
-        $datos = $this->reporteService->obtenerDatos($anio);
+        $datos = $this->reporteService->obtenerDatos(
+            $anio,
+            $filtros['periodo'] ?? null,
+            isset($filtros['categoriaId'])
+                ? (int) $filtros['categoriaId']
+                : null,
+            $filtros['concepto'] ?? null
+        );
 
         return Excel::download(
             new ReporteExport($datos),
             "reportes-fulbitogest-{$anio}.xlsx"
         );
+    }
+
+    /**
+     * Valida los filtros utilizados en pantalla y en Excel.
+     */
+    private function validarFiltros(Request $request): array
+    {
+        return $request->validate([
+            'anio' => [
+                'nullable',
+                'integer',
+                'between:2020,2100',
+            ],
+            'periodo' => [
+                'nullable',
+                'regex:/^\d{4}-\d{2}$/',
+            ],
+            'categoriaId' => [
+                'nullable',
+                'integer',
+                'min:1',
+            ],
+            'concepto' => [
+                'nullable',
+                'in:cuota_mensual,inscripcion_torneo,inscripcion_escuelita',
+            ],
+        ]);
     }
 }

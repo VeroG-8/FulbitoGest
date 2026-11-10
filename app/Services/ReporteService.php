@@ -142,7 +142,9 @@ class ReporteService
             'jugadores as jugadores_activos' => function ($query) {
                 $query->where('estado', true);
             },
-        ])->get();
+        ])
+            ->orderBy('anio', 'asc')
+            ->get();
 
         // 10. Inicializar los reportes por categoría
         $reportesPorCategoria = $categorias->mapWithKeys(function ($categoria) {

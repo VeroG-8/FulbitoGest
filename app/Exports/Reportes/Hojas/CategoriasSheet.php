@@ -2,12 +2,20 @@
 
 namespace App\Exports\Reportes\Hojas;
 
+use App\Exports\Reportes\Estilos\EstiloReporte;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Events\AfterSheet;
 
-class CategoriasSheet implements FromArray, WithHeadings, WithTitle, ShouldAutoSize
+class CategoriasSheet implements
+    FromArray,
+    WithHeadings,
+    WithTitle,
+    ShouldAutoSize,
+    WithEvents
 {
     protected array $categorias;
 
@@ -43,5 +51,33 @@ class CategoriasSheet implements FromArray, WithHeadings, WithTitle, ShouldAutoS
                 $item['deudaPendiente'],
             ];
         }, $this->categorias);
+    }
+
+    public function registerEvents(): array
+    {
+        return [
+            AfterSheet::class => function (AfterSheet $event) {
+                $sheet = $event->sheet->getDelegate();
+
+                EstiloReporte::aplicar(
+                    $sheet,
+                    'Resumen económico y deportivo por categoría',
+                    5
+                );
+
+                $ultimaFila = $sheet->getHighestRow();
+
+                // Formato monetario para recaudación y deuda.
+                if ($ultimaFila >= 5) {
+                    $sheet->getStyle("D5:E{$ultimaFila}")
+                        ->getNumberFormat()
+                        ->setFormatCode('"$" #,##0.00');
+
+                    $sheet->getStyle("D5:E{$ultimaFila}")
+                        ->getAlignment()
+                        ->setHorizontal('right');
+                }
+            },
+        ];
     }
 }

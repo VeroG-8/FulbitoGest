@@ -2,15 +2,20 @@
 
 namespace App\Exports\Reportes\Hojas;
 
+use App\Exports\Reportes\Estilos\EstiloReporte;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
-use App\Exports\Reportes\Estilos\EstiloReporte;
 
-class EstadisticasSheet implements FromArray, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
+class EstadisticasSheet implements
+    FromArray,
+    WithHeadings,
+    WithTitle,
+    ShouldAutoSize,
+    WithEvents
 {
     protected array $estadisticas;
 
@@ -26,7 +31,10 @@ class EstadisticasSheet implements FromArray, WithHeadings, WithTitle, ShouldAut
 
     public function headings(): array
     {
-        return ['Indicador', 'Valor'];
+        return [
+            'Indicador',
+            'Valor',
+        ];
     }
 
     public function array(): array
@@ -35,7 +43,6 @@ class EstadisticasSheet implements FromArray, WithHeadings, WithTitle, ShouldAut
             ['Año del reporte', $this->estadisticas['anioSeleccionado']],
             ['Jugadores activos', $this->estadisticas['jugadoresActivos']],
             ['Categorías activas', $this->estadisticas['categoriasActivas']],
-
             [
                 'Recaudación anual de cuotas mensuales',
                 $this->estadisticas['recaudacionCuotasMensuales'],
@@ -59,11 +66,22 @@ class EstadisticasSheet implements FromArray, WithHeadings, WithTitle, ShouldAut
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {
+                $sheet = $event->sheet->getDelegate();
+
                 EstiloReporte::aplicar(
-                    $event->sheet->getDelegate(),
+                    $sheet,
                     'Resumen general de indicadores',
                     2
                 );
+
+                // Formato monetario para los indicadores económicos.
+                $sheet->getStyle('B8:B11')
+                    ->getNumberFormat()
+                    ->setFormatCode('"$" #,##0.00');
+
+                $sheet->getStyle('B8:B11')
+                    ->getAlignment()
+                    ->setHorizontal('right');
             },
         ];
     }
