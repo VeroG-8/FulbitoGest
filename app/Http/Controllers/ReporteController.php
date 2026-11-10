@@ -6,6 +6,7 @@ use App\Services\ReporteService;
 use App\Exports\Reportes\ReporteExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Inertia\Inertia;
+use Illuminate\Http\Request;
 
 class ReporteController extends Controller
 {
@@ -16,24 +17,32 @@ class ReporteController extends Controller
         $this->reporteService = $reporteService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        // Obtener todos los datos mediante el servicio
-        $datos = $this->reporteService->obtenerDatos();
+        $request->validate([
+            'anio' => ['nullable', 'integer', 'between:2020,2100'],
+        ]);
 
-        // Enviar los datos a React
+        $anio = (int) $request->input('anio', now()->year);
+
+        $datos = $this->reporteService->obtenerDatos($anio);
+
         return Inertia::render('Reportes/Index', $datos);
     }
 
-    public function exportar()
+    public function exportar(Request $request)
     {
-        // Obtener los mismos datos que utiliza la pantalla
-        $datos = $this->reporteService->obtenerDatos();
+        $request->validate([
+            'anio' => ['nullable', 'integer', 'between:2020,2100'],
+        ]);
 
-        // Generar y descargar el archivo Excel
+        $anio = (int) $request->input('anio', now()->year);
+
+        $datos = $this->reporteService->obtenerDatos($anio);
+
         return Excel::download(
             new ReporteExport($datos),
-            'reportes-fulbitogest.xlsx'
+            "reportes-fulbitogest-{$anio}.xlsx"
         );
     }
 }

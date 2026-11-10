@@ -50,7 +50,7 @@ test('email verification status is unchanged when the email address is unchanged
     $this->assertNotNull($user->refresh()->email_verified_at);
 });
 
-test('user can delete their account', function () {
+test('user cannot delete their account from the profile', function () {
     $user = User::factory()->create();
 
     $response = $this
@@ -60,11 +60,13 @@ test('user can delete their account', function () {
         ]);
 
     $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect('/');
+        ->assertSessionHasErrors([
+            'password' => 'Las cuentas no pueden eliminarse desde el perfil. Si necesitas deshabilitar una cuenta, contacta al administrador.',
+        ])
+        ->assertRedirect('/profile');
 
-    $this->assertGuest();
-    $this->assertNull($user->fresh());
+    $this->assertAuthenticatedAs($user);
+    $this->assertNotNull($user->fresh());
 });
 
 test('correct password must be provided to delete account', function () {
@@ -81,5 +83,6 @@ test('correct password must be provided to delete account', function () {
         ->assertSessionHasErrors('password')
         ->assertRedirect('/profile');
 
+    $this->assertAuthenticatedAs($user);
     $this->assertNotNull($user->fresh());
 });

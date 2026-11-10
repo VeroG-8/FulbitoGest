@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cuota;
-use Inertia\Inertia;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class CuotaController extends Controller
 {
@@ -29,11 +29,22 @@ class CuotaController extends Controller
         $validated = $request->validate([
             'nombre' => 'required|string|max:150',
             'descripcion' => 'nullable|string|max:255',
+
+            'tipo' => 'required|in:cuota_mensual,inscripcion_escuelita,inscripcion_torneo',
+
             'monto' => 'required|numeric|min:0',
-            'periodo_mes' => 'required|integer|between:1,12',
+
+            'periodo_mes' => 'required_if:tipo,cuota_mensual|nullable|integer|between:1,12',
+
             'periodo_anio' => 'required|integer|min:2020|max:2100',
+
             'fecha_vencimiento' => 'required|date',
         ]);
+
+        // Las inscripciones no corresponden a un mes específico.
+        if ($validated['tipo'] !== 'cuota_mensual') {
+            $validated['periodo_mes'] = null;
+        }
 
         Cuota::create([
             ...$validated,
@@ -42,7 +53,7 @@ class CuotaController extends Controller
 
         return redirect()
             ->route('cuotas.index')
-            ->with('success', 'Cuota creada correctamente.');
+            ->with('success', 'Concepto de cobro creado correctamente.');
     }
 
     public function edit(Cuota $cuota)
@@ -57,17 +68,27 @@ class CuotaController extends Controller
         $validated = $request->validate([
             'nombre' => 'required|string|max:150',
             'descripcion' => 'nullable|string|max:255',
+
+            'tipo' => 'required|in:cuota_mensual,inscripcion_escuelita,inscripcion_torneo',
+
             'monto' => 'required|numeric|min:0',
-            'periodo_mes' => 'required|integer|between:1,12',
+
+            'periodo_mes' => 'required_if:tipo,cuota_mensual|nullable|integer|between:1,12',
+
             'periodo_anio' => 'required|integer|min:2020|max:2100',
+
             'fecha_vencimiento' => 'required|date',
         ]);
+
+        if ($validated['tipo'] !== 'cuota_mensual') {
+            $validated['periodo_mes'] = null;
+        }
 
         $cuota->update($validated);
 
         return redirect()
             ->route('cuotas.index')
-            ->with('success', 'Cuota actualizada correctamente.');
+            ->with('success', 'Concepto de cobro actualizado correctamente.');
     }
 
     public function destroy(Cuota $cuota)

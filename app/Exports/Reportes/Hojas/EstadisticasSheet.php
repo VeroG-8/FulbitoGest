@@ -6,9 +6,9 @@ use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use App\Exports\Reportes\Estilos\EstiloReporte;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
+use App\Exports\Reportes\Estilos\EstiloReporte;
 
 class EstadisticasSheet implements FromArray, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
 {
@@ -32,16 +32,30 @@ class EstadisticasSheet implements FromArray, WithHeadings, WithTitle, ShouldAut
     public function array(): array
     {
         return [
+            ['Año del reporte', $this->estadisticas['anioSeleccionado']],
             ['Jugadores activos', $this->estadisticas['jugadoresActivos']],
             ['Categorías activas', $this->estadisticas['categoriasActivas']],
-            ['Cuotas pagadas', $this->estadisticas['cuotasPagadas']],
-            ['Cuotas pendientes', $this->estadisticas['cuotasPendientes']],
-            ['Cuotas vencidas', $this->estadisticas['cuotasVencidas']],
-            ['Deuda vencida total', $this->estadisticas['deudaVencidaTotal']],
-            ['Total recaudado', $this->estadisticas['totalRecaudado']],
+
+            [
+                'Recaudación anual de cuotas mensuales',
+                $this->estadisticas['recaudacionCuotasMensuales'],
+            ],
+            [
+                'Deuda anual de cuotas mensuales',
+                $this->estadisticas['deudaCuotasMensuales'],
+            ],
+            [
+                'Recaudación anual de inscripciones a la escuelita',
+                $this->estadisticas['recaudacionInscripcionesEscuelita'],
+            ],
+            [
+                'Deuda anual de inscripciones a la escuelita',
+                $this->estadisticas['deudaInscripcionesEscuelita'],
+            ],
         ];
     }
-        public function registerEvents(): array
+
+    public function registerEvents(): array
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {

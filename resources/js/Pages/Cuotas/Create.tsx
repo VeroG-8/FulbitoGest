@@ -22,6 +22,12 @@ const anios = Array.from(
     (_, index) => anioActual - 1 + index,
 );
 
+const tipos = [
+    { valor: 'cuota_mensual', nombre: 'Cuota mensual' },
+    { valor: 'inscripcion_escuelita', nombre: 'Inscripción a la escuelita' },
+    { valor: 'inscripcion_torneo', nombre: 'Inscripción a torneo' },
+];
+
 export default function Create() {
     const { data, setData, post, processing, errors } = useForm({
         nombre: '',
@@ -29,12 +35,15 @@ export default function Create() {
         tipo: 'cuota_mensual',
         monto: '',
         periodo_mes: new Date().getMonth() + 1,
-        periodo_anio: new Date().getFullYear(),
+        periodo_anio: anioActual,
         fecha_vencimiento: '',
     });
 
+    const esCuotaMensual = data.tipo === 'cuota_mensual';
+
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
+
         post('/cuotas');
     };
 
@@ -63,8 +72,7 @@ export default function Create() {
 
                     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                         <form onSubmit={submit} className="space-y-5">
-
-                            {/* Tipo de cuota */}
+                            {/* Tipo de concepto */}
                             <div>
                                 <label className="mb-1 block font-medium text-slate-700">
                                     Tipo de concepto
@@ -77,12 +85,14 @@ export default function Create() {
                                     }
                                     className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 >
-                                    <option value="cuota_mensual">
-                                        Cuota mensual
-                                    </option>
-                                    <option value="inscripcion_torneo">
-                                        Inscripción
-                                    </option>
+                                    {tipos.map((tipo) => (
+                                        <option
+                                            key={tipo.valor}
+                                            value={tipo.valor}
+                                        >
+                                            {tipo.nombre}
+                                        </option>
+                                    ))}
                                 </select>
 
                                 {errors.tipo && (
@@ -113,7 +123,9 @@ export default function Create() {
                                     placeholder={
                                         data.tipo === 'cuota_mensual'
                                             ? 'Ej. Cuota Noviembre 2026'
-                                            : 'Ej. Inscripción Copa Salta 2026'
+                                            : data.tipo === 'inscripcion_escuelita'
+                                              ? 'Ej. Inscripción anual 2026'
+                                              : 'Ej. Inscripción Copa Salta 2026'
                                     }
                                 />
 
@@ -179,43 +191,51 @@ export default function Create() {
                                 </h3>
 
                                 <p className="mb-4 text-sm text-slate-500">
-                                    Indicá el mes y año al que corresponde
-                                    este cobro, independientemente de su
-                                    fecha de vencimiento.
+                                    {esCuotaMensual
+                                        ? 'Indicá el mes y año al que corresponde esta cuota.'
+                                        : 'Indicá el año al que corresponde esta inscripción.'}
                                 </p>
 
-                                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                                    <div>
-                                        <label className="mb-1 block font-medium text-slate-700">
-                                            Mes correspondiente
-                                        </label>
+                                <div
+                                    className={`grid grid-cols-1 gap-5 ${
+                                        esCuotaMensual
+                                            ? 'sm:grid-cols-2'
+                                            : 'sm:grid-cols-1'
+                                    }`}
+                                >
+                                    {esCuotaMensual && (
+                                        <div>
+                                            <label className="mb-1 block font-medium text-slate-700">
+                                                Mes correspondiente
+                                            </label>
 
-                                        <select
-                                            value={data.periodo_mes}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'periodo_mes',
-                                                    Number(e.target.value),
-                                                )
-                                            }
-                                            className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 focus:border-blue-500 focus:outline-none"
-                                        >
-                                            {meses.map((mes) => (
-                                                <option
-                                                    key={mes.valor}
-                                                    value={mes.valor}
-                                                >
-                                                    {mes.nombre}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            <select
+                                                value={data.periodo_mes}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'periodo_mes',
+                                                        Number(e.target.value),
+                                                    )
+                                                }
+                                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 focus:border-blue-500 focus:outline-none"
+                                            >
+                                                {meses.map((mes) => (
+                                                    <option
+                                                        key={mes.valor}
+                                                        value={mes.valor}
+                                                    >
+                                                        {mes.nombre}
+                                                    </option>
+                                                ))}
+                                            </select>
 
-                                        {errors.periodo_mes && (
-                                            <p className="mt-1 text-sm text-red-600">
-                                                {errors.periodo_mes}
-                                            </p>
-                                        )}
-                                    </div>
+                                            {errors.periodo_mes && (
+                                                <p className="mt-1 text-sm text-red-600">
+                                                    {errors.periodo_mes}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
 
                                     <div>
                                         <label className="mb-1 block font-medium text-slate-700">

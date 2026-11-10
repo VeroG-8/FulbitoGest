@@ -4,7 +4,7 @@ interface Cuota {
     id: number;
     nombre: string;
     descripcion: string | null;
-    tipo: 'cuota_mensual' | 'inscripcion_torneo';
+    tipo: 'cuota_mensual' | 'inscripcion_escuelita' | 'inscripcion_torneo';
     monto: string;
     periodo_mes: number | null;
     periodo_anio: number | null;
@@ -47,13 +47,14 @@ export default function Edit({ cuota }: Props) {
         descripcion: cuota.descripcion ?? '',
         tipo: cuota.tipo,
         monto: cuota.monto,
-        periodo_mes: cuota.periodo_mes ?? new Date().getMonth() + 1,
+        periodo_mes: cuota.periodo_mes,
         periodo_anio: cuota.periodo_anio ?? anioActual,
         fecha_vencimiento: formatearFechaInput(cuota.fecha_vencimiento),
     });
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
+
         put(`/cuotas/${cuota.id}`);
     };
 
@@ -91,21 +92,34 @@ export default function Edit({ cuota }: Props) {
 
                                 <select
                                     value={data.tipo}
-                                    onChange={(e) =>
-                                        setData(
-                                            'tipo',
-                                            e.target.value as
-                                                | 'cuota_mensual'
-                                                | 'inscripcion_torneo',
-                                        )
-                                    }
+                                    onChange={(e) => {
+                                        const tipo = e.target.value as
+                                            | 'cuota_mensual'
+                                            | 'inscripcion_escuelita'
+                                            | 'inscripcion_torneo';
+
+                                        setData((actual) => ({
+                                            ...actual,
+                                            tipo,
+                                            periodo_mes:
+                                                tipo === 'cuota_mensual'
+                                                    ? actual.periodo_mes ??
+                                                      new Date().getMonth() + 1
+                                                    : null,
+                                        }));
+                                    }}
                                     className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 >
                                     <option value="cuota_mensual">
                                         Cuota mensual
                                     </option>
+
+                                    <option value="inscripcion_escuelita">
+                                        Inscripción a la escuelita
+                                    </option>
+
                                     <option value="inscripcion_torneo">
-                                        Inscripción
+                                        Inscripción a torneo
                                     </option>
                                 </select>
 
@@ -191,43 +205,51 @@ export default function Edit({ cuota }: Props) {
                                 </h3>
 
                                 <p className="mb-4 text-sm text-slate-500">
-                                    Mes y año al que corresponde este cobro,
-                                    independientemente de su fecha de
-                                    vencimiento.
+                                    {data.tipo === 'cuota_mensual'
+                                        ? 'Indicá el mes y año al que corresponde esta cuota.'
+                                        : 'Indicá el año al que corresponde esta inscripción.'}
                                 </p>
 
-                                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                                    <div>
-                                        <label className="mb-1 block font-medium text-slate-700">
-                                            Mes correspondiente
-                                        </label>
+                                <div
+                                    className={`grid grid-cols-1 gap-5 ${
+                                        data.tipo === 'cuota_mensual'
+                                            ? 'sm:grid-cols-2'
+                                            : ''
+                                    }`}
+                                >
+                                    {data.tipo === 'cuota_mensual' && (
+                                        <div>
+                                            <label className="mb-1 block font-medium text-slate-700">
+                                                Mes correspondiente
+                                            </label>
 
-                                        <select
-                                            value={data.periodo_mes}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'periodo_mes',
-                                                    Number(e.target.value),
-                                                )
-                                            }
-                                            className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 focus:border-blue-500 focus:outline-none"
-                                        >
-                                            {meses.map((mes) => (
-                                                <option
-                                                    key={mes.valor}
-                                                    value={mes.valor}
-                                                >
-                                                    {mes.nombre}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            <select
+                                                value={data.periodo_mes ?? ''}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'periodo_mes',
+                                                        Number(e.target.value),
+                                                    )
+                                                }
+                                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 focus:border-blue-500 focus:outline-none"
+                                            >
+                                                {meses.map((mes) => (
+                                                    <option
+                                                        key={mes.valor}
+                                                        value={mes.valor}
+                                                    >
+                                                        {mes.nombre}
+                                                    </option>
+                                                ))}
+                                            </select>
 
-                                        {errors.periodo_mes && (
-                                            <p className="mt-1 text-sm text-red-600">
-                                                {errors.periodo_mes}
-                                            </p>
-                                        )}
-                                    </div>
+                                            {errors.periodo_mes && (
+                                                <p className="mt-1 text-sm text-red-600">
+                                                    {errors.periodo_mes}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
 
                                     <div>
                                         <label className="mb-1 block font-medium text-slate-700">
