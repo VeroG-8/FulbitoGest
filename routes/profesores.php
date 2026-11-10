@@ -10,20 +10,36 @@ Route::get('/profesores', [ProfesorController::class, 'index'])
 Route::get('/profesores/historial', [ProfesorController::class, 'historial'])
     ->name('profesores.historial');
 
+
+// Ficha personal del profesor autenticado.
+Route::middleware('rol:profesor')->group(function () {
+
+    Route::get('/profesores/mi-ficha', [ProfesorController::class, 'miFicha'])
+        ->name('profesores.mi-ficha');
+
+    Route::get('/profesores/mi-ficha/editar', [ProfesorController::class, 'editarMiFicha'])
+        ->name('profesores.mi-ficha.editar');
+
+    Route::put('/profesores/mi-ficha', [ProfesorController::class, 'actualizarMiFicha'])
+        ->name('profesores.mi-ficha.actualizar');
+});
+
+
 // Gestión de profesores: administradores y superadministradores.
 Route::middleware('rol:admin')->group(function () {
 
-    // Primero las rutas estáticas.
+    // Rutas estáticas.
     Route::get('/profesores/create', [ProfesorController::class, 'create'])
         ->name('profesores.create');
 
     Route::post('/profesores', [ProfesorController::class, 'store'])
         ->name('profesores.store');
 
+    // Reactivar profesor.
     Route::put('/profesores/{profesor}/reactivar', [ProfesorController::class, 'reactivar'])
         ->name('profesores.reactivar');
 
-    // Después las rutas con parámetros.
+    // Edición administrativa.
     Route::get('/profesores/{profesor}/edit', [ProfesorController::class, 'edit'])
         ->name('profesores.edit');
 
@@ -35,5 +51,6 @@ Route::middleware('rol:admin')->group(function () {
 });
 
 
+// Consulta individual.
 Route::get('/profesores/{profesor}', [ProfesorController::class, 'show'])
     ->name('profesores.show');

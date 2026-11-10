@@ -25,7 +25,6 @@ import ConfirmDialog from '@/Components/Shared/ConfirmDialog';
 
 interface Categoria {
     id: number;
-    nombre: string;
     anio: number;
 }
 
@@ -64,13 +63,20 @@ interface Props {
     categorias: Categoria[];
     filtros: Filtros;
     totalInactivos: number;
+    permisos: {
+        crear: boolean;
+        editar: boolean;
+        eliminar: boolean;
+        historial: boolean;
+    };
 }
 
 export default function Index({
     jugadores,
     categorias,
     filtros,
-    totalInactivos
+    totalInactivos,
+    permisos,
 }: Props) {
     const [buscar, setBuscar] = useState(filtros.buscar ?? '');
     const [categoria, setCategoria] = useState<string[]>(
@@ -182,21 +188,25 @@ export default function Index({
                     icon={<Users size={28} />}
                     actions={
                         <>
-                            <Link
-                                href="/jugadores/historial"
-                                className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
-                            >
-                                <History size={17} />
-                                Historial
-                            </Link>
+                            {permisos.historial && (
+                                <Link
+                                    href="/jugadores/historial"
+                                    className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+                                >
+                                    <History size={17} />
+                                    Historial
+                                </Link>
+                            )}
 
-                            <Link
-                                href="/jugadores/create"
-                                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
-                            >
-                                <UserPlus size={17} />
-                                Nuevo jugador
-                            </Link>
+                            {permisos.crear && (
+                                <Link
+                                    href="/jugadores/create"
+                                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                                >
+                                    <UserPlus size={17} />
+                                    Nuevo jugador
+                                </Link>
+                            )}
                         </>
                     }
                 />
@@ -409,9 +419,11 @@ export default function Index({
                                     <th className="px-5 py-4">Categoría</th>
                                     <th className="px-5 py-4">Localidad</th>
                                     <th className="px-5 py-4">Estado</th>
-                                    <th className="px-5 py-4 text-center">
-                                        Acciones
-                                    </th>
+                                    {(permisos.editar || permisos.eliminar || true) && (
+                                        <th className="px-5 py-4 text-center">
+                                            Acciones
+                                        </th>
+                                    )}
                                 </tr>
                             </thead>
 
@@ -435,8 +447,7 @@ export default function Index({
 
                                             <td className="px-5 py-4">
                                                 <span className="inline-flex rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700">
-                                                    {jugador.categoria?.nombre ??
-                                                        'Sin categoría'}
+                                                    {jugador.categoria?.anio ?? 'Sin categoría'}
                                                 </span>
                                             </td>
 
@@ -456,6 +467,8 @@ export default function Index({
 
                                             <td className="px-5 py-4">
                                                 <div className="flex items-center justify-center gap-2">
+
+                                                    {/* Consultar ficha: disponible para todos los roles autorizados */}
                                                     <Link
                                                         href={`/jugadores/${jugador.id}`}
                                                         title="Ver jugador"
@@ -464,26 +477,28 @@ export default function Index({
                                                         <Eye size={18} />
                                                     </Link>
 
-                                                    <Link
-                                                        href={`/jugadores/${jugador.id}/edit`}
-                                                        title="Editar jugador"
-                                                        className="rounded-lg p-2 text-amber-600 transition hover:bg-amber-50"
-                                                    >
-                                                        <Pencil size={18} />
-                                                    </Link>
+                                                    {/* Editar: solamente administradores */}
+                                                    {permisos.editar && (
+                                                        <Link
+                                                            href={`/jugadores/${jugador.id}/edit`}
+                                                            title="Editar jugador"
+                                                            className="rounded-lg p-2 text-amber-600 transition hover:bg-amber-50"
+                                                        >
+                                                            <Pencil size={18} />
+                                                        </Link>
+                                                    )}
 
-                                                    <button
-                                                        type="button"
-                                                        title="Deshabilitar jugador"
-                                                        onClick={() =>
-                                                            setJugadorSeleccionado(
-                                                                jugador,
-                                                            )
-                                                        }
-                                                        className="rounded-lg p-2 text-red-600 transition hover:bg-red-50"
-                                                    >
-                                                        <UserX size={18} />
-                                                    </button>
+                                                    {/* Deshabilitar: solamente administradores */}
+                                                    {permisos.eliminar && (
+                                                        <button
+                                                            type="button"
+                                                            title="Deshabilitar jugador"
+                                                            onClick={() => setJugadorSeleccionado(jugador)}
+                                                            className="rounded-lg p-2 text-red-600 transition hover:bg-red-50"
+                                                        >
+                                                            <UserX size={18} />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>

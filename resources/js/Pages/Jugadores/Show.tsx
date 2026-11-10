@@ -15,7 +15,7 @@ import {
 
 interface Categoria {
     id: number;
-    nombre: string;
+    anio: number;
 }
 
 interface Tutor {
@@ -50,6 +50,7 @@ interface Jugador {
 
 interface Props {
     jugador: Jugador;
+    puedeEditar: boolean;
 }
 
 function mostrarDato(valor: string | number | null | undefined): string {
@@ -100,7 +101,7 @@ function Dato({
     );
 }
 
-export default function Show({ jugador }: Props) {
+export default function Show({ jugador, puedeEditar }: Props) {
     const tutores = jugador.tutores ?? [];
 
     return (
@@ -130,13 +131,15 @@ export default function Show({ jugador }: Props) {
                                 Volver
                             </Link>
 
-                            <Link
-                                href={`/jugadores/${jugador.id}/edit`}
-                                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-                            >
-                                <Pencil size={17} />
-                                Editar jugador
-                            </Link>
+                           {puedeEditar && (
+                                <Link
+                                    href={`/jugadores/${jugador.id}/edit`}
+                                    className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                                >
+                                    <Pencil size={17} />
+                                    Editar jugador
+                                </Link>
+                            )}
                         </div>
                     </div>
 
@@ -161,7 +164,7 @@ export default function Show({ jugador }: Props) {
 
                             <div className="flex flex-wrap items-center gap-2">
                                 <span className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-slate-200">
-                                    {mostrarDato(jugador.categoria?.nombre)}
+                                    {mostrarDato(jugador.categoria?.anio)}
                                 </span>
 
                                 <span
@@ -218,7 +221,7 @@ export default function Show({ jugador }: Props) {
 
                                 <Dato
                                     etiqueta="Categoría"
-                                    valor={jugador.categoria?.nombre}
+                                    valor={jugador.categoria?.anio}
                                     icono={<ShieldCheck size={18} />}
                                 />
                             </div>

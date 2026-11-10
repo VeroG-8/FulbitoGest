@@ -194,6 +194,90 @@ class ProfesorController extends Controller
     }
 
     /**
+ * Mostrar la ficha personal del profesor autenticado.
+ */
+    public function miFicha()
+    {
+        $usuario = auth()->user();
+
+        // Verificar que el usuario tenga un profesor asociado.
+        abort_unless(
+            $usuario->rol === 'profesor' && $usuario->profesor_id,
+            403,
+            'No tienes permiso para consultar esta ficha.'
+        );
+
+        // Obtener los datos registrados en la tabla profesores.
+        $profesor = Profesor::with('categorias')
+            ->findOrFail($usuario->profesor_id);
+
+        return Inertia::render('Profesores/MiFicha', [
+            'profesor' => $profesor,
+        ]);
+    }
+    /**
+ * Mostrar el formulario para editar la ficha personal
+ * del profesor autenticado.
+ */
+public function editarMiFicha()
+{
+    $usuario = auth()->user();
+
+    abort_unless(
+        $usuario->rol === 'profesor' && $usuario->profesor_id,
+        403,
+        'No tienes permiso para editar esta ficha.'
+    );
+
+    $profesor = Profesor::with('categorias')
+        ->findOrFail($usuario->profesor_id);
+
+    return Inertia::render('Profesores/EditarMiFicha', [
+        'profesor' => $profesor,
+    ]);
+}
+
+/**
+ * Actualizar los datos personales del profesor autenticado.
+ * No permite modificar categorías ni estado.
+ */
+    public function actualizarMiFicha(Request $request)
+    {
+        $usuario = auth()->user();
+
+        abort_unless(
+            $usuario->rol === 'profesor' && $usuario->profesor_id,
+            403,
+            'No tienes permiso para modificar esta ficha.'
+        );
+
+        $profesor = Profesor::findOrFail($usuario->profesor_id);
+
+        $validated = $request->validate([
+            'dni' => [
+                'required',
+                'string',
+                'max:20',
+                Rule::unique('profesores', 'dni')->ignore($profesor->id),
+            ],
+            'nombre' => 'required|string|max:100',
+            'apellido' => 'required|string|max:100',
+            'email' => 'nullable|email|max:150',
+            'telefono' => 'nullable|string|max:30',
+            'direccion' => 'nullable|string|max:150',
+            'localidad' => 'nullable|string|max:100',
+            'especialidad' => 'nullable|string|max:150',
+        ]);
+
+        // Actualizar exclusivamente los campos personales validados.
+        $profesor->update($validated);
+
+        return redirect()
+            ->route('profesores.mi-ficha')
+            ->with('success', 'Tus datos personales se actualizaron correctamente.');
+    }
+
+    /**
      * Formulario para editar un profesor.
      */
     public function edit(Profesor $profesor)
