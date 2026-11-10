@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\ReporteService;
 use App\Exports\Reportes\ReporteExport;
 use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 
@@ -85,5 +86,27 @@ class ReporteController extends Controller
                 'in:cuota_mensual,inscripcion_torneo,inscripcion_escuelita',
             ],
         ]);
+    }
+        public function exportarPdf(Request $request)
+    {
+        $filtros = $this->validarFiltros($request);
+
+        $anio = (int) ($filtros['anio'] ?? now()->year);
+
+        $datos = $this->reporteService->obtenerDatos(
+            $anio,
+            $filtros['periodo'] ?? null,
+            isset($filtros['categoriaId'])
+                ? (int) $filtros['categoriaId']
+                : null,
+            $filtros['concepto'] ?? null
+        );
+
+        $pdf = Pdf::loadView('reportes.pdf', $datos)
+            ->setPaper('a4', 'landscape');
+
+        return $pdf->download(
+            "reportes-fulbitogest-{$anio}.pdf"
+        );
     }
 }

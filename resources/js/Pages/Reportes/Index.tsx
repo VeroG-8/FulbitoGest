@@ -15,6 +15,7 @@ import {
     ChevronDown,
     ArrowUp,
     ArrowDown,
+    FileText,
 } from 'lucide-react';
 
 interface Estadisticas {
@@ -367,6 +368,28 @@ export default function Index({
 
         return `/reportes/exportar?${parametros.toString()}`;
     };
+    const urlExportacionPdf = () => {
+        const parametros = new URLSearchParams({
+            anio: String(anioSeleccionado),
+        });
+
+        if (periodoRecaudacionSeleccionado) {
+            parametros.set('periodo', periodoRecaudacionSeleccionado);
+        }
+
+        if (filtrosRecaudacion.categoriaId !== null) {
+            parametros.set(
+                'categoriaId',
+                String(filtrosRecaudacion.categoriaId),
+            );
+        }
+
+        if (filtrosRecaudacion.concepto) {
+            parametros.set('concepto', filtrosRecaudacion.concepto);
+        }
+
+        return `/reportes/exportar-pdf?${parametros.toString()}`;
+    };
 
     const estadisticasCards = [
         {
@@ -425,72 +448,88 @@ export default function Index({
                 <div className="mx-auto max-w-7xl space-y-6">
 
                     {/* ENCABEZADO */}
-                    <div className="overflow-hidden rounded-2xl !bg-slate-950 shadow-lg">
-                        <div className="flex flex-col gap-5 px-6 py-7 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
+<div className="overflow-hidden rounded-2xl !bg-slate-950 shadow-lg">
+    <div className="flex flex-col gap-6 px-6 py-7 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
 
-                            <div className="flex items-center gap-4">
-                                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl !bg-slate-800">
-                                    <BarChart3
-                                        size={30}
-                                        strokeWidth={1.8}
-                                        className="!text-white"
-                                    />
-                                </div>
+        {/* TÍTULO */}
+        <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl !bg-slate-800">
+                <BarChart3
+                    size={30}
+                    strokeWidth={1.8}
+                    className="!text-white"
+                />
+            </div>
 
-                                <div>
-                                    <p className="mb-1 text-sm font-medium !text-slate-300">
-                                        Administración y seguimiento
-                                    </p>
+            <div>
+                <p className="mb-1 text-sm font-medium !text-slate-300">
+                    Administración y seguimiento
+                </p>
 
-                                    <h1 className="m-0 text-2xl font-bold tracking-tight !text-white sm:text-3xl">
-                                        Reportes y estadísticas
-                                    </h1>
+                <h1 className="m-0 text-2xl font-bold tracking-tight !text-white sm:text-3xl">
+                    Reportes y estadísticas
+                </h1>
 
-                                    <p className="mt-1 text-sm !text-slate-300">
-                                        Información general y seguimiento económico de la escuela.
-                                    </p>
-                                </div>
-                            </div>
+                <p className="mt-1 text-sm !text-slate-300">
+                    Información general y seguimiento económico de la escuela.
+                </p>
+            </div>
+        </div>
 
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+       {/* FILTRO Y EXPORTACIONES */}
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end lg:gap-8">
 
-                                {/* SELECTOR DE AÑO */}
-                                <div>
-                                    <label
-                                        htmlFor="anio-reporte"
-                                        className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300"
-                                    >
-                                        <CalendarDays size={16} />
-                                        Año del reporte
-                                    </label>
+            {/* SELECTOR DE AÑO */}
+            <div className="w-full sm:w-36">
+                <label
+                    htmlFor="anio-reporte"
+                    className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300"
+                >
+                    <CalendarDays size={16} />
+                    Año del reporte
+                </label>
 
-                                    <select
-                                        id="anio-reporte"
-                                        value={anioSeleccionado}
-                                        onChange={(e) =>
-                                            cambiarAnio(Number(e.target.value))
-                                        }
-                                        className="w-full min-w-36 rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-sm font-semibold text-white outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
-                                    >
-                                        {aniosDisponibles.map((anio) => (
-                                            <option key={anio} value={anio}>
-                                                {anio}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+                <select
+                    id="anio-reporte"
+                    value={anioSeleccionado}
+                    onChange={(e) =>
+                        cambiarAnio(Number(e.target.value))
+                    }
+                    className="h-11 w-full rounded-xl border border-slate-700 bg-slate-800 px-4 text-sm font-semibold text-white outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+                >
+                    {aniosDisponibles.map((anio) => (
+                        <option key={anio} value={anio}>
+                            {anio}
+                        </option>
+                    ))}
+                </select>
+            </div>
 
-                                {/* EXPORTAR EXCEL */}
-                                <a
-                                    href={`/reportes/exportar?anio=${anioSeleccionado}`}
-                                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-950"
-                                >
-                                    <FileSpreadsheet size={19} />
-                                    Exportar Excel
-                                </a>
-                            </div>
-                        </div>
-                    </div>
+            {/* BOTONES DE EXPORTACIÓN */}
+            <div className="flex w-full flex-col items-end gap-2 sm:w-44">
+
+                <a
+                    href={urlExportacion()}
+                    className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                >
+                    <FileSpreadsheet size={18} />
+                    Exportar Excel
+                </a>
+
+                <a
+                    href={urlExportacionPdf()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-800 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700"
+                >
+                    <FileText size={18} />
+                    Exportar PDF
+                </a>
+
+            </div>
+        </div>
+    </div>
+</div>
 
                     {/* INDICADORES GENERALES */}
                     <section>
@@ -1461,19 +1500,30 @@ export default function Index({
                         </div>
 
                         <p className="mt-2 text-sm text-slate-500">
-                            El archivo Excel se generará con el año, período,
-                            categoría y concepto seleccionados. Los demás
-                            indicadores conservarán sus criterios generales.
+                            Descargá los reportes en Excel o PDF según los filtros seleccionados.
+                             Los demás indicadores conservarán sus criterios generales.
                         </p>
                     </div>
 
-                    <a
-                        href={urlExportacion()}
-                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2"
-                    >
-                        <FileSpreadsheet size={19} />
-                        Exportar Excel
-                    </a>
+                   <div className="flex flex-wrap gap-3">
+                        <a
+                            href={urlExportacion()}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                        >
+                            <FileSpreadsheet size={18} />
+                            Exportar Excel
+                        </a>
+
+                        <a
+                            href={urlExportacionPdf()}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                        >
+                            <FileText size={18} />
+                            Exportar PDF
+                        </a>
+                    </div>
                 </section>
             </div>
         </>

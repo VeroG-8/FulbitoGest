@@ -8,3 +8,8 @@ Route::get('/reportes', [ReporteController::class, 'index'])
 
 Route::get('/reportes/exportar', [ReporteController::class, 'exportar'])
     ->name('reportes.exportar');
+
+Route::get('/reportes/exportar-pdf', [
+    ReporteController::class,
+    'exportarPdf',
+])->name('reportes.exportar-pdf');    
