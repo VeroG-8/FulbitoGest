@@ -390,7 +390,7 @@ export default function Dashboard() {
                                 </p>
                             </div>
 
-                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-3">
                                 <StatCard
                                     title="Mis categorías"
                                     value={datosProfesor?.total_categorias ?? 0}
@@ -433,20 +433,7 @@ export default function Dashboard() {
                         </section>
 
                         <div className="grid gap-4 xl:grid-cols-2">
-                            <PanelAlertas
-                                titulo="Categorías sin horarios"
-                                descripcion="Categorías que todavía no tienen entrenamientos activos asignados."
-                                icono={<CalendarX size={21} />}
-                                vacio="Todas tus categorías tienen horarios activos."
-                                cantidad={datosProfesor?.total_categorias_sin_horario ?? 0}
-                            >
-                                {(datosProfesor?.categorias_sin_horario ?? []).map((categoria: any) => (
-                                    <div key={categoria.id} className="flex items-center gap-3 rounded-lg border border-amber-100 bg-amber-50/70 p-3">
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100 text-amber-700"><CalendarX size={18} /></div>
-                                        <p className="font-semibold text-slate-700">Categoría {categoria.anio ?? 'Sin año'}</p>
-                                    </div>
-                                ))}
-                            </PanelAlertas>
+                           
 
                             <PanelAlertas
                                 titulo="Próximos entrenamientos"
@@ -468,78 +455,9 @@ export default function Dashboard() {
                             </PanelAlertas>
                         </div>
 
-                        <section>
-                            <div className="mb-4">
-                                <h2 className="text-lg font-bold text-slate-800">
-                                    Mis categorías
-                                </h2>
-                                <p className="text-sm text-slate-500">
-                                    Jugadores pertenecientes a cada categoría asignada.
-                                </p>
-                            </div>
+                        
 
-                            <div className="space-y-4">
-                                {datosProfesor?.categorias?.length > 0 ? (
-                                    datosProfesor.categorias.map((categoria: any) => (
-                                        <div
-                                            key={categoria.id}
-                                            className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
-                                        >
-                                            <div className="flex flex-col justify-between gap-3 border-b border-slate-200 bg-slate-50 p-5 sm:flex-row sm:items-center">
-                                                <div>
-                                                    <h3 className="font-bold text-slate-800">
-                                                        Categoría {categoria.anio ?? 'Sin año'}
-                                                    </h3>
-                                                </div>
-
-                                                <span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-700">
-                                                    {categoria.total_jugadores} jugadores
-                                                </span>
-                                            </div>
-
-                                            <div className="p-5">
-                                                {categoria.jugadores.length > 0 ? (
-                                                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                                        {categoria.jugadores.map((jugador: any) => (
-                                                            <div
-                                                                key={jugador.id}
-                                                                className="flex items-center gap-3 rounded-lg border border-slate-100 p-3"
-                                                            >
-                                                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                                                                    <UserRound size={19} />
-                                                                </div>
-
-                                                                <p className="text-sm font-medium text-slate-700">
-                                                                    {jugador.apellido}, {jugador.nombre}
-                                                                </p>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-sm text-slate-500">
-                                                        Esta categoría todavía no tiene jugadores activos.
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <MensajeVacio mensaje="Todavía no tenés categorías asignadas." />
-                                )}
-                            </div>
-                        </section>
-
-                        <section>
-                            <h2 className="mb-4 text-lg font-bold text-slate-800">
-                                Accesos rápidos
-                            </h2>
-
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                {accesosProfesor.map((item) => (
-                                    <AccesoRapido key={item.titulo} {...item} />
-                                ))}
-                            </div>
-                        </section>
+                       
                     </>
                 )}
 
@@ -724,18 +642,7 @@ export default function Dashboard() {
                             <MensajeVacio mensaje="Tu usuario todavía no tiene un tutor vinculado. Contactá al administrador de la institución." />
                         )}
 
-                        {/* Accesos del tutor */}
-                        <section>
-                            <h2 className="mb-4 text-lg font-bold text-slate-800">
-                                Accesos rápidos
-                            </h2>
-
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                {accesosTutor.map((item) => (
-                                    <AccesoRapido key={item.titulo} {...item} />
-                                ))}
-                            </div>
-                        </section>
+                       
                     </>
                 )}
 
