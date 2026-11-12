@@ -11,6 +11,43 @@ use App\Models\Jugador;
 class JugadorController extends Controller
 {
     /**
+     * Comprobar si el usuario es administrador o superadministrador.
+     */
+    private function esAdministrador(): bool
+    {
+        return in_array(auth()->user()->rol, ['admin', 'superadmin']);
+    }
+
+    /**
+     * Comprobar si el jugador está asociado al tutor autenticado.
+     */
+    private function esJugadorDelTutor(Jugador $jugador): bool
+    {
+        $usuario = auth()->user();
+
+        return $usuario->rol === 'tutor'
+            && $jugador->tutores()
+                ->where('tutores.id', $usuario->tutor_id)
+                ->exists();
+    }
+
+    /**
+     * Autorizar la edición de un jugador.
+     */
+    private function autorizarEdicion(Jugador $jugador): void
+    {
+        if ($this->esAdministrador()) {
+            return;
+        }
+
+        abort_unless(
+            $this->esJugadorDelTutor($jugador),
+            403,
+            'No tienes permiso para modificar este jugador.'
+        );
+    }
+
+    /**
      * Mostrar el listado de jugadores activos.
      */
     public function index(Request $request)
@@ -24,16 +61,22 @@ class JugadorController extends Controller
 
         // Restringir jugadores según el profesor.
         if ($usuario->rol === 'profesor') {
-            $consulta->whereHas('categoria.profesores', function ($query) use ($usuario) {
+            $filtroProfesor = function ($query) use ($usuario) {
                 $query->where('profesores.id', $usuario->profesor_id);
-            });
+            };
+
+            $consulta->whereHas('categoria.profesores', $filtroProfesor);
+            $consultaInactivos->whereHas('categoria.profesores', $filtroProfesor);
         }
 
         // Restringir jugadores según el tutor.
         if ($usuario->rol === 'tutor') {
-            $consulta->whereHas('tutores', function ($query) use ($usuario) {
+            $filtroTutor = function ($query) use ($usuario) {
                 $query->where('tutores.id', $usuario->tutor_id);
-            });
+            };
+
+            $consulta->whereHas('tutores', $filtroTutor);
+            $consultaInactivos->whereHas('tutores', $filtroTutor);
         }
 
         $totalInactivos = $consultaInactivos->count();
@@ -44,7 +87,7 @@ class JugadorController extends Controller
             (clone $consulta)->select('categoria_id')->distinct()
         )
             ->orderBy('anio', 'desc')
-            ->get(['id', 'nombre', 'anio']);
+            ->get(['id', 'anio']);
 
         // Búsqueda por nombre, apellido o DNI.
         $buscar = trim($request->input('buscar', ''));
@@ -57,7 +100,7 @@ class JugadorController extends Controller
             });
         }
 
-      // Filtro por múltiples categorías.
+        // Filtro por múltiples categorías.
         $categoria = $request->input('categoria', []);
 
         if (!is_array($categoria)) {
@@ -72,7 +115,8 @@ class JugadorController extends Controller
         if (!empty($categoria)) {
             $consulta->whereIn('categoria_id', $categoria);
         }
-        // Ordenamiento seguro: solo se permiten estos campos.
+
+        // Ordenamiento seguro.
         $orden = $request->input('orden', 'apellido');
         $direccion = $request->input('direccion', 'asc');
 
@@ -84,7 +128,6 @@ class JugadorController extends Controller
             $direccion = 'asc';
         }
 
-        // Aplicar orden y paginación.
         if ($orden === 'dni') {
             $consulta->orderBy('dni', $direccion)
                 ->orderBy('apellido')
@@ -97,12 +140,16 @@ class JugadorController extends Controller
         $jugadores = $consulta
             ->paginate(10)
             ->withQueryString();
+
+        $esAdministrador = $this->esAdministrador();
+
         $permisos = [
-            'crear' => in_array($usuario->rol, ['admin', 'superadmin']),
-            'editar' => in_array($usuario->rol, ['admin', 'superadmin']),
-            'eliminar' => in_array($usuario->rol, ['admin', 'superadmin']),
-            'historial' => in_array($usuario->rol, ['admin', 'superadmin']),
+            'crear' => $esAdministrador,
+            'editar' => $esAdministrador || $usuario->rol === 'tutor',
+            'eliminar' => $esAdministrador,
+            'historial' => $esAdministrador,
         ];
+
         return Inertia::render('Jugadores/Index', [
             'jugadores' => $jugadores,
             'categorias' => $categorias,
@@ -122,9 +169,15 @@ class JugadorController extends Controller
      */
     public function create()
     {
+        abort_unless(
+            $this->esAdministrador(),
+            403,
+            'No tienes permiso para crear jugadores.'
+        );
+
         $categorias = Categoria::where('estado', true)
             ->orderBy('anio', 'desc')
-            ->get(['id', 'nombre', 'anio']);
+            ->get(['id', 'anio']);
 
         return Inertia::render('Jugadores/Create', [
             'categorias' => $categorias,
@@ -136,6 +189,12 @@ class JugadorController extends Controller
      */
     public function store(Request $request)
     {
+        abort_unless(
+            $this->esAdministrador(),
+            403,
+            'No tienes permiso para crear jugadores.'
+        );
+
         $validated = $request->validate([
             'dni' => [
                 'required',
@@ -178,22 +237,19 @@ class JugadorController extends Controller
     /**
      * Mostrar el formulario de edición.
      */
-        public function edit(Jugador $jugador)
+    public function edit(Jugador $jugador)
     {
-        $usuario = auth()->user();
+        $this->autorizarEdicion($jugador);
 
-        // Solo administradores pueden editar jugadores.
-        abort_unless(
-            in_array($usuario->rol, ['admin', 'superadmin']),
-            403,
-            'No tienes permiso para editar jugadores.'
-        );
+        $puedeModificarCategoria = $this->esAdministrador();
 
-        // Incluir categorías activas y la categoría actual del jugador.
-        $categorias = Categoria::where('estado', true)
-            ->orWhere('id', $jugador->categoria_id)
-            ->orderBy('anio', 'desc')
-            ->get(['id', 'anio']);
+        // Solamente los administradores reciben las categorías disponibles.
+        $categorias = $puedeModificarCategoria
+            ? Categoria::where('estado', true)
+                ->orWhere('id', $jugador->categoria_id)
+                ->orderBy('anio', 'desc')
+                ->get(['id', 'anio'])
+            : [];
 
         // Formatear fecha para el input type="date".
         $jugador->fecha_nacimiento = $jugador->fecha_nacimiento
@@ -203,24 +259,18 @@ class JugadorController extends Controller
         return Inertia::render('Jugadores/Edit', [
             'jugador' => $jugador,
             'categorias' => $categorias,
+            'puedeModificarCategoria' => $puedeModificarCategoria,
         ]);
     }
 
     /**
      * Actualizar los datos de un jugador.
      */
-        public function update(Request $request, Jugador $jugador)
+    public function update(Request $request, Jugador $jugador)
     {
-        $usuario = auth()->user();
+        $this->autorizarEdicion($jugador);
 
-        // Solo administradores pueden actualizar jugadores.
-        abort_unless(
-            in_array($usuario->rol, ['admin', 'superadmin']),
-            403,
-            'No tienes permiso para modificar jugadores.'
-        );
-
-        $validated = $request->validate([
+        $reglasPersonales = [
             'dni' => [
                 'required',
                 'string',
@@ -234,25 +284,46 @@ class JugadorController extends Controller
             'telefono' => 'nullable|string|max:30',
             'direccion' => 'nullable|string|max:255',
             'localidad' => 'nullable|string|max:100',
-            'categoria_id' => [
-                'required',
-                Rule::exists('categorias', 'id')
-                    ->where(function ($query) use ($jugador) {
-                        $query->where('estado', true)
-                            ->orWhere('id', $jugador->categoria_id);
-                    }),
-            ],
-        ], [
+        ];
+
+        $mensajes = [
             'dni.required' => 'El DNI es obligatorio.',
             'dni.unique' => 'Ya existe otro jugador registrado con ese DNI.',
             'nombre.required' => 'El nombre es obligatorio.',
             'apellido.required' => 'El apellido es obligatorio.',
             'fecha_nacimiento.required' => 'La fecha de nacimiento es obligatoria.',
-            'categoria_id.required' => 'Debés seleccionar una categoría.',
-            'categoria_id.exists' => 'La categoría seleccionada no está disponible.',
-        ]);
+        ];
+
+        // Administradores pueden modificar todos los datos.
+        if ($this->esAdministrador()) {
+            $validated = $request->validate([
+                ...$reglasPersonales,
+                'categoria_id' => [
+                    'required',
+                    Rule::exists('categorias', 'id')
+                        ->where(function ($query) use ($jugador) {
+                            $query->where('estado', true)
+                                ->orWhere('id', $jugador->categoria_id);
+                        }),
+                ],
+            ], [
+                ...$mensajes,
+                'categoria_id.required' => 'Debés seleccionar una categoría.',
+                'categoria_id.exists' => 'La categoría seleccionada no está disponible.',
+            ]);
+        } else {
+            // El tutor solamente puede modificar datos personales y de contacto.
+            // categoria_id y cualquier otro campo administrativo se ignoran.
+            $validated = $request->validate($reglasPersonales, $mensajes);
+        }
 
         $jugador->update($validated);
+
+        if (auth()->user()->rol === 'tutor') {
+            return redirect()
+                ->route('jugadores.show', $jugador->id)
+                ->with('success', 'Los datos del jugador se actualizaron correctamente.');
+        }
 
         return redirect()
             ->route('jugadores.index')
@@ -262,10 +333,12 @@ class JugadorController extends Controller
     /**
      * Mostrar la ficha completa del jugador.
      */
-        public function show(Jugador $jugador)
+    public function show(Jugador $jugador)
     {
         $usuario = auth()->user();
-        $puedeEditar = in_array($usuario->rol, ['admin', 'superadmin']);
+
+        $puedeEditar = $this->esAdministrador();
+
         // Verificar acceso del profesor.
         if ($usuario->rol === 'profesor') {
             $tieneAcceso = $jugador->categoria()
@@ -283,15 +356,15 @@ class JugadorController extends Controller
 
         // Verificar acceso del tutor.
         if ($usuario->rol === 'tutor') {
-            $tieneAcceso = $jugador->tutores()
-                ->where('tutores.id', $usuario->tutor_id)
-                ->exists();
+            $tieneAcceso = $this->esJugadorDelTutor($jugador);
 
             abort_unless(
                 $tieneAcceso,
                 403,
                 'No tienes permiso para consultar este jugador.'
             );
+
+            $puedeEditar = true;
         }
 
         $jugador->load([
@@ -314,6 +387,12 @@ class JugadorController extends Controller
      */
     public function destroy(Jugador $jugador)
     {
+        abort_unless(
+            $this->esAdministrador(),
+            403,
+            'No tienes permiso para deshabilitar jugadores.'
+        );
+
         $jugador->update([
             'estado' => false,
         ]);
@@ -362,6 +441,12 @@ class JugadorController extends Controller
      */
     public function reactivar(Jugador $jugador)
     {
+        abort_unless(
+            $this->esAdministrador(),
+            403,
+            'No tienes permiso para reactivar jugadores.'
+        );
+
         $jugador->update([
             'estado' => true,
         ]);

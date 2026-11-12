@@ -83,6 +83,8 @@ export default function Authenticated({
     const esAdministrador = ['superadmin', 'admin'].includes(user.rol);
 
     const mostrarMiFicha = user.rol === 'profesor';
+    const mostrarMiFichaTutor =
+    user.rol === 'tutor' && user.tutor_id !== null;
 
     // =====================================================
     // GRUPOS DEL MENÚ LATERAL
@@ -137,11 +139,16 @@ export default function Authenticated({
                             icon: Trophy,
                         },
                         {
+                            label: 'Mis inscripciones',
+                            route: 'torneos.mis-inscripciones',
+                            icon: ClipboardList,
+                        },
+                        {
                             label: 'Clubes',
                             route: 'clubes.index',
                             icon: Building2,
                         },
-                         {
+                        {
                             label: 'Equipos',
                             route: 'equipos.index',
                             icon: UsersRound,
@@ -216,6 +223,9 @@ export default function Authenticated({
         if (item.route === 'profesores.mi-ficha') {
             return user.rol === 'profesor';
         }
+        if (item.route === 'torneos.mis-inscripciones') {
+                return user.rol === 'tutor';
+            }
 
         if (esAdministrador) {
             return true;
@@ -225,7 +235,6 @@ export default function Authenticated({
             return [
                 'dashboard',
                 'jugadores.index',
-                'equipos.index',
                 'horarios.index',
             ].includes(item.route);
         }
@@ -283,6 +292,19 @@ export default function Authenticated({
                 route().current(nombreRuta) ||
                 route().current('cuotas.asignaciones.*')
             );
+        }
+
+        if (nombreRuta === 'torneos.index') {
+            return (
+                route().current('torneos.index') ||
+                route().current('torneos.show') ||
+                route().current('torneos.edit') ||
+                route().current('torneos.create')
+            );
+        }
+
+        if (nombreRuta === 'torneos.mis-inscripciones') {
+            return route().current(nombreRuta);
         }
 
         return (
@@ -466,7 +488,24 @@ export default function Authenticated({
                             >
                                 <UserRound size={19} />
 
-                                <span>Mis datos personales</span>
+                                <span>Mis datos</span>
+                            </Link>
+                        )}
+                        {/* MI FICHA DE TUTOR */}
+
+                        {mostrarMiFichaTutor && (
+                            <Link
+                                href={route('tutores.show', user.tutor_id)}
+                                onClick={() => setSidebarOpen(false)}
+                                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                                    route().current('tutores.show')
+                                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-950/20'
+                                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                                }`}
+                            >
+                                <UserRound size={19} />
+
+                                <span>Tutor/a</span>
                             </Link>
                         )}
                     </div>

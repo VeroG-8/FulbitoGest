@@ -115,6 +115,7 @@ class HorarioController extends Controller
      */
     public function edit(Horario $horario)
     {
+        $this->autorizarEdicion();
         $categorias = Categoria::query()
             ->where(function ($query) use ($horario) {
                 $query->where('estado', true)
@@ -153,6 +154,7 @@ class HorarioController extends Controller
      */
     public function update(Request $request, Horario $horario)
     {
+        $this->autorizarEdicion();
         $datos = $this->validarDatos($request);
 
         // Se actualiza según el profesor responsable de la nueva categoría.
@@ -407,5 +409,16 @@ class HorarioController extends Controller
         throw ValidationException::withMessages([
             'hora_inicio' => 'Existe otro horario que se superpone para la misma categoría, profesor o cancha. Revisá los horarios asignados.',
         ]);
+    }
+    /**
+     * Impedir que los tutores modifiquen horarios.
+     */
+    private function autorizarEdicion(): void
+    {
+        abort_if(
+            auth()->user()?->rol === 'tutor',
+            403,
+            'No tienes permiso para modificar horarios.'
+        );
     }
 }

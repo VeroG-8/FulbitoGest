@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/react/timegrid';
 import dayGridPlugin from '@fullcalendar/react/daygrid';
-import interactionPlugin from '@fullcalendar/react/interaction';
+import interactionPlugin from '@fullcalendar/react';
 import {
     CalendarDays,
     Clock3,
@@ -20,7 +20,6 @@ import themePlugin from '@fullcalendar/react/themes/breezy';
 import '@fullcalendar/react/skeleton.css';
 import '@fullcalendar/react/themes/breezy/theme.css';
 import '@fullcalendar/react/themes/breezy/palettes/indigo.css';
-
 
 interface Categoria {
     id: number;
@@ -62,6 +61,7 @@ interface Horario {
 interface Props {
     horarios: Horario[];
 }
+
 interface EventoCalendario {
     id: string;
     title: string;
@@ -89,14 +89,14 @@ const diasSemana: Record<string, number> = {
 };
 
 const colores = [
-    '#bfdbfe', // Azul
-    '#bbf7d0', // Verde
-    '#ddd6fe', // Violeta
-    '#fed7aa', // Naranja
-    '#fbcfe8', // Rosa
-    '#a5f3fc', // Celeste
-    '#c7d2fe', // Índigo
-    '#d9f99d', // Lima
+    '#bfdbfe',
+    '#bbf7d0',
+    '#ddd6fe',
+    '#fed7aa',
+    '#fbcfe8',
+    '#a5f3fc',
+    '#c7d2fe',
+    '#d9f99d',
 ];
 
 function obtenerColor(id: number): string {
@@ -108,8 +108,17 @@ function normalizarDia(dia: string): number | undefined {
 }
 
 export default function Index({ horarios }: Props) {
-    const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('todas');
-    const [predioSeleccionado, setPredioSeleccionado] = useState('todos');
+    const page = usePage();
+    const { auth } = page.props as any;
+    const user = auth.user;
+
+    const esTutor = user?.rol === 'tutor';
+
+    const [categoriaSeleccionada, setCategoriaSeleccionada] =
+        useState('todas');
+
+    const [predioSeleccionado, setPredioSeleccionado] =
+        useState('todos');
 
     const categorias = useMemo(() => {
         const resultado = new Map<number, Categoria>();
@@ -157,40 +166,39 @@ export default function Index({ horarios }: Props) {
     }, [horarios, categoriaSeleccionada, predioSeleccionado]);
 
     const rangoHorario = useMemo(() => {
-    if (horariosFiltrados.length === 0) {
-        return {
-            inicio: '07:00:00',
-            fin: '22:00:00',
-        };
-    }
+        if (horariosFiltrados.length === 0) {
+            return {
+                inicio: '07:00:00',
+                fin: '22:00:00',
+            };
+        }
 
-    const horasInicio = horariosFiltrados.map((horario) =>
-        horario.hora_inicio.slice(0, 8),
-    );
+        const horasInicio = horariosFiltrados.map((horario) =>
+            horario.hora_inicio.slice(0, 8),
+        );
 
-    const horasFin = horariosFiltrados.map((horario) =>
-        horario.hora_fin.slice(0, 8),
-    );
+        const horasFin = horariosFiltrados.map((horario) =>
+            horario.hora_fin.slice(0, 8),
+        );
 
-    const inicio = horasInicio.reduce((menor, actual) =>
-        actual < menor ? actual : menor,
-    );
+        const inicio = horasInicio.reduce((menor, actual) =>
+            actual < menor ? actual : menor,
+        );
 
-    const ultimaHora = horasFin.reduce((mayor, actual) =>
-    actual > mayor ? actual : mayor,
-    );
+        const ultimaHora = horasFin.reduce((mayor, actual) =>
+            actual > mayor ? actual : mayor,
+        );
 
-    // Agregar 30 minutos al último horario.
-    const [horas, minutos] = ultimaHora.split(':').map(Number);
+        const [horas, minutos] = ultimaHora.split(':').map(Number);
 
-    const fechaFin = new Date(2000, 0, 1, horas, minutos);
-    fechaFin.setMinutes(fechaFin.getMinutes() + 30);
+        const fechaFin = new Date(2000, 0, 1, horas, minutos);
+        fechaFin.setMinutes(fechaFin.getMinutes() + 30);
 
-    const fin = [
-        String(fechaFin.getHours()).padStart(2, '0'),
-        String(fechaFin.getMinutes()).padStart(2, '0'),
-        '00',
-    ].join(':');
+        const fin = [
+            String(fechaFin.getHours()).padStart(2, '0'),
+            String(fechaFin.getMinutes()).padStart(2, '0'),
+            '00',
+        ].join(':');
 
         return {
             inicio,
@@ -198,37 +206,35 @@ export default function Index({ horarios }: Props) {
         };
     }, [horariosFiltrados]);
 
-
     const eventos = useMemo<EventoCalendario[]>(() => {
-    const resultado: EventoCalendario[] = [];
+        const resultado: EventoCalendario[] = [];
 
-    horariosFiltrados.forEach((horario) => {
-        const dia = normalizarDia(horario.dia_semana);
+        horariosFiltrados.forEach((horario) => {
+            const dia = normalizarDia(horario.dia_semana);
 
-        // Excluir sábados, domingos y días no reconocidos.
-        if (dia === undefined || dia < 1 || dia > 5) {
-            return;
-        }
+            if (dia === undefined || dia < 1 || dia > 5) {
+                return;
+            }
 
-        const color = obtenerColor(horario.categoria_id);
+            const color = obtenerColor(horario.categoria_id);
 
-        resultado.push({
-            id: String(horario.id),
-            title: `Categoría ${horario.categoria?.anio ?? '-'}`,
-            daysOfWeek: [dia],
-            startTime: horario.hora_inicio,
-            endTime: horario.hora_fin,
-            backgroundColor: color,
-            borderColor: color,
-            textColor: '#1e293b',
-            extendedProps: {
-                horario,
-            },
+            resultado.push({
+                id: String(horario.id),
+                title: `Categoría ${horario.categoria?.anio ?? '-'}`,
+                daysOfWeek: [dia],
+                startTime: horario.hora_inicio,
+                endTime: horario.hora_fin,
+                backgroundColor: color,
+                borderColor: color,
+                textColor: '#1e293b',
+                extendedProps: {
+                    horario,
+                },
+            });
         });
-    });
 
-    return resultado;
-}, [horariosFiltrados]);
+        return resultado;
+    }, [horariosFiltrados]);
 
     const profesoresUnicos = new Set(
         horariosFiltrados.map((horario) => horario.profesor_id),
@@ -242,7 +248,12 @@ export default function Index({ horarios }: Props) {
         setCategoriaSeleccionada('todas');
         setPredioSeleccionado('todos');
     };
+
     const deshabilitarHorario = (id: number) => {
+        if (esTutor) {
+            return;
+        }
+
         if (confirm('¿Estás seguro de que deseas deshabilitar este horario?')) {
             router.delete(`/horarios/${id}`);
         }
@@ -253,7 +264,8 @@ export default function Index({ horarios }: Props) {
             <Head title="Horarios" />
 
             <div className="space-y-6">
-                {/* Encabezado */}
+                {/* ENCABEZADO */}
+
                 <div className="overflow-hidden rounded-2xl bg-slate-950 shadow-sm">
                     <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-4">
@@ -265,35 +277,43 @@ export default function Index({ horarios }: Props) {
                                 <h1 className="text-2xl font-bold text-white">
                                     Horarios de entrenamiento
                                 </h1>
+
                                 <p className="mt-1 text-sm text-slate-300">
                                     Organización semanal de las actividades deportivas.
                                 </p>
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-3">
-                            <button
-                                type="button"
-                                onClick={() => router.visit('/horarios/historial')}
-                                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
-                            >
-                                <Clock3 size={18} />
-                                Historial
-                            </button>
+                        {!esTutor && (
+                            <div className="flex flex-wrap items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        router.visit('/horarios/historial')
+                                    }
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
+                                >
+                                    <Clock3 size={18} />
+                                    Historial
+                                </button>
 
-                            <button
-                                type="button"
-                                onClick={() => router.visit('/horarios/create')}
-                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
-                            >
-                                <CalendarCheck size={18} />
-                                Nuevo horario
-                            </button>
-                        </div>
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        router.visit('/horarios/create')
+                                    }
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
+                                >
+                                    <CalendarCheck size={18} />
+                                    Nuevo horario
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Estadísticas */}
+                {/* ESTADÍSTICAS */}
+
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                         <div className="flex items-center justify-between">
@@ -301,10 +321,12 @@ export default function Index({ horarios }: Props) {
                                 <p className="text-sm font-medium text-slate-500">
                                     Entrenamientos
                                 </p>
+
                                 <p className="mt-2 text-3xl font-bold text-slate-900">
                                     {horariosFiltrados.length}
                                 </p>
                             </div>
+
                             <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
                                 <Clock3 size={23} />
                             </div>
@@ -317,10 +339,12 @@ export default function Index({ horarios }: Props) {
                                 <p className="text-sm font-medium text-slate-500">
                                     Categorías
                                 </p>
+
                                 <p className="mt-2 text-3xl font-bold text-slate-900">
                                     {categoriasActivas.size}
                                 </p>
                             </div>
+
                             <div className="rounded-xl bg-emerald-50 p-3 text-emerald-600">
                                 <CalendarDays size={23} />
                             </div>
@@ -333,10 +357,12 @@ export default function Index({ horarios }: Props) {
                                 <p className="text-sm font-medium text-slate-500">
                                     Profesores
                                 </p>
+
                                 <p className="mt-2 text-3xl font-bold text-slate-900">
                                     {profesoresUnicos.size}
                                 </p>
                             </div>
+
                             <div className="rounded-xl bg-violet-50 p-3 text-violet-600">
                                 <Users size={23} />
                             </div>
@@ -344,11 +370,13 @@ export default function Index({ horarios }: Props) {
                     </div>
                 </div>
 
-                {/* Filtros */}
+                {/* FILTROS */}
+
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                     <div className="mb-4 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Filter size={18} className="text-slate-500" />
+
                             <h2 className="font-semibold text-slate-800">
                                 Filtros del calendario
                             </h2>
@@ -434,10 +462,12 @@ export default function Index({ horarios }: Props) {
                     </div>
                 </div>
 
-                {/* Referencias de colores */}
+                {/* REFERENCIAS DE COLORES */}
+
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                     <div className="mb-3 flex items-center gap-2">
                         <MapPin size={18} className="text-slate-500" />
+
                         <h2 className="font-semibold text-slate-800">
                             Referencias de categorías
                         </h2>
@@ -464,12 +494,14 @@ export default function Index({ horarios }: Props) {
                     </div>
                 </div>
 
-                {/* Calendario */}
+                {/* CALENDARIO */}
+
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
                     <div className="mb-5">
                         <h2 className="text-lg font-bold text-slate-900">
                             Calendario semanal
                         </h2>
+
                         <p className="mt-1 text-sm text-slate-500">
                             Entrenamientos programados de lunes a viernes.
                         </p>
@@ -478,11 +510,11 @@ export default function Index({ horarios }: Props) {
                     <div className="horarios-calendar">
                         <FullCalendar
                             plugins={[
-                            themePlugin,
-                            timeGridPlugin,
-                            dayGridPlugin,
-                            interactionPlugin,
-                        ]}
+                                themePlugin,
+                                timeGridPlugin,
+                                dayGridPlugin,
+                                interactionPlugin,
+                            ]}
                             initialView="timeGridWeek"
                             slotMinTime={rangoHorario.inicio}
                             slotMaxTime={rangoHorario.fin}
@@ -519,12 +551,11 @@ export default function Index({ horarios }: Props) {
                             selectable={false}
                             events={eventos}
                             eventClick={(info) => {
-                                router.visit(
-                                    `/horarios/${info.event.id}`,
-                                );
+                                router.visit(`/horarios/${info.event.id}`);
                             }}
                             eventContent={(info) => {
-                                const horario = info.event.extendedProps.horario as Horario;
+                                const horario = info.event.extendedProps
+                                    .horario as Horario;
 
                                 return (
                                     <div className="h-full overflow-hidden px-1 py-0.5 text-left leading-tight">
@@ -533,17 +564,19 @@ export default function Index({ horarios }: Props) {
                                                 Categoría {horario.categoria?.anio}
                                             </div>
 
-                                            <button
-                                                type="button"
-                                                title="Deshabilitar horario"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    deshabilitarHorario(horario.id);
-                                                }}
-                                                className="shrink-0 rounded p-0.5 text-slate-700 transition hover:bg-white/60 hover:text-red-600"
-                                            >
-                                                <Ban size={14} />
-                                            </button>
+                                            {!esTutor && (
+                                                <button
+                                                    type="button"
+                                                    title="Deshabilitar horario"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        deshabilitarHorario(horario.id);
+                                                    }}
+                                                    className="shrink-0 rounded p-0.5 text-slate-700 transition hover:bg-white/60 hover:text-red-600"
+                                                >
+                                                    <Ban size={14} />
+                                                </button>
+                                            )}
                                         </div>
 
                                         <div className="mt-1 truncate text-[11px]">

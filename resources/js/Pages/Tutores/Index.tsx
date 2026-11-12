@@ -4,7 +4,6 @@ import {
     Users,
     UserRound,
     UserPlus,
-    History,
     Search,
     ArrowUpDown,
     ChevronUp,
@@ -40,6 +39,7 @@ interface Props {
     tutores: Tutor[];
     totalActivos: number;
     totalInactivos: number;
+    puedeAdministrar: boolean;
     flash?: {
         success?: string;
     };
@@ -50,11 +50,16 @@ type DireccionOrden = 'asc' | 'desc';
 
 const POR_PAGINA = 10;
 
-export default function Index({ tutores, totalActivos,
-    totalInactivos,flash }: Props) {
-
+export default function Index({
+    tutores,
+    totalActivos,
+    totalInactivos,
+    puedeAdministrar,
+    flash,
+}: Props) {
     const [busqueda, setBusqueda] = useState('');
-    const [localidadSeleccionada, setLocalidadSeleccionada] = useState('Todas');
+    const [localidadSeleccionada, setLocalidadSeleccionada] =
+        useState('Todas');
     const [campoOrden, setCampoOrden] = useState<CampoOrden>('nombre');
     const [direccionOrden, setDireccionOrden] =
         useState<DireccionOrden>('asc');
@@ -115,7 +120,13 @@ export default function Index({ tutores, totalActivos,
         });
 
         return resultado;
-    }, [tutores, busqueda, localidadSeleccionada, campoOrden, direccionOrden]);
+    }, [
+        tutores,
+        busqueda,
+        localidadSeleccionada,
+        campoOrden,
+        direccionOrden,
+    ]);
 
     const totalPaginas = Math.ceil(
         tutoresFiltrados.length / POR_PAGINA,
@@ -125,8 +136,6 @@ export default function Index({ tutores, totalActivos,
         (paginaActual - 1) * POR_PAGINA,
         paginaActual * POR_PAGINA,
     );
-
-   
 
     const cambiarOrden = (campo: CampoOrden) => {
         if (campoOrden === campo) {
@@ -176,18 +185,14 @@ export default function Index({ tutores, totalActivos,
             <div className="space-y-6">
                 <PageHeader
                     title="Tutores"
-                    description="Administrá la información de los responsables de los jugadores."
+                    description={
+                        puedeAdministrar
+                            ? 'Administrá la información de los responsables de los jugadores.'
+                            : 'Consultá y actualizá tus datos personales y de contacto.'
+                    }
                     icon={<Users size={28} />}
                     actions={
-                        <div className="flex flex-wrap gap-2">
-                            <Link
-                                href="/tutores/historial"
-                                className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
-                            >
-                                <History className="h-4 w-4" />
-                                Historial
-                            </Link>
-
+                        puedeAdministrar ? (
                             <Link
                                 href="/tutores/create"
                                 className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
@@ -195,7 +200,7 @@ export default function Index({ tutores, totalActivos,
                                 <UserPlus size={17} />
                                 Nuevo tutor
                             </Link>
-                        </div>
+                        ) : undefined
                     }
                 />
 
@@ -205,22 +210,32 @@ export default function Index({ tutores, totalActivos,
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div
+                    className={`grid grid-cols-1 gap-4 ${
+                        puedeAdministrar ? 'sm:grid-cols-2' : ''
+                    }`}
+                >
                     <StatCard
                         title="Tutores activos"
                         value={totalActivos}
-                        description="Responsables habilitados"
+                        description={
+                            puedeAdministrar
+                                ? 'Responsables habilitados'
+                                : 'Tu ficha se encuentra habilitada'
+                        }
                         icon={<UserRound className="h-5 w-5" />}
                         color="emerald"
                     />
 
-                    <StatCard
-                        title="Tutores inactivos"
-                        value={totalInactivos}
-                        description="Responsables deshabilitados"
-                        icon={<UserX className="h-5 w-5" />}
-                        color="amber"
-                    />
+                    {puedeAdministrar && (
+                        <StatCard
+                            title="Tutores inactivos"
+                            value={totalInactivos}
+                            description="Responsables deshabilitados"
+                            icon={<UserX className="h-5 w-5" />}
+                            color="amber"
+                        />
+                    )}
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -258,7 +273,9 @@ export default function Index({ tutores, totalActivos,
                             }}
                             className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                         >
-                            <option value="Todas">Todas las localidades</option>
+                            <option value="Todas">
+                                Todas las localidades
+                            </option>
 
                             {localidades.map((localidad) => (
                                 <option key={localidad} value={localidad}>
@@ -281,10 +298,14 @@ export default function Index({ tutores, totalActivos,
                     <div className="flex flex-col gap-2 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h2 className="text-lg font-bold text-slate-800">
-                                Listado de tutores
+                                {puedeAdministrar
+                                    ? 'Listado de tutores'
+                                    : 'Mi ficha'}
                             </h2>
                             <p className="mt-1 text-sm text-slate-500">
-                                Información de los responsables registrados.
+                                {puedeAdministrar
+                                    ? 'Información de los responsables registrados.'
+                                    : 'Tus datos personales y de contacto.'}
                             </p>
                         </div>
 
@@ -415,26 +436,31 @@ export default function Index({ tutores, totalActivos,
 
                                                     <Link
                                                         href={`/tutores/${tutor.id}/edit`}
-                                                        title="Editar tutor"
+                                                        title={
+                                                            puedeAdministrar
+                                                                ? 'Editar tutor'
+                                                                : 'Editar mis datos'
+                                                        }
                                                         className="rounded-lg bg-amber-50 p-2 text-amber-600 transition hover:bg-amber-100"
                                                     >
                                                         <Pencil className="h-4 w-4" />
                                                     </Link>
 
-                                                    {tutor.estado && (
-                                                        <button
-                                                            type="button"
-                                                            title="Deshabilitar tutor"
-                                                            onClick={() =>
-                                                                deshabilitarTutor(
-                                                                    tutor,
-                                                                )
-                                                            }
-                                                            className="rounded-lg bg-red-50 p-2 text-red-600 transition hover:bg-red-100"
-                                                        >
-                                                            <UserX className="h-4 w-4" />
-                                                        </button>
-                                                    )}
+                                                    {puedeAdministrar &&
+                                                        tutor.estado && (
+                                                            <button
+                                                                type="button"
+                                                                title="Deshabilitar tutor"
+                                                                onClick={() =>
+                                                                    deshabilitarTutor(
+                                                                        tutor,
+                                                                    )
+                                                                }
+                                                                className="rounded-lg bg-red-50 p-2 text-red-600 transition hover:bg-red-100"
+                                                            >
+                                                                <UserX className="h-4 w-4" />
+                                                            </button>
+                                                        )}
                                                 </div>
                                             </td>
                                         </tr>

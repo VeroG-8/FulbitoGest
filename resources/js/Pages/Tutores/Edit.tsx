@@ -1,4 +1,17 @@
 import { Head, Link, useForm } from '@inertiajs/react';
+import type { FormEvent } from 'react';
+
+import {
+    UserRound,
+    ArrowLeft,
+    IdCard,
+    MapPin,
+    Save,
+    Mail,
+    Phone,
+} from 'lucide-react';
+
+import PageHeader from '@/Components/Shared/PageHeader';
 
 interface Tutor {
     id: number;
@@ -15,6 +28,53 @@ interface Props {
     tutor: Tutor;
 }
 
+const inputStyles =
+    'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100';
+
+interface CampoProps {
+    label: string;
+    value: string;
+    error?: string;
+    type?: string;
+    placeholder?: string;
+    onChange: (value: string) => void;
+}
+
+function Campo({
+    label,
+    value,
+    error,
+    type = 'text',
+    placeholder,
+    onChange,
+}: CampoProps) {
+    return (
+        <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+                {label}
+            </label>
+
+            <input
+                type={type}
+                value={value}
+                placeholder={placeholder}
+                onChange={(e) => onChange(e.target.value)}
+                className={`${inputStyles} ${
+                    error
+                        ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
+                        : ''
+                }`}
+            />
+
+            {error && (
+                <p className="mt-1.5 text-xs font-medium text-red-600">
+                    {error}
+                </p>
+            )}
+        </div>
+    );
+}
+
 export default function Edit({ tutor }: Props) {
     const { data, setData, put, processing, errors } = useForm({
         dni: tutor.dni ?? '',
@@ -26,202 +86,156 @@ export default function Edit({ tutor }: Props) {
         localidad: tutor.localidad ?? '',
     });
 
-    function submit(e: React.FormEvent) {
+    const submit = (e: FormEvent) => {
         e.preventDefault();
 
         put(`/tutores/${tutor.id}`);
-    }
+    };
 
     return (
         <>
             <Head title="Editar tutor" />
 
-            <div className="min-h-screen bg-gray-100 p-6">
-                <div className="mx-auto max-w-3xl">
-
-                    <div className="mb-6 flex items-center justify-between">
-                        <h1 className="text-3xl font-bold text-blue-600">
-                            Editar tutor
-                        </h1>
-
+            <div className="space-y-6">
+                {/* Encabezado */}
+                <PageHeader
+                    title="Editar mis datos"
+                    description={`Actualizá la información personal y de contacto de ${tutor.nombre} ${tutor.apellido}.`}
+                    icon={<UserRound size={28} />}
+                    actions={
                         <Link
                             href={`/tutores/${tutor.id}`}
-                            className="rounded bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
+                            className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
                         >
-                            Volver
+                            <ArrowLeft size={17} />
+                            Volver a mi ficha
                         </Link>
+                    }
+                />
+
+                <form onSubmit={submit} className="space-y-6">
+                    {/* Datos personales */}
+                    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div className="flex items-center gap-3 border-b border-slate-100 px-6 py-5">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                                <IdCard size={21} />
+                            </div>
+
+                            <div>
+                                <h2 className="font-bold text-slate-800">
+                                    Datos personales
+                                </h2>
+
+                                <p className="text-xs text-slate-500">
+                                    Información de identificación del tutor.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
+                            <Campo
+                                label="DNI"
+                                value={data.dni}
+                                error={errors.dni}
+                                placeholder="Ingresar DNI"
+                                onChange={(value) => setData('dni', value)}
+                            />
+
+                            <Campo
+                                label="Nombre"
+                                value={data.nombre}
+                                error={errors.nombre}
+                                placeholder="Nombre"
+                                onChange={(value) => setData('nombre', value)}
+                            />
+
+                            <Campo
+                                label="Apellido"
+                                value={data.apellido}
+                                error={errors.apellido}
+                                placeholder="Apellido"
+                                onChange={(value) => setData('apellido', value)}
+                            />
+                        </div>
+                    </section>
+
+                    {/* Datos de contacto */}
+                    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div className="flex items-center gap-3 border-b border-slate-100 px-6 py-5">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                                <MapPin size={21} />
+                            </div>
+
+                            <div>
+                                <h2 className="font-bold text-slate-800">
+                                    Datos de contacto
+                                </h2>
+
+                                <p className="text-xs text-slate-500">
+                                    Información de contacto y domicilio.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
+                            <Campo
+                                label="Email"
+                                type="email"
+                                value={data.email}
+                                error={errors.email}
+                                placeholder="correo@ejemplo.com"
+                                onChange={(value) => setData('email', value)}
+                            />
+
+                            <Campo
+                                label="Teléfono"
+                                type="tel"
+                                value={data.telefono}
+                                error={errors.telefono}
+                                placeholder="Número de teléfono"
+                                onChange={(value) => setData('telefono', value)}
+                            />
+
+                            <Campo
+                                label="Localidad"
+                                value={data.localidad}
+                                error={errors.localidad}
+                                placeholder="Localidad"
+                                onChange={(value) => setData('localidad', value)}
+                            />
+
+                            <Campo
+                                label="Dirección"
+                                value={data.direccion}
+                                error={errors.direccion}
+                                placeholder="Calle, número y barrio"
+                                onChange={(value) => setData('direccion', value)}
+                            />
+                        </div>
+                    </section>
+
+                    {/* Botones */}
+                    <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row">
+                        <Link
+                            href={`/tutores/${tutor.id}`}
+                            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                        >
+                            Cancelar
+                        </Link>
+
+                        <button
+                            type="submit"
+                            disabled={processing}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <Save size={18} />
+
+                            {processing
+                                ? 'Guardando cambios...'
+                                : 'Guardar cambios'}
+                        </button>
                     </div>
-
-                    <div className="rounded-lg bg-white p-6 shadow">
-                        <form onSubmit={submit}>
-
-                            {/* DNI */}
-                            <div className="mb-4">
-                                <label className="mb-1 block font-medium text-gray-700">
-                                    DNI
-                                </label>
-
-                                <input
-                                    type="text"
-                                    value={data.dni}
-                                    onChange={(e) =>
-                                        setData('dni', e.target.value)
-                                    }
-                                    className="w-full rounded border border-gray-300 px-3 py-2"
-                                />
-
-                                {errors.dni && (
-                                    <p className="mt-1 text-sm text-red-600">
-                                        {errors.dni}
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* Nombre */}
-                            <div className="mb-4">
-                                <label className="mb-1 block font-medium text-gray-700">
-                                    Nombre
-                                </label>
-
-                                <input
-                                    type="text"
-                                    value={data.nombre}
-                                    onChange={(e) =>
-                                        setData('nombre', e.target.value)
-                                    }
-                                    className="w-full rounded border border-gray-300 px-3 py-2"
-                                />
-
-                                {errors.nombre && (
-                                    <p className="mt-1 text-sm text-red-600">
-                                        {errors.nombre}
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* Apellido */}
-                            <div className="mb-4">
-                                <label className="mb-1 block font-medium text-gray-700">
-                                    Apellido
-                                </label>
-
-                                <input
-                                    type="text"
-                                    value={data.apellido}
-                                    onChange={(e) =>
-                                        setData('apellido', e.target.value)
-                                    }
-                                    className="w-full rounded border border-gray-300 px-3 py-2"
-                                />
-
-                                {errors.apellido && (
-                                    <p className="mt-1 text-sm text-red-600">
-                                        {errors.apellido}
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* Email */}
-                            <div className="mb-4">
-                                <label className="mb-1 block font-medium text-gray-700">
-                                    Email
-                                </label>
-
-                                <input
-                                    type="email"
-                                    value={data.email}
-                                    onChange={(e) =>
-                                        setData('email', e.target.value)
-                                    }
-                                    className="w-full rounded border border-gray-300 px-3 py-2"
-                                />
-
-                                {errors.email && (
-                                    <p className="mt-1 text-sm text-red-600">
-                                        {errors.email}
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* Teléfono */}
-                            <div className="mb-4">
-                                <label className="mb-1 block font-medium text-gray-700">
-                                    Teléfono
-                                </label>
-
-                                <input
-                                    type="text"
-                                    value={data.telefono}
-                                    onChange={(e) =>
-                                        setData('telefono', e.target.value)
-                                    }
-                                    className="w-full rounded border border-gray-300 px-3 py-2"
-                                />
-
-                                {errors.telefono && (
-                                    <p className="mt-1 text-sm text-red-600">
-                                        {errors.telefono}
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* Dirección */}
-                            <div className="mb-4">
-                                <label className="mb-1 block font-medium text-gray-700">
-                                    Dirección
-                                </label>
-
-                                <input
-                                    type="text"
-                                    value={data.direccion}
-                                    onChange={(e) =>
-                                        setData('direccion', e.target.value)
-                                    }
-                                    className="w-full rounded border border-gray-300 px-3 py-2"
-                                />
-
-                                {errors.direccion && (
-                                    <p className="mt-1 text-sm text-red-600">
-                                        {errors.direccion}
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* Localidad */}
-                            <div className="mb-6">
-                                <label className="mb-1 block font-medium text-gray-700">
-                                    Localidad
-                                </label>
-
-                                <input
-                                    type="text"
-                                    value={data.localidad}
-                                    onChange={(e) =>
-                                        setData('localidad', e.target.value)
-                                    }
-                                    className="w-full rounded border border-gray-300 px-3 py-2"
-                                />
-
-                                {errors.localidad && (
-                                    <p className="mt-1 text-sm text-red-600">
-                                        {errors.localidad}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="flex justify-end">
-                                <button
-                                    type="submit"
-                                    disabled={processing}
-                                    className="rounded bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-                                >
-                                    Guardar cambios
-                                </button>
-                            </div>
-
-                        </form>
-                    </div>
-                </div>
+                </form>
             </div>
         </>
     );

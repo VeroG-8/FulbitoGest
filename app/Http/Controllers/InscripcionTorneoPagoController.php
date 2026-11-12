@@ -14,10 +14,26 @@ use Inertia\Inertia;
 class InscripcionTorneoPagoController extends Controller
 {
     /**
+     * Verificar que el usuario sea administrador
+     * o superadministrador.
+     */
+    private function autorizarAdministracion(): void
+    {
+        abort_unless(
+            auth()->check() &&
+            in_array(auth()->user()->rol, ['admin', 'superadmin'], true),
+            403,
+            'No tienes permiso para gestionar los pagos de inscripciones.'
+        );
+    }
+
+    /**
      * Mostrar la inscripción, sus pagos y el saldo pendiente.
      */
     public function index(InscripcionTorneo $inscripcionTorneo)
     {
+        $this->autorizarAdministracion();
+
         $inscripcionTorneo->load([
             'jugador',
             'torneo',
@@ -52,6 +68,8 @@ class InscripcionTorneoPagoController extends Controller
         InscripcionTorneo $inscripcionTorneo,
         ReciboService $reciboService
     ) {
+        $this->autorizarAdministracion();
+
         $validated = $request->validate([
             'modalidad_pago_id' => [
                 'required',
@@ -62,7 +80,7 @@ class InscripcionTorneoPagoController extends Controller
             'monto' => ['required', 'numeric', 'gt:0'],
         ]);
 
-        $pago = DB::transaction(function () use (
+        DB::transaction(function () use (
             $validated,
             $inscripcionTorneo,
             $reciboService
@@ -121,7 +139,8 @@ class InscripcionTorneoPagoController extends Controller
 
             $reciboService->generar($pago);
 
-            // Actualizar el estado según el saldo, excepto si está cancelada.
+            // Actualizar el estado según el saldo,
+            // excepto si la inscripción está cancelada.
             if ($inscripcion->estado !== 'cancelado') {
                 $totalPagado = InscripcionTorneoPago::query()
                     ->where('inscripcion_torneo_id', $inscripcion->id)
@@ -129,7 +148,8 @@ class InscripcionTorneoPagoController extends Controller
                     ->sum('monto');
 
                 $saldoPendiente = round(
-                    (float) $inscripcion->monto_inscripcion - (float) $totalPagado,
+                    (float) $inscripcion->monto_inscripcion
+                    - (float) $totalPagado,
                     2
                 );
 
@@ -139,9 +159,7 @@ class InscripcionTorneoPagoController extends Controller
                         : 'pendiente',
                 ]);
             }
-
-            return $pago;
-                    });
+        });
 
         return redirect()
             ->route('torneos.show', $inscripcionTorneo->torneo_id)

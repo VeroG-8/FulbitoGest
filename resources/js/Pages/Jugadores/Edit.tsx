@@ -27,11 +27,13 @@ interface Jugador {
     direccion: string | null;
     localidad: string | null;
     categoria_id: number;
+    categoria?: Categoria;
 }
 
 interface Props {
     jugador: Jugador;
     categorias: Categoria[];
+    puedeModificarCategoria: boolean;
 }
 
 const inputStyles =
@@ -77,13 +79,21 @@ function Campo({
     );
 }
 
-export default function Edit({ jugador, categorias }: Props) {
+export default function Edit({
+    jugador,
+    categorias,
+    puedeModificarCategoria,
+}: Props) {
+    const rutaVolver = puedeModificarCategoria
+        ? '/jugadores'
+        : `/jugadores/${jugador.id}`;
+
     const { data, setData, put, processing, errors } = useForm({
         dni: jugador.dni,
         nombre: jugador.nombre,
         apellido: jugador.apellido,
         nacionalidad: jugador.nacionalidad ?? '',
-        fecha_nacimiento: jugador.fecha_nacimiento.substring(0, 10),
+        fecha_nacimiento: jugador.fecha_nacimiento?.substring(0, 10) ?? '',
         telefono: jugador.telefono ?? '',
         direccion: jugador.direccion ?? '',
         localidad: jugador.localidad ?? '',
@@ -101,18 +111,17 @@ export default function Edit({ jugador, categorias }: Props) {
             <Head title="Editar jugador" />
 
             <div className="space-y-6">
-                {/* Encabezado */}
                 <PageHeader
                     title="Editar jugador"
                     description={`Modificá los datos de ${jugador.nombre} ${jugador.apellido}.`}
                     icon={<UserRound size={28} />}
                     actions={
                         <Link
-                            href="/jugadores"
+                            href={rutaVolver}
                             className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
                         >
                             <ArrowLeft size={17} />
-                            Volver al listado
+                            Volver
                         </Link>
                     }
                 />
@@ -158,9 +167,7 @@ export default function Edit({ jugador, categorias }: Props) {
                                 value={data.apellido}
                                 error={errors.apellido}
                                 placeholder="Apellido del jugador"
-                                onChange={(value) =>
-                                    setData('apellido', value)
-                                }
+                                onChange={(value) => setData('apellido', value)}
                             />
 
                             <Campo
@@ -168,9 +175,7 @@ export default function Edit({ jugador, categorias }: Props) {
                                 value={data.nacionalidad}
                                 error={errors.nacionalidad}
                                 placeholder="Ej. Argentina"
-                                onChange={(value) =>
-                                    setData('nacionalidad', value)
-                                }
+                                onChange={(value) => setData('nacionalidad', value)}
                             />
 
                             <Campo
@@ -210,9 +215,7 @@ export default function Edit({ jugador, categorias }: Props) {
                                 value={data.telefono}
                                 error={errors.telefono}
                                 placeholder="Número de teléfono"
-                                onChange={(value) =>
-                                    setData('telefono', value)
-                                }
+                                onChange={(value) => setData('telefono', value)}
                             />
 
                             <Campo
@@ -220,9 +223,7 @@ export default function Edit({ jugador, categorias }: Props) {
                                 value={data.localidad}
                                 error={errors.localidad}
                                 placeholder="Localidad"
-                                onChange={(value) =>
-                                    setData('localidad', value)
-                                }
+                                onChange={(value) => setData('localidad', value)}
                             />
 
                             <div className="md:col-span-2">
@@ -231,15 +232,13 @@ export default function Edit({ jugador, categorias }: Props) {
                                     value={data.direccion}
                                     error={errors.direccion}
                                     placeholder="Calle, número y barrio"
-                                    onChange={(value) =>
-                                        setData('direccion', value)
-                                    }
+                                    onChange={(value) => setData('direccion', value)}
                                 />
                             </div>
                         </div>
                     </section>
 
-                    {/* Categoría */}
+                    {/* Categoría: editable solamente por administradores */}
                     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                         <div className="flex items-center gap-3 border-b border-slate-100 px-6 py-5">
                             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
@@ -263,34 +262,48 @@ export default function Edit({ jugador, categorias }: Props) {
                                     Categoría
                                 </label>
 
-                                <select
-                                    value={data.categoria_id}
-                                    onChange={(e) =>
-                                        setData(
-                                            'categoria_id',
-                                            e.target.value,
-                                        )
-                                    }
-                                    className={`${inputStyles} ${errors.categoria_id ? 'border-red-400' : ''}`}
-                                >
-                                    <option value="">
-                                        Seleccionar categoría
-                                    </option>
-
-                                    {categorias.map((categoria) => (
-                                        <option
-                                            key={categoria.id}
-                                            value={categoria.id}
+                                {puedeModificarCategoria ? (
+                                    <>
+                                        <select
+                                            value={data.categoria_id}
+                                            onChange={(e) =>
+                                                setData('categoria_id', e.target.value)
+                                            }
+                                            className={`${inputStyles} ${errors.categoria_id ? 'border-red-400' : ''}`}
                                         >
-                                            {categoria.anio}
-                                        </option>
-                                    ))}
-                                </select>
+                                            <option value="">
+                                                Seleccionar categoría
+                                            </option>
 
-                                {errors.categoria_id && (
-                                    <p className="mt-1.5 text-xs font-medium text-red-600">
-                                        {errors.categoria_id}
-                                    </p>
+                                            {categorias.map((categoria) => (
+                                                <option
+                                                    key={categoria.id}
+                                                    value={categoria.id}
+                                                >
+                                                    {categoria.anio}
+                                                </option>
+                                            ))}
+                                        </select>
+
+                                        {errors.categoria_id && (
+                                            <p className="mt-1.5 text-xs font-medium text-red-600">
+                                                {errors.categoria_id}
+                                            </p>
+                                        )}
+                                    </>
+                                ) : (
+                                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                        <p className="text-sm font-semibold text-slate-700">
+                                            {jugador.categoria?.anio ?? categorias.find(
+                                                (categoria) =>
+                                                    categoria.id === jugador.categoria_id,
+                                            )?.anio ?? 'Sin categoría'}
+                                        </p>
+
+                                        <p className="mt-1 text-xs text-slate-500">
+                                            La categoría solamente puede ser modificada por un administrador.
+                                        </p>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -299,7 +312,7 @@ export default function Edit({ jugador, categorias }: Props) {
                     {/* Botones */}
                     <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row">
                         <Link
-                            href="/jugadores"
+                            href={rutaVolver}
                             className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
                         >
                             Cancelar
