@@ -18,6 +18,10 @@ import {
 interface Categoria {
     id: number;
     anio: number;
+    pivot?: {
+        monto_inscripcion?: string | number;
+        monto_por_jugador?: string | number;
+    };
 }
 
 interface Club {
@@ -35,7 +39,7 @@ interface Equipo {
         torneo_id: number;
         equipo_id: number;
         fecha_inscripcion: string;
-        monto_inscripcion: string | number;
+        monto_inscripcion?: string | number;
         estado: boolean | number;
     };
 }
@@ -44,12 +48,12 @@ interface JugadorInscripto {
     id: number;
     nombre: string;
     apellido: string;
-    dni: string;
+    dni?: string;
     categoria: Categoria | null;
     pivot: {
         id: number;
         fecha_inscripcion: string;
-        monto_inscripcion: string | number;
+        monto_inscripcion?: string | number;
         estado: string;
     };
 }
@@ -80,6 +84,8 @@ export default function Show({ torneo }: Props) {
         auth?.user?.rol,
     );
 
+    const esProfesor = auth?.user?.rol === 'profesor';
+
     const [filtroEstado, setFiltroEstado] = useState('todos');
     const [mostrarFiltro, setMostrarFiltro] = useState(false);
 
@@ -106,12 +112,14 @@ export default function Show({ torneo }: Props) {
         );
     };
 
-    const jugadoresFiltrados = torneo.jugadores.filter((jugador) => {
-        return (
-            filtroEstado === 'todos' ||
-            jugador.pivot.estado === filtroEstado
-        );
-    });
+    const jugadoresFiltrados = esAdministrador
+        ? torneo.jugadores.filter((jugador) => {
+              return (
+                  filtroEstado === 'todos' ||
+                  jugador.pivot.estado === filtroEstado
+              );
+          })
+        : torneo.jugadores;
 
     const formatearFecha = (fecha: string | null) => {
         if (!fecha) return 'Sin definir';
@@ -364,7 +372,9 @@ export default function Show({ torneo }: Props) {
                                     </h2>
 
                                     <p className="mt-1 text-sm !text-slate-500">
-                                        Equipos inscriptos en este torneo.
+                                        {esProfesor
+                                            ? 'Equipos con inscripción activa en este torneo.'
+                                            : 'Equipos inscriptos en este torneo.'}
                                     </p>
                                 </div>
 
@@ -404,7 +414,7 @@ export default function Show({ torneo }: Props) {
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto rounded-xl border border-slate-200">
-                                    <table className="w-full min-w-[700px] text-left text-sm">
+                                    <table className="w-full min-w-[650px] text-left text-sm">
                                         <thead className="!bg-slate-100">
                                             <tr>
                                                 <th className="px-4 py-3 font-semibold !text-slate-700">
@@ -514,7 +524,9 @@ export default function Show({ torneo }: Props) {
                                 </h2>
 
                                 <p className="mt-1 text-sm !text-slate-500">
-                                    Jugadores inscriptos en este torneo.
+                                    {esProfesor
+                                        ? 'Jugadores con inscripción confirmada en este torneo.'
+                                        : 'Jugadores inscriptos en este torneo.'}
                                 </p>
                             </div>
 
@@ -535,37 +547,51 @@ export default function Show({ torneo }: Props) {
                             )}
                         </div>
 
-                        {/* FILTRO POR ESTADO */}
-                        <div className="mb-5 flex items-center justify-end gap-2">
-                            {mostrarFiltro && (
-                                <select
-                                    id="filtroEstado"
-                                    value={filtroEstado}
-                                    onChange={(e) => setFiltroEstado(e.target.value)}
-                                    className="rounded-lg border border-slate-300 !bg-white px-3 py-2 text-sm !text-slate-800 shadow-sm"
-                                >
-                                    <option value="todos">Todos los estados</option>
-                                    <option value="pendiente">Pendientes</option>
-                                    <option value="inscripto">Inscriptos</option>
-                                    <option value="cancelado">Cancelados</option>
-                                </select>
-                            )}
+                        {/* FILTRO POR ESTADO: SOLO ADMINISTRADORES */}
+                        {esAdministrador && (
+                            <div className="mb-5 flex items-center justify-end gap-2">
+                                {mostrarFiltro && (
+                                    <select
+                                        id="filtroEstado"
+                                        value={filtroEstado}
+                                        onChange={(e) =>
+                                            setFiltroEstado(e.target.value)
+                                        }
+                                        className="rounded-lg border border-slate-300 !bg-white px-3 py-2 text-sm !text-slate-800 shadow-sm"
+                                    >
+                                        <option value="todos">
+                                            Todos los estados
+                                        </option>
+                                        <option value="pendiente">
+                                            Pendientes
+                                        </option>
+                                        <option value="inscripto">
+                                            Inscriptos
+                                        </option>
+                                        <option value="cancelado">
+                                            Cancelados
+                                        </option>
+                                    </select>
+                                )}
 
-                            <button
-                                type="button"
-                                onClick={() => setMostrarFiltro(!mostrarFiltro)}
-                                title="Filtrar participantes"
-                                aria-label="Mostrar u ocultar filtros"
-                                aria-expanded={mostrarFiltro}
-                                className={`flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${
-                                    filtroEstado !== 'todos'
-                                        ? 'border-blue-300 !bg-blue-50 !text-blue-700'
-                                        : 'border-slate-300 !bg-white !text-slate-600 hover:!bg-slate-100'
-                                }`}
-                            >
-                                <Filter size={18} />
-                            </button>
-                        </div>
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setMostrarFiltro(!mostrarFiltro)
+                                    }
+                                    title="Filtrar participantes"
+                                    aria-label="Mostrar u ocultar filtros"
+                                    aria-expanded={mostrarFiltro}
+                                    className={`flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${
+                                        filtroEstado !== 'todos'
+                                            ? 'border-blue-300 !bg-blue-50 !text-blue-700'
+                                            : 'border-slate-300 !bg-white !text-slate-600 hover:!bg-slate-100'
+                                    }`}
+                                >
+                                    <Filter size={18} />
+                                </button>
+                            </div>
+                        )}
 
                         {/* LISTADO DE JUGADORES */}
                         {torneo.jugadores.length === 0 ? (
@@ -576,7 +602,9 @@ export default function Show({ torneo }: Props) {
                                 />
 
                                 <p className="text-sm font-semibold !text-slate-700">
-                                    Todavía no hay jugadores inscriptos.
+                                    {esProfesor
+                                        ? 'Todavía no hay jugadores con inscripción confirmada.'
+                                        : 'Todavía no hay jugadores inscriptos.'}
                                 </p>
 
                                 {esAdministrador && (
@@ -593,16 +621,18 @@ export default function Show({ torneo }: Props) {
                             </div>
                         ) : (
                             <div className="overflow-x-auto rounded-xl border border-slate-200">
-                                <table className="w-full min-w-[700px] text-left text-sm">
+                                <table className="w-full min-w-[600px] text-left text-sm">
                                     <thead className="!bg-slate-100">
                                         <tr>
                                             <th className="px-4 py-3 font-semibold !text-slate-700">
                                                 Jugador
                                             </th>
 
-                                            <th className="px-4 py-3 font-semibold !text-slate-700">
-                                                DNI
-                                            </th>
+                                            {esAdministrador && (
+                                                <th className="px-4 py-3 font-semibold !text-slate-700">
+                                                    DNI
+                                                </th>
+                                            )}
 
                                             <th className="px-4 py-3 font-semibold !text-slate-700">
                                                 Categoría
@@ -636,9 +666,11 @@ export default function Show({ torneo }: Props) {
                                                     </span>
                                                 </td>
 
-                                                <td className="px-4 py-4 !text-slate-700">
-                                                    {jugador.dni}
-                                                </td>
+                                                {esAdministrador && (
+                                                    <td className="px-4 py-4 !text-slate-700">
+                                                        {jugador.dni ?? '-'}
+                                                    </td>
+                                                )}
 
                                                 <td className="px-4 py-4">
                                                     <span className="rounded-full !bg-blue-100 px-3 py-1 text-xs font-semibold !text-blue-800">
@@ -674,10 +706,11 @@ export default function Show({ torneo }: Props) {
                                                             <select
                                                                 value={jugador.pivot.estado}
                                                                 onChange={(e) => {
-                                                                    const nuevoEstado = e.target.value as
-                                                                        | 'pendiente'
-                                                                        | 'inscripto'
-                                                                        | 'cancelado';
+                                                                    const nuevoEstado =
+                                                                        e.target.value as
+                                                                            | 'pendiente'
+                                                                            | 'inscripto'
+                                                                            | 'cancelado';
 
                                                                     actualizarEstado(
                                                                         jugador.id,

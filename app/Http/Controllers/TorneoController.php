@@ -73,7 +73,7 @@ class TorneoController extends Controller
 
         $buscar = trim($request->input('buscar', ''));
 
-        $torneos = Torneo::with('categorias')
+        $torneos = Torneo::with('categorias:id,anio')
             // Los profesores solamente ven torneos activos.
             ->when($usuario->rol === 'profesor', function ($query) {
                 $query->where('estado', true);
@@ -198,14 +198,54 @@ class TorneoController extends Controller
     {
         $this->autorizarConsulta($torneo);
 
+        $esProfesor = auth()->user()->rol === 'profesor';
+
         $torneo->load([
-            'categorias',
-            'equipos.club',
-            'equipos.categoria',
-            'jugadores.categoria',
-            'equipos.categoria:id,anio',
-            'jugadores.categoria:id,anio',
+            'categorias:id,anio',
+
+            'equipos' => function ($query) use ($esProfesor) {
+                $query->with([
+                    'club',
+                    'categoria:id,anio',
+                ]);
+
+                if ($esProfesor) {
+                    $query->wherePivot('estado', true);
+                }
+            },
+
+            'jugadores' => function ($query) use ($esProfesor) {
+                $query->with([
+                    'categoria:id,anio',
+                ]);
+
+                if ($esProfesor) {
+                    $query->wherePivot('estado', 'inscripto');
+                }
+            },
         ]);
+
+        // Los profesores no necesitan recibir información económica.
+        if ($esProfesor) {
+            foreach ($torneo->categorias as $categoria) {
+                $categoria->pivot->makeHidden([
+                    'monto_inscripcion',
+                    'monto_por_jugador',
+                ]);
+            }
+
+            foreach ($torneo->equipos as $equipo) {
+                $equipo->pivot->makeHidden([
+                    'monto_inscripcion',
+                ]);
+            }
+
+            foreach ($torneo->jugadores as $jugador) {
+                $jugador->pivot->makeHidden([
+                    'monto_inscripcion',
+                ]);
+            }
+        }
 
         return Inertia::render('Torneos/Show', [
             'torneo' => $torneo,
@@ -219,7 +259,7 @@ class TorneoController extends Controller
     {
         $this->autorizarAdministracion();
 
-        $torneo->load('categorias');
+        $torneo->load('categorias:id,anio');
 
         $categorias = Categoria::orderBy('anio')->get();
 
