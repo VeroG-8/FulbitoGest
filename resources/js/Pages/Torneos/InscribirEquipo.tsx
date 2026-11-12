@@ -11,7 +11,7 @@ import { FormEvent } from 'react';
 
 interface Categoria {
     id: number;
-    nombre: string;
+    anio: number;
 }
 
 interface Club {
@@ -149,7 +149,7 @@ export default function InscribirEquipo({
                                             key={categoria.id}
                                             className="rounded-full !bg-blue-100 px-3 py-1.5 text-sm font-medium !text-blue-800"
                                         >
-                                            {categoria.nombre}
+                                            Categoría {categoria.anio}
                                         </span>
                                     ))}
                                 </div>
@@ -207,7 +207,7 @@ export default function InscribirEquipo({
                                         >
                                             {equipo.nombre}
                                             {' - '}
-                                            {equipo.categoria?.nombre ?? 'Sin categoría'}
+                                            {equipo.categoria?.anio ? `Categoría ${equipo.categoria.anio}` : 'Sin categoría'}
                                         </option>
                                     ))}
                                 </select>
@@ -251,7 +251,7 @@ export default function InscribirEquipo({
                                                 Categoría
                                             </p>
                                             <p className="text-sm font-semibold !text-slate-900">
-                                                {equipoSeleccionado.categoria?.nombre ?? 'Sin categoría'}
+                                                {equipoSeleccionado.categoria?.anio ? `Categoría ${equipoSeleccionado.categoria.anio}` : 'Sin categoría'}
                                             </p>
                                         </div>
                                     </div>

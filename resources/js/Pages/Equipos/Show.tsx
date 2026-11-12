@@ -8,7 +8,7 @@ interface Club {
 
 interface Categoria {
     id: number;
-    nombre: string;
+    anio: number;
 }
 
 interface Equipo {
@@ -16,7 +16,7 @@ interface Equipo {
     nombre: string;
     estado: boolean;
     club: Club;
-    categoria: Categoria;
+    categoria: Categoria | null;
 }
 
 interface Props {
@@ -24,7 +24,6 @@ interface Props {
 }
 
 export default function Show({ equipo }: Props) {
-    console.log('Datos del equipo:', equipo);
     return (
         <>
             <Head title={`Equipo: ${equipo.nombre}`} />
@@ -101,7 +100,9 @@ export default function Show({ equipo }: Props) {
                                     Categoría
                                 </p>
                                 <p className="mt-1 text-base font-semibold text-slate-800">
-                                    {equipo.categoria?.nombre ?? 'Sin categoría asignada'}
+                                    {equipo.categoria?.anio
+                                        ? `Categoría ${equipo.categoria.anio}`
+                                        : 'Sin categoría asignada'}
                                 </p>
                             </div>
 

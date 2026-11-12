@@ -50,11 +50,11 @@ class JugadorController extends Controller
     /**
      * Mostrar el listado de jugadores activos.
      */
-    public function index(Request $request)
+        public function index(Request $request)
     {
         $usuario = auth()->user();
 
-        $consulta = Jugador::with('categoria')
+        $consulta = Jugador::with('categoria:id,anio')
             ->where('estado', true);
 
         $consultaInactivos = Jugador::where('estado', false);
@@ -237,6 +237,9 @@ class JugadorController extends Controller
     /**
      * Mostrar el formulario de edición.
      */
+        /**
+     * Mostrar el formulario de edición.
+     */
     public function edit(Jugador $jugador)
     {
         $this->autorizarEdicion($jugador);
@@ -333,55 +336,28 @@ class JugadorController extends Controller
     /**
      * Mostrar la ficha completa del jugador.
      */
-    public function show(Jugador $jugador)
+    public function show(Profesor $profesor)
     {
         $usuario = auth()->user();
 
-        $puedeEditar = $this->esAdministrador();
-
-        // Verificar acceso del profesor.
         if ($usuario->rol === 'profesor') {
-            $tieneAcceso = $jugador->categoria()
-                ->whereHas('profesores', function ($query) use ($usuario) {
-                    $query->where('profesores.id', $usuario->profesor_id);
-                })
-                ->exists();
-
             abort_unless(
-                $tieneAcceso,
+                $usuario->profesor_id === $profesor->id,
                 403,
-                'No tienes permiso para consultar este jugador.'
+                'No tienes permiso para consultar este profesor.'
             );
         }
 
-        // Verificar acceso del tutor.
         if ($usuario->rol === 'tutor') {
-            $tieneAcceso = $this->esJugadorDelTutor($jugador);
-
-            abort_unless(
-                $tieneAcceso,
-                403,
-                'No tienes permiso para consultar este jugador.'
-            );
-
-            $puedeEditar = true;
+            abort(403, 'No tienes permiso para consultar fichas de profesores.');
         }
 
-        $jugador->load([
-            'categoria',
-            'tutores',
-            'carnets',
-            'torneos',
-            'viajes',
-            'pases',
-        ]);
+        $profesor->load('categorias:id,anio');
 
-        return Inertia::render('Jugadores/Show', [
-            'jugador' => $jugador,
-            'puedeEditar' => $puedeEditar,
+        return Inertia::render('Profesores/Show', [
+            'profesor' => $profesor,
         ]);
     }
-
     /**
      * Deshabilitar un jugador.
      */
@@ -402,14 +378,14 @@ class JugadorController extends Controller
             ->with('success', 'Jugador deshabilitado correctamente.');
     }
 
-    /**
+        /**
      * Mostrar el historial de jugadores deshabilitados.
      */
     public function historial()
     {
         $usuario = auth()->user();
 
-        $consulta = Jugador::with('categoria')
+        $consulta = Jugador::with('categoria:id,anio')
             ->where('estado', false);
 
         // Filtrar por categorías asignadas al profesor.
@@ -435,7 +411,6 @@ class JugadorController extends Controller
             'jugadores' => $jugadores,
         ]);
     }
-
     /**
      * Reactivar un jugador deshabilitado.
      */

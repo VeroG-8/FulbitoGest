@@ -198,8 +198,7 @@ export default function Edit({
                                         <option
                                             key={categoria.id}
                                             value={categoria.id}
-                                        >
-                                            Categoría {categoria.anio}
+                                        >Categoría {categoria.anio}
                                         </option>
                                     ))}
                                 </select>

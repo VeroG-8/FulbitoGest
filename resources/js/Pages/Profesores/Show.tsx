@@ -18,7 +18,6 @@ import StatusBadge from '@/Components/Shared/StatusBadge';
 
 interface Categoria {
     id: number;
-    nombre: string;
     anio: number;
     estado: boolean;
 }
@@ -306,12 +305,6 @@ export default function Show({ profesor }: Props) {
                                             Categoría
                                         </th>
                                         <th className="px-6 py-4">
-                                            <span className="inline-flex items-center gap-2">
-                                                <CalendarDays size={15} />
-                                                Año
-                                            </span>
-                                        </th>
-                                        <th className="px-6 py-4">
                                             Estado
                                         </th>
                                     </tr>
@@ -323,12 +316,8 @@ export default function Show({ profesor }: Props) {
                                             key={categoria.id}
                                             className="transition hover:bg-slate-50"
                                         >
-                                            <td className="px-6 py-4 font-semibold text-slate-700">
-                                                {categoria.nombre}
-                                            </td>
-
-                                            <td className="px-6 py-4 text-slate-600">
-                                                {categoria.anio}
+                                           <td className="px-6 py-4 font-semibold text-slate-700">
+                                                Categoría {categoria.anio}
                                             </td>
 
                                             <td className="px-6 py-4">

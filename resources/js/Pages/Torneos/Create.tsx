@@ -11,7 +11,7 @@ import {
 
 interface Categoria {
     id: number;
-    nombre: string;
+    anio: number;
 }
 
 interface Props {
@@ -434,7 +434,7 @@ export default function Create({ categorias }: Props) {
                                                     />
 
                                                     <span className="text-sm font-medium text-slate-800">
-                                                        {categoria.nombre}
+                                                        Categoría {categoria.anio}
                                                     </span>
                                                 </label>
 

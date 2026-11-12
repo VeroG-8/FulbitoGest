@@ -9,7 +9,7 @@ interface Club {
 
 interface Categoria {
     id: number;
-    nombre: string;
+    anio: number;
 }
 
 interface Equipo {
@@ -221,7 +221,7 @@ export default function Edit({
                                             key={categoria.id}
                                             value={categoria.id}
                                         >
-                                            {categoria.nombre}
+                                            {categoria.anio}
                                         </option>
                                     ))}
                                 </select>

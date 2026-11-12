@@ -10,10 +10,10 @@ class JugadorSeeder extends Seeder
 {
     public function run(): void
     {
-        $categoria2018 = Categoria::where('nombre', '2018')->first();
-        $categoria2017 = Categoria::where('nombre', '2017')->first();
-        $categoria2016 = Categoria::where('nombre', '2016')->first();
-        $categoria2015 = Categoria::where('nombre', '2015')->first();
+        $categoria2018 = Categoria::where('anio', 2018)->first();
+        $categoria2017 = Categoria::where('anio', 2017)->first();
+        $categoria2016 = Categoria::where('anio', 2016)->first();
+        $categoria2015 = Categoria::where('anio', 2015)->first();
 
         Jugador::updateOrCreate(
             ['dni' => '45123456'],

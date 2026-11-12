@@ -40,7 +40,7 @@ class EquipoController extends Controller
                             $club->where('nombre', 'like', "%{$buscar}%");
                         })
                         ->orWhereHas('categoria', function ($categoria) use ($buscar) {
-                            $categoria->where('nombre', 'like', "%{$buscar}%");
+                            $categoria->where('anio', 'like', "%{$buscar}%");
                         });
                 });
             })
@@ -63,7 +63,7 @@ class EquipoController extends Controller
     {
         return Inertia::render('Equipos/Create', [
             'clubes' => Club::orderBy('nombre')->get(['id', 'nombre']),
-            'categorias' => Categoria::orderBy('nombre')->get(['id', 'nombre']),
+            'categorias' => Categoria::orderBy('anio')->get(['id', 'anio']),
         ]);
     }
 
@@ -154,8 +154,8 @@ class EquipoController extends Controller
             'equipo' => $equipo,
             'clubes' => Club::orderBy('nombre')
                 ->get(['id', 'nombre']),
-            'categorias' => Categoria::orderBy('nombre')
-                ->get(['id', 'nombre']),
+            'categorias' => Categoria::orderBy('anio')
+                ->get(['id', 'anio']),
         ]);
     }
 

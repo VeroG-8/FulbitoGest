@@ -11,7 +11,7 @@ import {
 
 interface Categoria {
     id: number;
-    nombre: string;
+    anio: number;
 }
 
 interface Jugador {
@@ -20,7 +20,7 @@ interface Jugador {
     apellido: string;
     dni: string;
     categoria_id: number;
-    categoria: Categoria;
+    categoria: Categoria | null;
 }
 
 interface Torneo {
@@ -181,7 +181,7 @@ export default function InscribirJugador({ torneo, jugadores }: Props) {
                                             key={categoria.id}
                                             value={categoria.id}
                                         >
-                                            {categoria.nombre}
+                                            Categoría {categoria.anio}
                                         </option>
                                     ))}
                                 </select>
@@ -245,7 +245,7 @@ export default function InscribirJugador({ torneo, jugadores }: Props) {
                                             </p>
 
                                             <span className="mt-2 inline-block rounded-full !bg-blue-100 px-3 py-1 text-xs font-semibold !text-blue-800">
-                                                {jugador.categoria.nombre}
+                                                {jugador.categoria?.anio ? `Categoría ${jugador.categoria.anio}` : 'Sin categoría asignada'}
                                             </span>
                                         </div>
 

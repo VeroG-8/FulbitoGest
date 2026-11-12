@@ -11,7 +11,7 @@ import {
 
 interface Categoria {
     id: number;
-    nombre: string;
+    anio: number;
 }
 
 interface Torneo {
@@ -462,7 +462,7 @@ export default function Edit({ torneo, categorias }: Props) {
                                                     />
 
                                                     <span className="text-sm font-medium !text-slate-800">
-                                                        {categoria.nombre}
+                                                        Categoria {categoria.anio}
                                                     </span>
                                                 </label>
 

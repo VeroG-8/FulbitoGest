@@ -13,7 +13,7 @@ import StatusBadge from '@/Components/Shared/StatusBadge';
 
 interface Categoria {
     id: number;
-    anio?: number;
+    anio: number;
 }
 
 interface Jugador {
@@ -57,7 +57,6 @@ export default function Historial({ jugadores }: Props) {
 
             <div className="min-h-screen bg-slate-50 p-6">
                 <div className="mx-auto max-w-7xl">
-
                     <PageHeader
                         title="Historial de jugadores"
                         description="Consultá los jugadores deshabilitados y administrá su reactivación."
@@ -73,7 +72,7 @@ export default function Historial({ jugadores }: Props) {
                         }
                     />
 
-                   <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
                         <StatCard
                             title="Jugadores en historial"
                             value={jugadores.length}
@@ -154,28 +153,26 @@ export default function Historial({ jugadores }: Props) {
                                                     />
                                                 </td>
 
-                                                <td className="px-5 py-4">
+                                                <td className="px-5 py-4 text-center">
                                                     <div className="flex items-center justify-center gap-2">
                                                         <Link
                                                             href={`/jugadores/${jugador.id}`}
-                                                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+                                                            className="rounded-lg p-2 text-slate-500 transition hover:bg-blue-50 hover:text-blue-600"
+                                                            title="Ver jugador"
                                                         >
-                                                            <Eye size={15} />
-                                                            Ver
+                                                            <Eye size={17} />
                                                         </Link>
 
-                                                        {!jugador.estado && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    reactivarJugador(jugador)
-                                                                }
-                                                                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
-                                                            >
-                                                                <RotateCcw size={15} />
-                                                                Reactivar
-                                                            </button>
-                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                reactivarJugador(jugador)
+                                                            }
+                                                            className="rounded-lg p-2 text-slate-500 transition hover:bg-emerald-50 hover:text-emerald-600"
+                                                            title="Reactivar jugador"
+                                                        >
+                                                            <RotateCcw size={17} />
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -186,16 +183,16 @@ export default function Historial({ jugadores }: Props) {
                         ) : (
                             <div className="px-6 py-16 text-center">
                                 <History
-                                    size={42}
-                                    className="mx-auto mb-4 text-slate-300"
+                                    size={36}
+                                    className="mx-auto mb-3 text-slate-300"
                                 />
 
-                                <h3 className="font-semibold text-slate-700">
-                                    No hay jugadores en el historial
-                                </h3>
+                                <p className="font-semibold text-slate-700">
+                                    No hay jugadores en el historial.
+                                </p>
 
-                                <p className="mt-2 text-sm text-slate-500">
-                                    Cuando se deshabiliten jugadores, aparecerán registrados en esta sección.
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Los jugadores deshabilitados aparecerán aquí.
                                 </p>
                             </div>
                         )}

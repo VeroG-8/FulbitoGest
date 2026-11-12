@@ -178,7 +178,7 @@ export default function Create({ categorias, canchas }: Props) {
                                             key={categoria.id}
                                             value={categoria.id}
                                         >
-                                            Categoría {categoria.anio}
+                                        {categoria.anio}
                                         </option>
                                     ))}
                                 </select>

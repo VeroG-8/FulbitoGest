@@ -9,7 +9,7 @@ interface Club {
 
 interface Categoria {
     id: number;
-    nombre: string;
+    anio: number;
 }
 
 interface Props {
@@ -204,7 +204,7 @@ export default function Create({ clubes, categorias }: Props) {
                                             key={categoria.id}
                                             value={categoria.id}
                                         >
-                                            {categoria.nombre}
+                                            {categoria.anio}
                                         </option>
                                     ))}
                                 </select>

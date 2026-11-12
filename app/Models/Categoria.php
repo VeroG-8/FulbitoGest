@@ -11,7 +11,6 @@ class Categoria extends Model
     protected $table = 'categorias';
 
     protected $fillable = [
-        'nombre',
         'anio',
         'estado',
     ];
@@ -30,7 +29,7 @@ class Categoria extends Model
     {
         return $this->hasMany(Horario::class);
     }
-    
+
     public function equipos(): HasMany
     {
         return $this->hasMany(Equipo::class);

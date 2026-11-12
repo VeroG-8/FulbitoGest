@@ -57,7 +57,10 @@ class CarnetController extends Controller
     }
     public function show(Carnet $carnet)
     {
-        $carnet->load('jugador');
+        $carnet->load([
+            'jugador:id,nombre,apellido,categoria_id',
+            'jugador.categoria:id,anio',
+        ]);
 
         return Inertia::render('Carnets/Show', [
             'carnet' => $carnet,
@@ -108,7 +111,7 @@ class CarnetController extends Controller
     {
         $carnet = Carnet::with([
             'jugador:id,nombre,apellido,categoria_id',
-            'jugador.categoria:id,nombre',
+            'jugador.categoria:id,anio',
         ])
             ->where('qr_token', $qr_token)
             ->firstOrFail();

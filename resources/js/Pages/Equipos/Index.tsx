@@ -20,7 +20,7 @@ interface Club {
 
 interface Categoria {
     id: number;
-    nombre: string;
+    anio: number;
 }
 
 interface Equipo {
@@ -284,16 +284,11 @@ export default function Index({ equipos, filtros }: Props) {
                                                     <div className="mt-1 text-xs text-slate-400">
                                                         ID: {equipo.id}
                                                     </div>
-                                                </td>
-
+                                                </td>               
                                                 <td className="px-6 py-4 text-slate-600">
-                                                    {equipo.club?.nombre ??
-                                                        'Sin club asignado'}
-                                                </td>
-
-                                                <td className="px-6 py-4 text-slate-600">
-                                                    {equipo.categoria?.nombre ??
-                                                        'Sin categoría'}
+                                                    {equipo.categoria?.anio
+                                                        ? `Categoría ${equipo.categoria.anio}`
+                                                        : 'Sin categoría'}
                                                 </td>
 
                                                 <td className="px-6 py-4">

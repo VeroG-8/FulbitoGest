@@ -164,17 +164,11 @@ export default function Show({ jugador, puedeEditar }: Props) {
 
                             <div className="flex flex-wrap items-center gap-2">
                                 <span className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-slate-200">
-                                    {mostrarDato(jugador.categoria?.anio)}
+                                    Categoría: {mostrarDato(jugador.categoria?.anio)}
                                 </span>
 
-                                <span
-                                    className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
-                                        jugador.estado
-                                            ? 'bg-emerald-400/20 text-emerald-300'
-                                            : 'bg-red-400/20 text-red-300'
-                                    }`}
-                                >
-                                    {jugador.estado ? 'Activo' : 'Inactivo'}
+                                <span className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-slate-200">
+                                    Estado: {jugador.estado ? 'Activo' : 'Inactivo'}
                                 </span>
                             </div>
                         </div>

@@ -186,8 +186,7 @@ class ProfesorController extends Controller
             abort(403, 'No tienes permiso para consultar fichas de profesores.');
         }
 
-        $profesor->load('categorias');
-
+        $profesor->load('categorias:id,anio');
         return Inertia::render('Profesores/Show', [
             'profesor' => $profesor,
         ]);

@@ -17,7 +17,6 @@ import PageHeader from '@/Components/Shared/PageHeader';
 
 interface Categoria {
     id: number;
-    nombre: string;
     anio: number;
 }
 
@@ -269,7 +268,7 @@ export default function Create({ categorias }: Props) {
                                         key={categoria.id}
                                         value={categoria.id}
                                     >
-                                        {categoria.nombre} - {categoria.anio}
+                                        {categoria.anio}
                                     </option>
                                 ))}
                             </select>

@@ -39,7 +39,7 @@ interface Jugador {
     direccion: string | null;
     localidad: string | null;
     estado: boolean;
-    categoria: Categoria | null;
+        categoria: Categoria | null;
 }
 
 interface Paginacion {

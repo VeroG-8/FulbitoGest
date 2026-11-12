@@ -8,7 +8,6 @@ interface Jugador {
 }
 interface Categoria {
     id: number;
-    nombre: string;
     anio: number;
 }
 
@@ -62,7 +61,7 @@ export default function Consulta({ carnet }: Props) {
                             Código: {carnet.codigo}
                         </p>
                         <p className="mt-1 text-gray-600">
-                            Categoría: {carnet.jugador.categoria.nombre}
+                            Categoría: {carnet.jugador.categoria.anio}
                         </p>
                     </div>
 

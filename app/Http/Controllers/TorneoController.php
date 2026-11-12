@@ -104,7 +104,7 @@ class TorneoController extends Controller
     {
         $this->autorizarAdministracion();
 
-        $categorias = Categoria::orderBy('anio')->get();
+        $categorias = Categoria::orderBy('anio')->get(['id', 'anio']);
 
         return Inertia::render('Torneos/Create', [
             'categorias' => $categorias,
@@ -261,7 +261,7 @@ class TorneoController extends Controller
 
         $torneo->load('categorias:id,anio');
 
-        $categorias = Categoria::orderBy('anio')->get();
+        $categorias = Categoria::orderBy('anio')->get(['id', 'anio']);
 
         return Inertia::render('Torneos/Edit', [
             'torneo' => $torneo,

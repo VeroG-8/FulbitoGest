@@ -120,6 +120,7 @@ export default function Authenticated({
                     label: 'Horarios',
                     route: 'horarios.index',
                     icon: CalendarDays,
+                },
             ],
 
             subgroups: [
