@@ -120,12 +120,6 @@ export default function Authenticated({
                     label: 'Horarios',
                     route: 'horarios.index',
                     icon: CalendarDays,
-                },
-                {
-                    label: 'Carnets',
-                    route: 'carnets.index',
-                    icon: IdCard,
-                },
             ],
 
             subgroups: [
@@ -139,7 +133,7 @@ export default function Authenticated({
                             icon: Trophy,
                         },
                         {
-                            label: 'Mis inscripciones',
+                            label: 'Mis torneos',
                             route: 'torneos.mis-inscripciones',
                             icon: ClipboardList,
                         },
@@ -236,6 +230,7 @@ export default function Authenticated({
                 'dashboard',
                 'jugadores.index',
                 'horarios.index',
+                'torneos.index',
             ].includes(item.route);
         }
 
@@ -244,6 +239,7 @@ export default function Authenticated({
                 'dashboard',
                 'jugadores.index',
                 'horarios.index',
+                'torneos.mis-inscripciones',
             ].includes(item.route);
         }
 
