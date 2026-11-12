@@ -203,6 +203,8 @@ class TorneoController extends Controller
             'equipos.club',
             'equipos.categoria',
             'jugadores.categoria',
+            'equipos.categoria:id,anio',
+            'jugadores.categoria:id,anio',
         ]);
 
         return Inertia::render('Torneos/Show', [

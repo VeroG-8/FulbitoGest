@@ -1,6 +1,5 @@
-import { Head, Link,usePage,router } from '@inertiajs/react';
-import {useState} from 'react';
-import { type PageProps } from '@/types';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 import {
     Trophy,
     ArrowLeft,
@@ -18,7 +17,7 @@ import {
 
 interface Categoria {
     id: number;
-    nombre: string;
+    anio: number;
 }
 
 interface Club {
@@ -31,7 +30,6 @@ interface Equipo {
     nombre: string;
     club: Club | null;
     categoria: Categoria | null;
-
     pivot: {
         id: number;
         torneo_id: number;
@@ -39,6 +37,20 @@ interface Equipo {
         fecha_inscripcion: string;
         monto_inscripcion: string | number;
         estado: boolean | number;
+    };
+}
+
+interface JugadorInscripto {
+    id: number;
+    nombre: string;
+    apellido: string;
+    dni: string;
+    categoria: Categoria | null;
+    pivot: {
+        id: number;
+        fecha_inscripcion: string;
+        monto_inscripcion: string | number;
+        estado: string;
     };
 }
 
@@ -53,56 +65,36 @@ interface Torneo {
     descripcion: string | null;
     estado: boolean;
     categorias: Categoria[];
-     // Nueva propiedad
     equipos: Equipo[];
     jugadores: JugadorInscripto[];
 }
 
-interface JugadorInscripto {
-    id: number;
-    nombre: string;
-    apellido: string;
-    dni: string;
-    categoria: {
-        id: number;
-        nombre: string;
-    } | null;
-    pivot: {
-        id:number;
-        fecha_inscripcion: string;
-        monto_inscripcion: string | number;
-        estado: string;
-    };
-}
 interface Props {
     torneo: Torneo;
 }
 
 export default function Show({ torneo }: Props) {
+    const { auth, flash } = usePage<any>().props;
+
+    const esAdministrador = ['admin', 'superadmin'].includes(
+        auth?.user?.rol,
+    );
 
     const [filtroEstado, setFiltroEstado] = useState('todos');
     const [mostrarFiltro, setMostrarFiltro] = useState(false);
-    const { flash } = usePage<
-        PageProps<{
-            flash: {
-                success?: string | null;
-                error?: string | null;
-            };
-        }>
-    >().props;
 
     const actualizarEstado = (
         jugadorId: number,
-        estado: 'pendiente' | 'inscripto' | 'cancelado'
+        estado: 'pendiente' | 'inscripto' | 'cancelado',
     ) => {
+        if (!esAdministrador) return;
+
         if (estado === 'cancelado') {
             const confirmar = window.confirm(
-                '¿Estás segura de que querés cancelar la inscripción de este jugador?'
+                '¿Estás segura de que querés cancelar la inscripción de este jugador?',
             );
 
-            if (!confirmar) {
-                return;
-            }
+            if (!confirmar) return;
         }
 
         router.patch(
@@ -110,20 +102,22 @@ export default function Show({ torneo }: Props) {
             { estado },
             {
                 preserveScroll: true,
-            }
+            },
         );
     };
+
     const jugadoresFiltrados = torneo.jugadores.filter((jugador) => {
-        return filtroEstado === 'todos'
-            || jugador.pivot.estado === filtroEstado;
+        return (
+            filtroEstado === 'todos' ||
+            jugador.pivot.estado === filtroEstado
+        );
     });
 
-    // Formatear fechas recibidas desde Laravel
     const formatearFecha = (fecha: string | null) => {
         if (!fecha) return 'Sin definir';
 
         return new Date(
-            `${fecha.substring(0, 10)}T12:00:00`
+            `${fecha.substring(0, 10)}T12:00:00`,
         ).toLocaleDateString('es-AR', {
             day: '2-digit',
             month: 'long',
@@ -140,11 +134,8 @@ export default function Show({ torneo }: Props) {
 
                     {/* ENCABEZADO */}
                     <div className="rounded-2xl !bg-slate-950 px-6 py-7 shadow-lg sm:px-8">
-
                         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-
                             <div className="flex items-center gap-4">
-
                                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl !bg-slate-800">
                                     <Trophy
                                         size={30}
@@ -164,7 +155,7 @@ export default function Show({ torneo }: Props) {
                                     <p className="mt-1 text-sm !text-slate-300">
                                         {torneo.nombre}
                                     </p>
-                                    {/* TIPO DE TORNEO */}
+
                                     <div className="mt-3">
                                         {torneo.tipo === 'propio' ? (
                                             <span className="inline-flex items-center rounded-full !bg-blue-100 px-3 py-1 text-xs font-bold !text-blue-800">
@@ -180,7 +171,6 @@ export default function Show({ torneo }: Props) {
                             </div>
 
                             <div className="flex flex-wrap gap-3">
-
                                 <Link
                                     href="/torneos"
                                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-600 !bg-slate-800 px-4 py-3 text-sm font-semibold !text-white transition hover:!bg-slate-700"
@@ -189,46 +179,45 @@ export default function Show({ torneo }: Props) {
                                     Volver
                                 </Link>
 
-                                <Link
-                                    href={`/torneos/${torneo.id}/edit`}
-                                    className="inline-flex items-center justify-center gap-2 rounded-xl !bg-white px-4 py-3 text-sm font-semibold !text-slate-900 transition hover:!bg-slate-100"
-                                >
-                                    <Pencil size={17} />
-                                    Editar torneo
-                                </Link>
-
+                                {esAdministrador && (
+                                    <Link
+                                        href={`/torneos/${torneo.id}/edit`}
+                                        className="inline-flex items-center justify-center gap-2 rounded-xl !bg-white px-4 py-3 text-sm font-semibold !text-slate-900 transition hover:!bg-slate-100"
+                                    >
+                                        <Pencil size={17} />
+                                        Editar torneo
+                                    </Link>
+                                )}
                             </div>
                         </div>
-
-                        
                     </div>
-                        {flash?.success && (
-                                <div
-                                    role="status"
-                                    className="rounded-xl border border-emerald-200 !bg-emerald-50 px-5 py-4 shadow-sm"
-                                >
-                                    <p className="text-sm font-semibold !text-emerald-800">
-                                        ✓ {flash.success}
-                                    </p>
-                                </div>
-                            )}
 
-                        {flash?.error && (
-                            <div
-                                role="alert"
-                                className="rounded-xl border border-red-200 !bg-red-50 px-5 py-4 shadow-sm"
-                            >
-                                <p className="text-sm font-semibold !text-red-700">
-                                    {flash.error}
-                                </p>
-                            </div>
-                        )}
+                    {/* MENSAJES */}
+                    {flash?.success && (
+                        <div
+                            role="status"
+                            className="rounded-xl border border-emerald-200 !bg-emerald-50 px-5 py-4 shadow-sm"
+                        >
+                            <p className="text-sm font-semibold !text-emerald-800">
+                                ✓ {flash.success}
+                            </p>
+                        </div>
+                    )}
+
+                    {flash?.error && (
+                        <div
+                            role="alert"
+                            className="rounded-xl border border-red-200 !bg-red-50 px-5 py-4 shadow-sm"
+                        >
+                            <p className="text-sm font-semibold !text-red-700">
+                                {flash.error}
+                            </p>
+                        </div>
+                    )}
 
                     {/* INFORMACIÓN GENERAL */}
                     <section className="rounded-2xl border border-slate-200 !bg-white p-6 shadow-sm">
-
                         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-
                             <h2 className="text-lg font-bold !text-slate-900">
                                 Información general
                             </h2>
@@ -248,12 +237,9 @@ export default function Show({ torneo }: Props) {
 
                                 {torneo.estado ? 'Activo' : 'Inactivo'}
                             </span>
-
                         </div>
 
                         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-
-                            {/* NOMBRE */}
                             <div>
                                 <p className="mb-1 text-xs font-semibold uppercase tracking-wide !text-slate-500">
                                     Nombre del torneo
@@ -264,7 +250,6 @@ export default function Show({ torneo }: Props) {
                                 </p>
                             </div>
 
-                            {/* ORGANIZADOR */}
                             <div>
                                 <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide !text-slate-500">
                                     <Building2 size={15} />
@@ -276,7 +261,6 @@ export default function Show({ torneo }: Props) {
                                 </p>
                             </div>
 
-                            {/* LUGAR */}
                             <div>
                                 <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide !text-slate-500">
                                     <MapPin size={15} />
@@ -288,7 +272,6 @@ export default function Show({ torneo }: Props) {
                                 </p>
                             </div>
 
-                            {/* CATEGORÍAS */}
                             <div>
                                 <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide !text-slate-500">
                                     <Users size={15} />
@@ -304,16 +287,13 @@ export default function Show({ torneo }: Props) {
 
                     {/* FECHAS */}
                     <section className="rounded-2xl border border-slate-200 !bg-white p-6 shadow-sm">
-
                         <h2 className="mb-6 flex items-center gap-2 text-lg font-bold !text-slate-900">
                             <CalendarDays size={21} />
                             Fechas del torneo
                         </h2>
 
                         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-
                             <div className="rounded-xl border border-slate-200 !bg-slate-50 p-5">
-
                                 <p className="mb-2 text-sm font-medium !text-slate-500">
                                     Fecha de inicio
                                 </p>
@@ -321,11 +301,9 @@ export default function Show({ torneo }: Props) {
                                 <p className="text-base font-semibold !text-slate-900">
                                     {formatearFecha(torneo.fecha_inicio)}
                                 </p>
-
                             </div>
 
                             <div className="rounded-xl border border-slate-200 !bg-slate-50 p-5">
-
                                 <p className="mb-2 text-sm font-medium !text-slate-500">
                                     Fecha de finalización
                                 </p>
@@ -333,15 +311,12 @@ export default function Show({ torneo }: Props) {
                                 <p className="text-base font-semibold !text-slate-900">
                                     {formatearFecha(torneo.fecha_fin)}
                                 </p>
-
                             </div>
                         </div>
                     </section>
 
                     {/* CATEGORÍAS PARTICIPANTES */}
-                    
                     <section className="rounded-2xl border border-slate-200 !bg-white p-6 shadow-sm">
-
                         <h2 className="mb-2 flex items-center gap-2 text-lg font-bold !text-slate-900">
                             <Users size={21} />
                             Categorías participantes
@@ -352,19 +327,14 @@ export default function Show({ torneo }: Props) {
                         </p>
 
                         {torneo.categorias.length === 0 ? (
-
                             <div className="rounded-xl border border-amber-200 !bg-amber-50 p-5">
                                 <p className="text-sm !text-amber-800">
                                     Este torneo todavía no tiene categorías asociadas.
                                 </p>
                             </div>
-
                         ) : (
-
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-
                                 {torneo.categorias.map((categoria) => (
-
                                     <div
                                         key={categoria.id}
                                         className="flex items-center gap-3 rounded-xl border border-blue-200 !bg-blue-50 px-4 py-3"
@@ -375,23 +345,18 @@ export default function Show({ torneo }: Props) {
                                         />
 
                                         <span className="text-sm font-semibold !text-blue-900">
-                                            {categoria.nombre}
+                                            {categoria.anio}
                                         </span>
                                     </div>
-
                                 ))}
-
                             </div>
-
                         )}
                     </section>
+
                     {/* EQUIPOS PARTICIPANTES */}
                     {torneo.tipo === 'propio' && (
                         <section className="rounded-2xl border border-slate-200 !bg-white p-6 shadow-sm">
-
-                            {/* ENCABEZADO */}
                             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-
                                 <div>
                                     <h2 className="flex items-center gap-2 text-lg font-bold !text-slate-900">
                                         <Users size={21} />
@@ -403,24 +368,24 @@ export default function Show({ torneo }: Props) {
                                     </p>
                                 </div>
 
-                                <Link
-                                    href={`/torneos/${torneo.id}/inscribir-equipo`}
-                                    style={{
-                                        backgroundColor: '#0f172a',
-                                        color: '#ffffff',
-                                    }}
-                                    className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition hover:opacity-90"
-                                >
-                                    <Plus size={18} color="#ffffff" />
-                                    <span style={{ color: '#ffffff' }}>
-                                        Inscribir equipo
-                                    </span>
-                                </Link>
+                                {esAdministrador && (
+                                    <Link
+                                        href={`/torneos/${torneo.id}/inscribir-equipo`}
+                                        style={{
+                                            backgroundColor: '#0f172a',
+                                            color: '#ffffff',
+                                        }}
+                                        className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition hover:opacity-90"
+                                    >
+                                        <Plus size={18} color="#ffffff" />
+                                        <span style={{ color: '#ffffff' }}>
+                                            Inscribir equipo
+                                        </span>
+                                    </Link>
+                                )}
                             </div>
 
-                            {/* LISTADO DE EQUIPOS */}
                             {torneo.equipos.length === 0 ? (
-
                                 <div className="rounded-xl border border-slate-200 !bg-slate-50 px-5 py-8 text-center">
                                     <Users
                                         size={35}
@@ -431,17 +396,15 @@ export default function Show({ torneo }: Props) {
                                         Todavía no hay equipos inscriptos.
                                     </p>
 
-                                    <p className="mt-1 text-sm !text-slate-500">
-                                        Podés comenzar inscribiendo un equipo en este torneo.
-                                    </p>
+                                    {esAdministrador && (
+                                        <p className="mt-1 text-sm !text-slate-500">
+                                            Podés comenzar inscribiendo un equipo en este torneo.
+                                        </p>
+                                    )}
                                 </div>
-
                             ) : (
-
                                 <div className="overflow-x-auto rounded-xl border border-slate-200">
-
                                     <table className="w-full min-w-[700px] text-left text-sm">
-
                                         <thead className="!bg-slate-100">
                                             <tr>
                                                 <th className="px-4 py-3 font-semibold !text-slate-700">
@@ -463,46 +426,41 @@ export default function Show({ torneo }: Props) {
                                                 <th className="px-4 py-3 font-semibold !text-slate-700">
                                                     Estado
                                                 </th>
-                                                <th className="px-4 py-3 font-semibold !text-slate-700">
-                                                    Acciones
-                                                </th>
+
+                                                {esAdministrador && (
+                                                    <th className="px-4 py-3 font-semibold !text-slate-700">
+                                                        Acciones
+                                                    </th>
+                                                )}
                                             </tr>
                                         </thead>
 
                                         <tbody className="divide-y divide-slate-200">
-
                                             {torneo.equipos.map((equipo) => (
-
                                                 <tr
                                                     key={equipo.id}
                                                     className="transition hover:!bg-slate-50"
                                                 >
-
-                                                    {/* EQUIPO */}
                                                     <td className="px-4 py-4">
                                                         <span className="font-semibold !text-slate-900">
                                                             {equipo.nombre}
                                                         </span>
                                                     </td>
 
-                                                    {/* CLUB */}
                                                     <td className="px-4 py-4 !text-slate-700">
                                                         {equipo.club?.nombre ?? 'Sin club'}
                                                     </td>
 
-                                                    {/* CATEGORÍA */}
                                                     <td className="px-4 py-4">
                                                         <span className="rounded-full !bg-blue-100 px-3 py-1 text-xs font-semibold !text-blue-800">
-                                                            {equipo.categoria?.nombre ?? 'Sin categoría'}
+                                                            {equipo.categoria?.anio ?? 'Sin categoría'}
                                                         </span>
                                                     </td>
 
-                                                    {/* FECHA DE INSCRIPCIÓN */}
                                                     <td className="px-4 py-4 !text-slate-700">
                                                         {formatearFecha(equipo.pivot.fecha_inscripcion)}
                                                     </td>
 
-                                                    {/* ESTADO */}
                                                     <td className="px-4 py-4">
                                                         {Boolean(equipo.pivot.estado) ? (
                                                             <span className="inline-flex items-center gap-1 rounded-full !bg-emerald-100 px-3 py-1 text-xs font-semibold !text-emerald-800">
@@ -516,28 +474,25 @@ export default function Show({ torneo }: Props) {
                                                             </span>
                                                         )}
                                                     </td>
-                                                    {/* ACCIONES */}
-                                                    <td className="px-4 py-4">
-                                                        <Link
-                                                            href={`/inscripciones-equipo/${equipo.pivot.id}/pagos`}
-                                                            className="inline-flex items-center justify-center gap-2 rounded-lg !bg-slate-900 px-3 py-2 text-xs font-semibold !text-white transition hover:!bg-slate-700"
-                                                        >
-                                                            <FileText size={15} />
-                                                            Ver pagos
-                                                        </Link>
-                                                    </td>
 
+                                                    {esAdministrador && (
+                                                        <td className="px-4 py-4">
+                                                            <Link
+                                                                href={`/inscripciones-equipo/${equipo.pivot.id}/pagos`}
+                                                                className="inline-flex items-center justify-center gap-2 rounded-lg !bg-slate-900 px-3 py-2 text-xs font-semibold !text-white transition hover:!bg-slate-700"
+                                                            >
+                                                                <FileText size={15} />
+                                                                Ver pagos
+                                                            </Link>
+                                                        </td>
+                                                    )}
                                                 </tr>
-
                                             ))}
-
                                         </tbody>
                                     </table>
                                 </div>
-
                             )}
 
-                            {/* TOTAL DE EQUIPOS */}
                             {torneo.equipos.length > 0 && (
                                 <p className="mt-4 text-sm !text-slate-500">
                                     Total de equipos registrados:{' '}
@@ -546,256 +501,243 @@ export default function Show({ torneo }: Props) {
                                     </span>
                                 </p>
                             )}
-
                         </section>
-                    )}    
+                    )}
 
-                   {/* PARTICIPACIÓN EN TORNEOS EXTERNOS */}
-                        {(
-                            torneo.tipo === 'propio' ||
-                            torneo.tipo === 'externo'
-                        ) && (
-                            <section className="rounded-2xl border border-slate-200 !bg-white p-6 shadow-sm">
+                    {/* JUGADORES PARTICIPANTES */}
+                    <section className="rounded-2xl border border-slate-200 !bg-white p-6 shadow-sm">
+                        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h2 className="flex items-center gap-2 text-lg font-bold !text-slate-900">
+                                    <Users size={21} />
+                                    Jugadores participantes
+                                </h2>
 
-                                {/* ENCABEZADO */}
-                                <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <p className="mt-1 text-sm !text-slate-500">
+                                    Jugadores inscriptos en este torneo.
+                                </p>
+                            </div>
 
-                                    <div>
-                                        <h2 className="flex items-center gap-2 text-lg font-bold !text-slate-900">
-                                            <Users size={21} />
-                                            Jugadores participantes
-                                        </h2>
+                            {esAdministrador && (
+                                <Link
+                                    href={`/torneos/${torneo.id}/inscribir-jugador`}
+                                    style={{
+                                        backgroundColor: '#047857',
+                                        color: '#ffffff',
+                                    }}
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition hover:opacity-90"
+                                >
+                                    <Plus size={18} color="#ffffff" />
+                                    <span style={{ color: '#ffffff' }}>
+                                        Inscribir jugador
+                                    </span>
+                                </Link>
+                            )}
+                        </div>
 
-                                        <p className="mt-1 text-sm !text-slate-500">
-                                            Jugadores inscriptos en este torneo.
-                                        </p>
-                                    </div>
+                        {/* FILTRO POR ESTADO */}
+                        <div className="mb-5 flex items-center justify-end gap-2">
+                            {mostrarFiltro && (
+                                <select
+                                    id="filtroEstado"
+                                    value={filtroEstado}
+                                    onChange={(e) => setFiltroEstado(e.target.value)}
+                                    className="rounded-lg border border-slate-300 !bg-white px-3 py-2 text-sm !text-slate-800 shadow-sm"
+                                >
+                                    <option value="todos">Todos los estados</option>
+                                    <option value="pendiente">Pendientes</option>
+                                    <option value="inscripto">Inscriptos</option>
+                                    <option value="cancelado">Cancelados</option>
+                                </select>
+                            )}
 
-                                    <Link
-                                        href={`/torneos/${torneo.id}/inscribir-jugador`}
-                                        style={{
-                                            backgroundColor: '#047857',
-                                            color: '#ffffff',
-                                        }}
-                                        className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition hover:opacity-90"
-                                    >
-                                        <Plus size={18} color="#ffffff" />
+                            <button
+                                type="button"
+                                onClick={() => setMostrarFiltro(!mostrarFiltro)}
+                                title="Filtrar participantes"
+                                aria-label="Mostrar u ocultar filtros"
+                                aria-expanded={mostrarFiltro}
+                                className={`flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${
+                                    filtroEstado !== 'todos'
+                                        ? 'border-blue-300 !bg-blue-50 !text-blue-700'
+                                        : 'border-slate-300 !bg-white !text-slate-600 hover:!bg-slate-100'
+                                }`}
+                            >
+                                <Filter size={18} />
+                            </button>
+                        </div>
 
-                                        <span style={{ color: '#ffffff' }}>
-                                            Inscribir jugador
-                                        </span>
-                                    </Link>
+                        {/* LISTADO DE JUGADORES */}
+                        {torneo.jugadores.length === 0 ? (
+                            <div className="rounded-xl border border-slate-200 !bg-slate-50 px-5 py-8 text-center">
+                                <Users
+                                    size={35}
+                                    className="mx-auto mb-3 !text-slate-400"
+                                />
 
-                                </div>
-                                {/* FILTRO POR ESTADO */}
-                                
-                                <div className="mb-5 flex items-center justify-end gap-2">
-                                    {mostrarFiltro && (
-                                        <select
-                                            id="filtroEstado"
-                                            value={filtroEstado}
-                                            onChange={(e) => setFiltroEstado(e.target.value)}
-                                            className="rounded-lg border border-slate-300 !bg-white px-3 py-2 text-sm !text-slate-800 shadow-sm"
-                                        >
-                                            <option value="todos">Todos los estados</option>
-                                            <option value="pendiente">Pendientes</option>
-                                            <option value="inscripto">Inscriptos</option>
-                                            <option value="cancelado">Cancelados</option>
-                                        </select>
-                                    )}
+                                <p className="text-sm font-semibold !text-slate-700">
+                                    Todavía no hay jugadores inscriptos.
+                                </p>
 
-                                    <button
-                                        type="button"
-                                        onClick={() => setMostrarFiltro(!mostrarFiltro)}
-                                        title="Filtrar participantes"
-                                        aria-label="Mostrar u ocultar filtros"
-                                        aria-expanded={mostrarFiltro}
-                                        className={`flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${
-                                            filtroEstado !== 'todos'
-                                                ? 'border-blue-300 !bg-blue-50 !text-blue-700'
-                                                : 'border-slate-300 !bg-white !text-slate-600 hover:!bg-slate-100'
-                                        }`}
-                                    >
-                                        <Filter size={18} />
-                                    </button>
-                                </div>
-                                {/* LISTADO DE JUGADORES */}
-                                {torneo.jugadores.length === 0 ? (
-
-                                    <div className="rounded-xl border border-slate-200 !bg-slate-50 px-5 py-8 text-center">
-
-                                        <Users
-                                            size={35}
-                                            className="mx-auto mb-3 !text-slate-400"
-                                        />
-
-                                        <p className="text-sm font-semibold !text-slate-700">
-                                            Todavía no hay jugadores inscriptos.
-                                        </p>
-
-                                        <p className="mt-1 text-sm !text-slate-500">
-                                            Podés comenzar registrando jugadores
-                                            participantes en este torneo.
-                                        </p>
-
-                                    </div>
-
-                                ) : (
-
-                                    <div className="overflow-x-auto rounded-xl border border-slate-200">
-
-                                        <table className="w-full min-w-[700px] text-left text-sm">
-
-                                            <thead className="!bg-slate-100">
-                                                <tr>
-                                                    <th className="px-4 py-3 font-semibold !text-slate-700">
-                                                        Jugador
-                                                    </th>
-
-                                                    <th className="px-4 py-3 font-semibold !text-slate-700">
-                                                        DNI
-                                                    </th>
-
-                                                    <th className="px-4 py-3 font-semibold !text-slate-700">
-                                                        Categoría
-                                                    </th>
-
-                                                    <th className="px-4 py-3 font-semibold !text-slate-700">
-                                                        Fecha de inscripción
-                                                    </th>
-
-                                                    <th className="px-4 py-3 font-semibold !text-slate-700">
-                                                        Estado
-                                                    </th>
-                                                    <th className="px-4 py-3 font-semibold !text-slate-700">
-                                                        Acciones
-                                                    </th>
-                                                </tr>
-                                            </thead>
-
-                                            <tbody className="divide-y divide-slate-200">
-
-                                                {jugadoresFiltrados.map((jugador) => (
-
-                                                    <tr
-                                                        key={jugador.id}
-                                                        className="transition hover:!bg-slate-50"
-                                                    >
-
-                                                        {/* JUGADOR */}
-                                                        <td className="px-4 py-4">
-                                                            <span className="font-semibold !text-slate-900">
-                                                                {jugador.apellido}, {jugador.nombre}
-                                                            </span>
-                                                        </td>
-
-                                                        {/* DNI */}
-                                                        <td className="px-4 py-4 !text-slate-700">
-                                                            {jugador.dni}
-                                                        </td>
-
-                                                        {/* CATEGORÍA */}
-                                                        <td className="px-4 py-4">
-                                                            <span className="rounded-full !bg-blue-100 px-3 py-1 text-xs font-semibold !text-blue-800">
-                                                                {jugador.categoria?.nombre ?? 'Sin categoría'}
-                                                            </span>
-                                                        </td>
-
-                                                        {/* FECHA DE INSCRIPCIÓN */}
-                                                        <td className="px-4 py-4 !text-slate-700">
-                                                            {formatearFecha(jugador.pivot.fecha_inscripcion)}
-                                                        </td>
-
-                                                        {/* ESTADO */}
-                                                        <td className="px-4 py-4">
-                                                            {jugador.pivot.estado === 'inscripto' ? (
-                                                                <span className="inline-flex items-center gap-1 rounded-full !bg-emerald-100 px-3 py-1 text-xs font-semibold !text-emerald-800">
-                                                                    <CheckCircle2 size={14} />
-                                                                    Inscripto
-                                                                </span>
-                                                            ) : jugador.pivot.estado === 'pendiente' ? (
-                                                                <span className="inline-flex items-center rounded-full !bg-amber-100 px-3 py-1 text-xs font-semibold !text-amber-800">
-                                                                    Pendiente
-                                                                </span>
-                                                            ) : (
-                                                                <span className="inline-flex items-center gap-1 rounded-full !bg-red-100 px-3 py-1 text-xs font-semibold !text-red-800">
-                                                                    <XCircle size={14} />
-                                                                    Cancelado
-                                                                </span>
-                                                            )}
-                                                        </td>
-                                                        {/* ACCIONES */}
-                                                        <td className="px-4 py-4">
-                                                            <div className="flex flex-col gap-2">
-
-                                                                <select
-                                                                    defaultValue={jugador.pivot.estado}
-                                                                    onChange={(e) => {
-                                                                        const nuevoEstado = e.target.value as
-                                                                            | 'pendiente'
-                                                                            | 'inscripto'
-                                                                            | 'cancelado';
-
-                                                                        actualizarEstado(jugador.id, nuevoEstado);
-                                                                    }}
-                                                                    className="rounded-lg border border-slate-300 !bg-white px-3 py-2 text-sm !text-slate-800"
-                                                                >
-                                                                    <option value="pendiente">Pendiente</option>
-                                                                    <option value="inscripto">Inscripto</option>
-                                                                    <option value="cancelado">Cancelado</option>
-                                                                </select>
-                                                                <Link
-                                                                    href={`/inscripciones-torneo/${jugador.pivot.id}/pagos`}
-                                                                    className="inline-flex items-center justify-center rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800"
-                                                                >
-                                                                    Ver pagos
-                                                                </Link>
-                                                            </div>
-                                                        </td>
-
-                                                    </tr>
-
-                                                ))}
-
-                                            </tbody>
-                                        </table>
-
-                                    </div>
-
-                                )}
-
-                                {/* TOTAL DE JUGADORES */}
-                                {torneo.jugadores.length > 0 && (
-
-                                    <p className="mt-4 text-sm !text-slate-500">
-                                        Total de jugadores inscriptos:{' '}
-
-                                        <span className="font-semibold !text-slate-900">
-                                            {torneo.jugadores.length}
-                                        </span>
+                                {esAdministrador && (
+                                    <p className="mt-1 text-sm !text-slate-500">
+                                        Podés comenzar registrando jugadores participantes en este torneo.
                                     </p>
-
                                 )}
+                            </div>
+                        ) : jugadoresFiltrados.length === 0 ? (
+                            <div className="rounded-xl border border-slate-200 !bg-slate-50 px-5 py-8 text-center">
+                                <p className="text-sm font-semibold !text-slate-700">
+                                    No hay jugadores con el estado seleccionado.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto rounded-xl border border-slate-200">
+                                <table className="w-full min-w-[700px] text-left text-sm">
+                                    <thead className="!bg-slate-100">
+                                        <tr>
+                                            <th className="px-4 py-3 font-semibold !text-slate-700">
+                                                Jugador
+                                            </th>
 
-                            </section>
+                                            <th className="px-4 py-3 font-semibold !text-slate-700">
+                                                DNI
+                                            </th>
+
+                                            <th className="px-4 py-3 font-semibold !text-slate-700">
+                                                Categoría
+                                            </th>
+
+                                            <th className="px-4 py-3 font-semibold !text-slate-700">
+                                                Fecha de inscripción
+                                            </th>
+
+                                            <th className="px-4 py-3 font-semibold !text-slate-700">
+                                                Estado
+                                            </th>
+
+                                            {esAdministrador && (
+                                                <th className="px-4 py-3 font-semibold !text-slate-700">
+                                                    Acciones
+                                                </th>
+                                            )}
+                                        </tr>
+                                    </thead>
+
+                                    <tbody className="divide-y divide-slate-200">
+                                        {jugadoresFiltrados.map((jugador) => (
+                                            <tr
+                                                key={jugador.id}
+                                                className="transition hover:!bg-slate-50"
+                                            >
+                                                <td className="px-4 py-4">
+                                                    <span className="font-semibold !text-slate-900">
+                                                        {jugador.apellido}, {jugador.nombre}
+                                                    </span>
+                                                </td>
+
+                                                <td className="px-4 py-4 !text-slate-700">
+                                                    {jugador.dni}
+                                                </td>
+
+                                                <td className="px-4 py-4">
+                                                    <span className="rounded-full !bg-blue-100 px-3 py-1 text-xs font-semibold !text-blue-800">
+                                                        {jugador.categoria?.anio ?? 'Sin categoría'}
+                                                    </span>
+                                                </td>
+
+                                                <td className="px-4 py-4 !text-slate-700">
+                                                    {formatearFecha(jugador.pivot.fecha_inscripcion)}
+                                                </td>
+
+                                                <td className="px-4 py-4">
+                                                    {jugador.pivot.estado === 'inscripto' ? (
+                                                        <span className="inline-flex items-center gap-1 rounded-full !bg-emerald-100 px-3 py-1 text-xs font-semibold !text-emerald-800">
+                                                            <CheckCircle2 size={14} />
+                                                            Inscripto
+                                                        </span>
+                                                    ) : jugador.pivot.estado === 'pendiente' ? (
+                                                        <span className="inline-flex items-center rounded-full !bg-amber-100 px-3 py-1 text-xs font-semibold !text-amber-800">
+                                                            Pendiente
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 rounded-full !bg-red-100 px-3 py-1 text-xs font-semibold !text-red-800">
+                                                            <XCircle size={14} />
+                                                            Cancelado
+                                                        </span>
+                                                    )}
+                                                </td>
+
+                                                {esAdministrador && (
+                                                    <td className="px-4 py-4">
+                                                        <div className="flex flex-col gap-2">
+                                                            <select
+                                                                value={jugador.pivot.estado}
+                                                                onChange={(e) => {
+                                                                    const nuevoEstado = e.target.value as
+                                                                        | 'pendiente'
+                                                                        | 'inscripto'
+                                                                        | 'cancelado';
+
+                                                                    actualizarEstado(
+                                                                        jugador.id,
+                                                                        nuevoEstado,
+                                                                    );
+                                                                }}
+                                                                className="rounded-lg border border-slate-300 !bg-white px-3 py-2 text-sm !text-slate-800"
+                                                            >
+                                                                <option value="pendiente">
+                                                                    Pendiente
+                                                                </option>
+                                                                <option value="inscripto">
+                                                                    Inscripto
+                                                                </option>
+                                                                <option value="cancelado">
+                                                                    Cancelado
+                                                                </option>
+                                                            </select>
+
+                                                            <Link
+                                                                href={`/inscripciones-torneo/${jugador.pivot.id}/pagos`}
+                                                                className="inline-flex items-center justify-center rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800"
+                                                            >
+                                                                Ver pagos
+                                                            </Link>
+                                                        </div>
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         )}
+
+                        {torneo.jugadores.length > 0 && (
+                            <p className="mt-4 text-sm !text-slate-500">
+                                Total de jugadores inscriptos:{' '}
+                                <span className="font-semibold !text-slate-900">
+                                    {torneo.jugadores.length}
+                                </span>
+                            </p>
+                        )}
+                    </section>
+
                     {/* DESCRIPCIÓN */}
                     <section className="rounded-2xl border border-slate-200 !bg-white p-6 shadow-sm">
-
                         <h2 className="mb-5 flex items-center gap-2 text-lg font-bold !text-slate-900">
                             <FileText size={21} />
                             Descripción
                         </h2>
 
                         <p className="whitespace-pre-line text-sm leading-relaxed !text-slate-700">
-                            {torneo.descripcion || 'No se registró una descripción para este torneo.'}
+                            {torneo.descripcion ||
+                                'No se registró una descripción para este torneo.'}
                         </p>
-
                     </section>
 
                     {/* ACCIONES INFERIORES */}
                     <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-
                         <Link
                             href="/torneos"
                             className="rounded-xl border border-slate-300 !bg-white px-6 py-3 text-center text-sm font-semibold !text-slate-700 transition hover:!bg-slate-100"
@@ -803,16 +745,16 @@ export default function Show({ torneo }: Props) {
                             Volver al listado
                         </Link>
 
-                        <Link
-                            href={`/torneos/${torneo.id}/edit`}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl !bg-slate-900 px-6 py-3 text-sm font-semibold !text-white transition hover:!bg-slate-800"
-                        >
-                            <Pencil size={18} />
-                            Editar torneo
-                        </Link>
-
+                        {esAdministrador && (
+                            <Link
+                                href={`/torneos/${torneo.id}/edit`}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl !bg-slate-900 px-6 py-3 text-sm font-semibold !text-white transition hover:!bg-slate-800"
+                            >
+                                <Pencil size={18} />
+                                Editar torneo
+                            </Link>
+                        )}
                     </div>
-
                 </div>
             </div>
         </>

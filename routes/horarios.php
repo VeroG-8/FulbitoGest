@@ -3,15 +3,16 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HorarioController;
 
-// Consultas: cualquier usuario autenticado.
+// Consultas de horarios activos: cualquier usuario autenticado.
+// El controlador filtra los horarios según el rol.
 Route::get('/horarios', [HorarioController::class, 'index'])
     ->name('horarios.index');
 
-Route::get('/horarios/historial', [HorarioController::class, 'historial'])
-    ->name('horarios.historial');
-
-// Gestión de horarios: solo administradores.
+// Gestión y consultas administrativas: solo administradores.
 Route::middleware('rol:admin')->group(function () {
+
+    Route::get('/horarios/historial', [HorarioController::class, 'historial'])
+        ->name('horarios.historial');
 
     Route::get('/horarios/create', [HorarioController::class, 'create'])
         ->name('horarios.create');
@@ -32,6 +33,6 @@ Route::middleware('rol:admin')->group(function () {
         ->name('horarios.destroy');
 });
 
-// Esta ruta debe quedar después de las rutas estáticas.
+// Detalle: el controlador verifica si el usuario puede consultar ese horario.
 Route::get('/horarios/{horario}', [HorarioController::class, 'show'])
     ->name('horarios.show');

@@ -3,7 +3,14 @@ import { Head, router, usePage } from '@inertiajs/react';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/react/timegrid';
 import dayGridPlugin from '@fullcalendar/react/daygrid';
-import interactionPlugin from '@fullcalendar/react';
+import interactionPlugin from '@fullcalendar/react/interaction';
+
+import themePlugin from '@fullcalendar/react/themes/breezy';
+
+import '@fullcalendar/react/skeleton.css';
+import '@fullcalendar/react/themes/breezy/theme.css';
+import '@fullcalendar/react/themes/breezy/palettes/indigo.css';
+
 import {
     CalendarDays,
     Clock3,
@@ -15,11 +22,7 @@ import {
     Ban,
 } from 'lucide-react';
 
-import themePlugin from '@fullcalendar/react/themes/breezy';
 
-import '@fullcalendar/react/skeleton.css';
-import '@fullcalendar/react/themes/breezy/theme.css';
-import '@fullcalendar/react/themes/breezy/palettes/indigo.css';
 
 interface Categoria {
     id: number;
@@ -107,7 +110,7 @@ function normalizarDia(dia: string): number | undefined {
     return diasSemana[dia.trim().toLocaleLowerCase('es')];
 }
 
-export default function Index({ horarios }: Props) {
+export default function Index({ horarios=[] }: Props) {
     const page = usePage();
     const { auth } = page.props as any;
     const user = auth.user;

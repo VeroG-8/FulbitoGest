@@ -243,6 +243,7 @@ export default function Authenticated({
             return [
                 'dashboard',
                 'jugadores.index',
+                'horarios.index',
             ].includes(item.route);
         }
 

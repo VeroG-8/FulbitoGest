@@ -14,12 +14,12 @@ import {
     AlertTriangle,
     X,
 } from 'lucide-react';
-import { type PageProps } from '@/types';
+
 
 // Tipos de datos
 interface Categoria {
     id: number;
-    nombre: string;
+    anio: number;
 }
 
 interface Torneo {
@@ -57,11 +57,13 @@ interface FlashMessages {
     error?: string | null;
 }
 export default function Index({ torneos, filtros }: Props) {
-    const { flash } = usePage<
-        PageProps<{
-            flash: FlashMessages;
-        }>
-    >().props;
+    const { auth, flash } = usePage<any>().props;
+
+    const esAdministrador = ['admin', 'superadmin'].includes(
+        auth?.user?.rol,
+    );
+
+const esProfesor = auth?.user?.rol === 'profesor';
     const [buscar, setBuscar] = useState(filtros.buscar ?? '');
 
     const buscarTorneos = (e: FormEvent<HTMLFormElement>) => {
@@ -138,20 +140,24 @@ export default function Index({ torneos, filtros }: Props) {
                                         Torneos
                                     </h1>
 
-                                    <p className="mt-1 text-sm !text-slate-300">
-                                        Administración de torneos y categorías
-                                    </p>
+                                   <p className="mt-1 text-sm !text-slate-300">
+                                        {esAdministrador
+                                            ? 'Administración de torneos y categorías'
+                                            : 'Consulta de torneos disponibles'}
+                                   </p>
                                 </div>
                             </div>
 
                             {/* Botón nuevo torneo */}
-                            <Link
-                                href="/torneos/create"
-                                className="inline-flex items-center justify-center gap-2 rounded-xl !bg-white px-5 py-3 text-sm font-semibold !text-slate-900 transition hover:!bg-slate-100"
-                            >
-                                <Plus size={18} />
-                                Nuevo torneo
-                            </Link>
+                           {esAdministrador && (
+                                <Link
+                                    href="/torneos/create"
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl !bg-white px-5 py-3 text-sm font-semibold !text-slate-900 transition hover:!bg-slate-100"
+                                >
+                                    <Plus size={18} />
+                                    Nuevo torneo
+                                </Link>
+                            )}
 
                         </div>
                     </div>
@@ -222,18 +228,20 @@ export default function Index({ torneos, filtros }: Props) {
                             </p>
                         </div>
 
-                        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-slate-500">
-                                    Inactivos en esta página
-                                </span>
-                                <Users className="text-slate-400" size={21} />
-                            </div>
+                        {esAdministrador && (
+                            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-slate-500">
+                                        Inactivos en esta página
+                                    </span>
+                                    <Users className="text-slate-400" size={21} />
+                                </div>
 
-                            <p className="mt-3 text-3xl font-bold text-slate-700">
-                                {torneos.data.filter((t) => !t.estado).length}
-                            </p>
-                        </div>
+                                <p className="mt-3 text-3xl font-bold text-slate-700">
+                                    {torneos.data.filter((t) => !t.estado).length}
+                                </p>
+                            </div>
+                        )}
                     </div>
 
                     {/* LISTADO */}
@@ -246,7 +254,9 @@ export default function Index({ torneos, filtros }: Props) {
                                         Listado de torneos
                                     </h2>
                                     <p className="text-sm text-slate-500">
-                                        Consultá y administrá los torneos registrados.
+                                        {esAdministrador
+                                            ? 'Consultá y administrá los torneos registrados.'
+                                            : 'Consultá los torneos disponibles y sus detalles.'}
                                     </p>
                                 </div>
 
@@ -330,7 +340,7 @@ export default function Index({ torneos, filtros }: Props) {
                                                                     key={categoria.id}
                                                                     className="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700"
                                                                 >
-                                                                    {categoria.nombre}
+                                                                    {categoria.anio}
                                                                 </span>
                                                             ))
                                                         ) : (
@@ -374,21 +384,26 @@ export default function Index({ torneos, filtros }: Props) {
                                                             <Eye size={18} />
                                                         </Link>
 
-                                                        <Link
-                                                            href={`/torneos/${torneo.id}/edit`}
-                                                            title="Editar torneo"
-                                                            className="rounded-lg p-2 text-amber-600 transition hover:bg-amber-50"
-                                                        >
-                                                            <Pencil size={18} />
-                                                        </Link>
-                                                        <button
-                                                            type="button"
-                                                            title="Eliminar torneo"
-                                                            onClick={() => setTorneoAEliminar(torneo)}
-                                                            className="rounded-lg p-2 !text-red-600 transition hover:!bg-red-50"
-                                                        >
-                                                            <Trash2 size={18} />
-                                                        </button>
+                                                        {esAdministrador && (
+                                                            <>
+                                                                <Link
+                                                                    href={`/torneos/${torneo.id}/edit`}
+                                                                    title="Editar torneo"
+                                                                    className="rounded-lg p-2 text-amber-600 transition hover:bg-amber-50"
+                                                                >
+                                                                    <Pencil size={18} />
+                                                                </Link>
+
+                                                                <button
+                                                                    type="button"
+                                                                    title="Eliminar torneo"
+                                                                    onClick={() => setTorneoAEliminar(torneo)}
+                                                                    className="rounded-lg p-2 !text-red-600 transition hover:!bg-red-50"
+                                                                >
+                                                                    <Trash2 size={18} />
+                                                                </button>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -433,7 +448,7 @@ export default function Index({ torneos, filtros }: Props) {
                 </div>
             </div>
             {/* MODAL DE CONFIRMACIÓN */}
-            {torneoAEliminar && (
+            {torneoAEliminar && torneoAEliminar && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center !bg-black/60 p-4"
                     role="presentation"

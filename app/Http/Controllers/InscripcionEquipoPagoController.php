@@ -14,10 +14,26 @@ use Inertia\Inertia;
 class InscripcionEquipoPagoController extends Controller
 {
     /**
+     * Verificar que el usuario sea administrador
+     * o superadministrador.
+     */
+    private function autorizarAdministracion(): void
+    {
+        abort_unless(
+            auth()->check() &&
+            in_array(auth()->user()->rol, ['admin', 'superadmin'], true),
+            403,
+            'No tienes permiso para gestionar los pagos de inscripciones.'
+        );
+    }
+
+    /**
      * Mostrar los pagos de una inscripción de equipo.
      */
     public function index(InscripcionEquipo $inscripcionEquipo)
     {
+        $this->autorizarAdministracion();
+
         $inscripcionEquipo->load([
             'equipo.club',
             'equipo.categoria',
@@ -53,6 +69,8 @@ class InscripcionEquipoPagoController extends Controller
         InscripcionEquipo $inscripcionEquipo,
         ReciboService $reciboService
     ) {
+        $this->autorizarAdministracion();
+
         $validated = $request->validate([
             'modalidad_pago_id' => [
                 'required',

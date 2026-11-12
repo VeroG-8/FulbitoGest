@@ -11,27 +11,42 @@ use Illuminate\Validation\ValidationException;
 class InscripcionEquipoController extends Controller
 {
     /**
+     * Verificar que el usuario sea administrador o superadministrador.
+     */
+    private function autorizarAdministracion(): void
+    {
+        abort_unless(
+            in_array(auth()->user()?->rol, ['admin', 'superadmin'], true),
+            403,
+            'No tenés permisos para realizar esta operación.'
+        );
+    }
+
+    /**
      * Mostrar los equipos disponibles para inscribir.
      */
     public function create(Torneo $torneo)
     {
-         // Verificar que sea un torneo propio
+        $this->autorizarAdministracion();
+
+        // Verificar que sea un torneo propio.
         if ($torneo->tipo !== 'propio') {
             return redirect()
                 ->route('torneos.show', $torneo)
                 ->with('error', 'Solo se pueden inscribir equipos en torneos propios.');
-        }        
-        // Cargar las categorías habilitadas en el torneo
+        }
+
+        // Cargar las categorías habilitadas en el torneo.
         $torneo->load('categorias');
 
-        // Obtener los ID de las categorías permitidas
+        // Obtener los ID de las categorías permitidas.
         $categoriasIds = $torneo->categorias->pluck('id');
 
-        // Obtener los ID de los equipos ya inscriptos
+        // Obtener los ID de los equipos ya inscriptos.
         $equiposInscriptosIds = $torneo->equipos()
             ->pluck('equipos.id');
 
-        // Buscar equipos disponibles
+        // Buscar equipos disponibles.
         $equiposDisponibles = Equipo::with(['club', 'categoria'])
             ->whereIn('categoria_id', $categoriasIds)
             ->whereNotIn('id', $equiposInscriptosIds)
@@ -44,37 +59,41 @@ class InscripcionEquipoController extends Controller
         ]);
     }
 
-        /**
+    /**
      * Registrar un equipo en un torneo.
      */
     public function store(Request $request, Torneo $torneo)
     {
+        $this->autorizarAdministracion();
+
+        // Verificar que sea un torneo propio.
         if ($torneo->tipo !== 'propio') {
             return redirect()
                 ->route('torneos.show', $torneo)
                 ->with('error', 'No se pueden inscribir equipos en torneos externos.');
         }
-        // 1. Validar que el equipo exista
+
+        // 1. Validar que el equipo exista.
         $validated = $request->validate([
             'equipo_id' => ['required', 'integer', 'exists:equipos,id'],
         ]);
 
-        // 2. Recuperar el equipo
+        // 2. Recuperar el equipo.
         $equipo = Equipo::findOrFail($validated['equipo_id']);
 
         // 3. Verificar que el equipo pertenezca a una categoría
-        // habilitada en el torneo
+        // habilitada en el torneo.
         $categoriaTorneo = $torneo->categorias()
             ->where('categorias.id', $equipo->categoria_id)
             ->first();
 
         if (!$categoriaTorneo) {
-             throw ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'equipo_id' => 'La categoría del equipo no está habilitada para este torneo.',
             ]);
         }
 
-        // 4. Verificar que el equipo no esté inscripto
+        // 4. Verificar que el equipo no esté inscripto.
         $yaInscripto = $torneo->equipos()
             ->where('equipos.id', $equipo->id)
             ->exists();
@@ -85,14 +104,14 @@ class InscripcionEquipoController extends Controller
             ]);
         }
 
-        // 5. Registrar la inscripción
+        // 5. Registrar la inscripción.
         $torneo->equipos()->attach($equipo->id, [
             'fecha_inscripcion' => now()->toDateString(),
             'monto_inscripcion' => $categoriaTorneo->pivot->monto_inscripcion,
             'estado' => true,
         ]);
 
-        // 6. Redirigir con mensaje de éxito
+        // 6. Redirigir con mensaje de éxito.
         return redirect()
             ->route('torneos.show', $torneo)
             ->with('success', 'El equipo se inscribió correctamente en el torneo.');

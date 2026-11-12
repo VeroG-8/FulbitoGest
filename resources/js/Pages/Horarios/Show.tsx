@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import {
     CalendarDays,
     Clock3,
@@ -53,6 +53,12 @@ function capitalizar(texto: string): string {
 }
 
 export default function Show({ horario }: Props) {
+    const { auth } = usePage<any>().props;
+
+    const esAdministrador = ['admin', 'superadmin'].includes(
+        auth?.user?.rol,
+    );
+
     const dia = capitalizar(
         horario.dia_semana
             .toLowerCase()
@@ -70,13 +76,15 @@ export default function Show({ horario }: Props) {
                 icon={<CalendarDays size={28} />}
                 actions={
                     <div className="flex items-center gap-2">
-                        <Link
-                            href={`/horarios/${horario.id}/edit`}
-                            className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20"
-                        >
-                            <Pencil size={17} />
-                            Editar
-                        </Link>
+                        {esAdministrador && (
+                            <Link
+                                href={`/horarios/${horario.id}/edit`}
+                                className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20"
+                            >
+                                <Pencil size={17} />
+                                Editar
+                            </Link>
+                        )}
 
                         <Link
                             href="/horarios"

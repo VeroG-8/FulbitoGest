@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Cancha;
 use App\Models\Categoria;
 use App\Models\Horario;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -13,16 +14,17 @@ use Inertia\Inertia;
 class HorarioController extends Controller
 {
     /**
-     * Listado de horarios activos.
+     * Listado de horarios activos según el rol.
      */
     public function index()
     {
-        $horarios = Horario::with([
-            'categoria:id,anio',
-            'profesor:id,nombre,apellido',
-            'cancha:id,nombre,predio_id',
-            'cancha.predio:id,nombre',
-        ])
+        $horarios = $this->consultaHorariosVisibles()
+            ->with([
+                'categoria:id,anio',
+                'profesor:id,nombre,apellido',
+                'cancha:id,nombre,predio_id',
+                'cancha.predio:id,nombre',
+            ])
             ->where('estado', true)
             ->orderBy('dia_semana')
             ->orderBy('hora_inicio')
@@ -38,6 +40,8 @@ class HorarioController extends Controller
      */
     public function create()
     {
+        $this->autorizarAdministracion();
+
         $categorias = Categoria::query()
             ->where('estado', true)
             ->with([
@@ -72,15 +76,15 @@ class HorarioController extends Controller
      */
     public function store(Request $request)
     {
+        $this->autorizarAdministracion();
+
         $datos = $this->validarDatos($request);
 
-        // El profesor se obtiene automáticamente desde la categoría.
         $datos['profesor_id'] = $this->obtenerProfesorCategoria(
             $datos['categoria_id']
         );
 
         $this->validarCanchaDisponible($datos['cancha_id']);
-
         $this->validarConflictos($datos);
 
         Horario::create([
@@ -95,15 +99,21 @@ class HorarioController extends Controller
 
     /**
      * Mostrar detalle de un horario.
+     * El usuario solamente puede consultar horarios habilitados
+     * para su rol.
      */
     public function show(Horario $horario)
     {
-        $horario->load([
-            'categoria:id,anio',
-            'profesor:id,nombre,apellido',
-            'cancha:id,nombre,predio_id',
-            'cancha.predio:id,nombre',
-        ]);
+        $horario = $this->consultaHorariosVisibles()
+            ->where('estado', true)
+            ->whereKey($horario->id)
+            ->with([
+                'categoria:id,anio',
+                'profesor:id,nombre,apellido',
+                'cancha:id,nombre,predio_id',
+                'cancha.predio:id,nombre',
+            ])
+            ->firstOrFail();
 
         return Inertia::render('Horarios/Show', [
             'horario' => $horario,
@@ -115,7 +125,8 @@ class HorarioController extends Controller
      */
     public function edit(Horario $horario)
     {
-        $this->autorizarEdicion();
+        $this->autorizarAdministracion();
+
         $categorias = Categoria::query()
             ->where(function ($query) use ($horario) {
                 $query->where('estado', true)
@@ -154,16 +165,15 @@ class HorarioController extends Controller
      */
     public function update(Request $request, Horario $horario)
     {
-        $this->autorizarEdicion();
+        $this->autorizarAdministracion();
+
         $datos = $this->validarDatos($request);
 
-        // Se actualiza según el profesor responsable de la nueva categoría.
         $datos['profesor_id'] = $this->obtenerProfesorCategoria(
             $datos['categoria_id']
         );
 
         $this->validarCanchaDisponible($datos['cancha_id']);
-
         $this->validarConflictos($datos, $horario->id);
 
         $horario->update($datos);
@@ -178,6 +188,8 @@ class HorarioController extends Controller
      */
     public function destroy(Horario $horario)
     {
+        $this->autorizarAdministracion();
+
         $horario->update([
             'estado' => false,
         ]);
@@ -192,6 +204,8 @@ class HorarioController extends Controller
      */
     public function historial()
     {
+        $this->autorizarAdministracion();
+
         $horarios = Horario::with([
             'categoria:id,anio',
             'profesor:id,nombre,apellido',
@@ -213,6 +227,8 @@ class HorarioController extends Controller
      */
     public function reactivar(Horario $horario)
     {
+        $this->autorizarAdministracion();
+
         if ($horario->estado) {
             return redirect()
                 ->route('horarios.index');
@@ -264,6 +280,70 @@ class HorarioController extends Controller
         return redirect()
             ->route('horarios.historial')
             ->with('success', 'Horario reactivado correctamente.');
+    }
+
+    /**
+     * Construir la consulta de horarios que puede visualizar
+     * el usuario autenticado según su rol.
+     *
+     * Admin y superadmin: todos.
+     * Profesor: categorías asignadas al profesor.
+     * Tutor: categorías de sus jugadores asociados.
+     */
+    private function consultaHorariosVisibles(): Builder
+    {
+        $usuario = auth()->user();
+
+        $query = Horario::query();
+
+        if (in_array($usuario?->rol, ['admin', 'superadmin'], true)) {
+            return $query;
+        }
+
+        if ($usuario?->rol === 'profesor') {
+            abort_if(
+                !$usuario->profesor_id,
+                403,
+                'La cuenta no tiene un profesor asociado.'
+            );
+
+            return $query->whereHas(
+                'categoria.profesores',
+                function ($consulta) use ($usuario) {
+                    $consulta->where(
+                        'profesores.id',
+                        $usuario->profesor_id
+                    );
+                }
+            );
+        }
+
+        if ($usuario?->rol === 'tutor') {
+            abort_if(
+                !$usuario->tutor_id,
+                403,
+                'La cuenta no tiene un tutor asociado.'
+            );
+
+            return $query->whereHas(
+                'categoria.jugadores',
+                function ($jugadores) use ($usuario) {
+                    $jugadores
+                        ->where('jugadores.estado', true)
+                        ->whereHas(
+                            'tutores',
+                            function ($tutores) use ($usuario) {
+                                $tutores->where(
+                                    'tutores.id',
+                                    $usuario->tutor_id
+                                );
+                            }
+                        );
+                }
+            );
+        }
+
+        abort(403, 'No tienes permiso para consultar horarios.');
     }
 
     /**
@@ -329,8 +409,6 @@ class HorarioController extends Controller
 
     /**
      * Obtener el profesor responsable de una categoría.
-     *
-     * Si la categoría no tiene profesor, devuelve null.
      */
     private function obtenerProfesorCategoria(int $categoriaId): ?int
     {
@@ -410,15 +488,20 @@ class HorarioController extends Controller
             'hora_inicio' => 'Existe otro horario que se superpone para la misma categoría, profesor o cancha. Revisá los horarios asignados.',
         ]);
     }
+
     /**
-     * Impedir que los tutores modifiquen horarios.
+     * Permitir modificaciones únicamente a administradores.
      */
-    private function autorizarEdicion(): void
+    private function autorizarAdministracion(): void
     {
-        abort_if(
-            auth()->user()?->rol === 'tutor',
+        abort_unless(
+            in_array(
+                auth()->user()?->rol,
+                ['admin', 'superadmin'],
+                true
+            ),
             403,
-            'No tienes permiso para modificar horarios.'
+            'No tienes permiso para realizar esta acción.'
         );
     }
 }

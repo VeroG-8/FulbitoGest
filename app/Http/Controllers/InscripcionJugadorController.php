@@ -15,11 +15,27 @@ use App\Models\InscripcionTorneoPago;
 class InscripcionJugadorController extends Controller
 {
     /**
+     * Verificar que el usuario sea administrador
+     * o superadministrador.
+     */
+    private function autorizarAdministracion(): void
+    {
+        abort_unless(
+            auth()->check() &&
+            in_array(auth()->user()->rol, ['admin', 'superadmin'], true),
+            403,
+            'No tienes permiso para gestionar las inscripciones de jugadores.'
+        );
+    }
+
+    /**
      * Mostrar el formulario para inscribir jugadores
-     * en un torneo externo.
+     * en un torneo.
      */
     public function create(Torneo $torneo): Response
     {
+        $this->autorizarAdministracion();
+
         // Obtener las categorías habilitadas para el torneo.
         $torneo->load('categorias');
 
@@ -52,10 +68,12 @@ class InscripcionJugadorController extends Controller
     }
 
     /**
-     * Registrar un jugador en un torneo externo.
+     * Registrar un jugador en un torneo.
      */
     public function store(Request $request, Torneo $torneo)
     {
+        $this->autorizarAdministracion();
+
         // Permitir la inscripción individual en ambos tipos de torneo.
         abort_if(
             !in_array($torneo->tipo, ['propio', 'externo'], true),
@@ -136,6 +154,8 @@ class InscripcionJugadorController extends Controller
         Torneo $torneo,
         Jugador $jugador
     ) {
+        $this->autorizarAdministracion();
+
         abort_if(
             !in_array($torneo->tipo, ['propio', 'externo'], true),
             403,
@@ -160,7 +180,7 @@ class InscripcionJugadorController extends Controller
                 'estado' => 'cancelado',
             ]);
         } else {
-            // Solo se permite asignar pendiente o inscripto según los pagos.
+            // El estado se determina según los pagos confirmados.
             $totalPagado = InscripcionTorneoPago::query()
                 ->where('inscripcion_torneo_id', $inscripcion->id)
                 ->where('estado', 'confirmado')
