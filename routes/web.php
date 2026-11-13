@@ -45,6 +45,7 @@ Route::middleware('auth', 'verified')->group(function () {
     require __DIR__ . '/torneos.php';
     require __DIR__ . '/reportes.php';
     require __DIR__ . '/usuarios.php';
+    require __DIR__ . '/categorias.php';
     
 });
 

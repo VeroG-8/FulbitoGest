@@ -267,7 +267,7 @@ export default function Dashboard() {
                 </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-3">
                 <StatCard
                     title="Jugadores activos"
                     value={datosEstadisticos?.jugadoresActivos ?? 0}

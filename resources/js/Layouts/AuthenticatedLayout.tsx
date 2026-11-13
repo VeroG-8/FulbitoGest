@@ -20,7 +20,6 @@ import {
     CalendarDays,
     CreditCard,
     Wallet,
-    IdCard,
     UserCog,
     LogOut,
     Menu,
@@ -32,6 +31,7 @@ import {
     MapPin,
     ClipboardList,
     FileBarChart,
+    Layers,
 } from 'lucide-react';
 
 // =====================================================
@@ -115,6 +115,11 @@ export default function Authenticated({
                     label: 'Profesores',
                     route: 'profesores.index',
                     icon: GraduationCap,
+                },
+                {
+                    label: 'Categorías',
+                    route: 'categorias.index',
+                    icon: Layers,
                 },
                 {
                     label: 'Horarios',
@@ -230,6 +235,7 @@ export default function Authenticated({
             return [
                 'dashboard',
                 'jugadores.index',
+                'categorias.index',
                 'horarios.index',
                 'torneos.index',
             ].includes(item.route);
