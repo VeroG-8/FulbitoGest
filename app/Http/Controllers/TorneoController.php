@@ -408,7 +408,7 @@ class TorneoController extends Controller
      * Mostrar las inscripciones a torneos de los jugadores
      * asociados al tutor autenticado.
      */
-    public function misInscripciones()
+    public function misInscripciones(Request $request)
     {
         $usuario = auth()->user();
 
@@ -419,6 +419,20 @@ class TorneoController extends Controller
             403,
             'No tienes permiso para consultar estas inscripciones.'
         );
+
+        $validated = $request->validate([
+            'orden' => [
+                'nullable',
+                Rule::in(['torneo', 'jugador', 'fecha_inscripcion']),
+            ],
+            'direccion' => [
+                'nullable',
+                Rule::in(['asc', 'desc']),
+            ],
+        ]);
+
+        $orden = $validated['orden'] ?? 'fecha_inscripcion';
+        $direccion = $validated['direccion'] ?? 'desc';
 
         $tutorId = $usuario->tutor_id;
 
@@ -452,10 +466,31 @@ class TorneoController extends Controller
                     'estado' => $jugador->pivot->estado,
                 ];
             });
-        })->sortByDesc('fecha_inscripcion')->values();
+        });
+
+        // Ordenar las inscripciones según el criterio seleccionado.
+        $inscripciones = $inscripciones
+            ->sortBy(
+                function ($inscripcion) use ($orden) {
+                    return match ($orden) {
+                        'torneo' => mb_strtolower($inscripcion['torneo']),
+                        'jugador' => mb_strtolower($inscripcion['jugador']),
+                        'fecha_inscripcion' => $inscripcion['fecha_inscripcion'] ?? '',
+                    };
+                },
+                SORT_NATURAL
+            );
+
+        if ($direccion === 'desc') {
+            $inscripciones = $inscripciones->reverse();
+        }
 
         return Inertia::render('Torneos/MisInscripciones', [
-            'inscripciones' => $inscripciones,
+            'inscripciones' => $inscripciones->values(),
+            'filtros' => [
+                'orden' => $orden,
+                'direccion' => $direccion,
+            ],
         ]);
     }
 }

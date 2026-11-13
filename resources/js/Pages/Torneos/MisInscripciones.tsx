@@ -1,12 +1,21 @@
-import { Head } from '@inertiajs/react';
-import { ClipboardList, CalendarDays, Users, Wallet } from 'lucide-react';
+import { Head, router } from '@inertiajs/react';
+import {
+    ClipboardList,
+    Users,
+    Wallet,
+    ArrowUp,
+    ArrowDown,
+    ArrowUpDown,
+} from 'lucide-react';
 
 import StatusBadge from '@/Components/Shared/StatusBadge';
 
 interface Inscripcion {
     id: number;
     torneo: string;
+    torneo_id: number;
     jugador: string;
+    jugador_id: number;
     dni: string;
     categoria: number | null;
     fecha_inscripcion: string;
@@ -14,8 +23,14 @@ interface Inscripcion {
     estado: 'pendiente' | 'inscripto' | 'cancelado';
 }
 
+type CampoOrden = 'torneo' | 'jugador' | 'fecha_inscripcion';
+
 interface Props {
     inscripciones: Inscripcion[];
+    filtros: {
+        orden: CampoOrden;
+        direccion: 'asc' | 'desc';
+    };
 }
 
 const formatoMoneda = (monto: number | string) => {
@@ -36,6 +51,7 @@ const formatoFecha = (fecha: string) => {
 
 export default function MisInscripciones({
     inscripciones,
+    filtros,
 }: Props) {
     const totalInscripciones = inscripciones.length;
 
@@ -47,9 +63,62 @@ export default function MisInscripciones({
         (item) => item.estado === 'inscripto',
     ).length;
 
-    const canceladas = inscripciones.filter(
-        (item) => item.estado === 'cancelado',
-    ).length;
+    const ordenarPor = (campo: CampoOrden) => {
+        const direccion =
+            filtros.orden === campo && filtros.direccion === 'asc'
+                ? 'desc'
+                : 'asc';
+
+        router.get(
+            route('torneos.mis-inscripciones'),
+            {
+                orden: campo,
+                direccion,
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        );
+    };
+
+    const iconoOrden = (campo: CampoOrden) => {
+        if (filtros.orden !== campo) {
+            return (
+                <ArrowUpDown
+                    size={15}
+                    className="text-slate-400"
+                />
+            );
+        }
+
+        return filtros.direccion === 'asc' ? (
+            <ArrowUp
+                size={15}
+                className="text-blue-600"
+            />
+        ) : (
+            <ArrowDown
+                size={15}
+                className="text-blue-600"
+            />
+        );
+    };
+
+    const encabezadoOrdenable = (
+        titulo: string,
+        campo: CampoOrden,
+    ) => (
+        <button
+            type="button"
+            onClick={() => ordenarPor(campo)}
+            className="inline-flex items-center gap-2 font-semibold transition hover:text-slate-900"
+        >
+            {titulo}
+            {iconoOrden(campo)}
+        </button>
+    );
 
     return (
         <>
@@ -80,7 +149,7 @@ export default function MisInscripciones({
 
                 {/* ESTADÍSTICAS */}
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
 
                     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                         <div className="flex items-center justify-between">
@@ -136,7 +205,6 @@ export default function MisInscripciones({
                         </div>
                     </div>
 
-                   
                 </div>
 
                 {/* TABLA */}
@@ -159,20 +227,29 @@ export default function MisInscripciones({
 
                                 <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
                                     <tr>
-                                        <th className="px-6 py-4 font-semibold">
-                                            Torneo
+                                        <th className="px-6 py-4">
+                                            {encabezadoOrdenable(
+                                                'Torneo',
+                                                'torneo',
+                                            )}
                                         </th>
 
-                                        <th className="px-6 py-4 font-semibold">
-                                            Jugador
+                                        <th className="px-6 py-4">
+                                            {encabezadoOrdenable(
+                                                'Jugador',
+                                                'jugador',
+                                            )}
                                         </th>
 
                                         <th className="px-6 py-4 font-semibold">
                                             Categoría
                                         </th>
 
-                                        <th className="px-6 py-4 font-semibold">
-                                            Fecha
+                                        <th className="px-6 py-4">
+                                            {encabezadoOrdenable(
+                                                'Fecha de inscripción',
+                                                'fecha_inscripcion',
+                                            )}
                                         </th>
 
                                         <th className="px-6 py-4 font-semibold">
