@@ -297,7 +297,9 @@ export default function Authenticated({
                 route().current('cuotas.asignaciones.*')
             );
         }
-
+        if (nombreRuta === 'cuotas.mis') {
+            return route().current('cuotas.mis');
+        }
         if (nombreRuta === 'torneos.index') {
             return (
                 route().current('torneos.index') ||
@@ -510,6 +512,23 @@ export default function Authenticated({
                                 <UserRound size={19} />
 
                                 <span>Tutor/a</span>
+                            </Link>
+                        )}
+                        {/* MIS CUOTAS */}
+
+                        {user.rol === 'tutor' && user.tutor_id !== null && (
+                            <Link
+                                href={route('cuotas.mis')}
+                                onClick={() => setSidebarOpen(false)}
+                                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                                    route().current('cuotas.mis')
+                                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-950/20'
+                                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                                }`}
+                            >
+                                <Wallet size={19} />
+
+                                <span>Mis cuotas</span>
                             </Link>
                         )}
                     </div>
