@@ -333,29 +333,51 @@ class JugadorController extends Controller
             ->with('success', 'Jugador actualizado correctamente.');
     }
 
-    /**
+        /**
      * Mostrar la ficha completa del jugador.
      */
-    public function show(Profesor $profesor)
+    public function show(Jugador $jugador)
     {
         $usuario = auth()->user();
 
-        if ($usuario->rol === 'profesor') {
+        // Administradores y superadministradores pueden consultar cualquier jugador.
+        if (in_array($usuario->rol, ['admin', 'superadmin'])) {
+            // Acceso permitido.
+        } elseif ($usuario->rol === 'tutor') {
+            // El tutor solamente puede consultar jugadores asociados a él.
             abort_unless(
-                $usuario->profesor_id === $profesor->id,
+                $this->esJugadorDelTutor($jugador),
                 403,
-                'No tienes permiso para consultar este profesor.'
+                'No tienes permiso para consultar este jugador.'
             );
+        } elseif ($usuario->rol === 'profesor') {
+            // El profesor solamente puede consultar jugadores de sus categorías.
+            abort_unless(
+                $jugador->categoria()
+                    ->whereHas('profesores', function ($query) use ($usuario) {
+                        $query->where('profesores.id', $usuario->profesor_id);
+                    })
+                    ->exists(),
+                403,
+                'No tienes permiso para consultar este jugador.'
+            );
+        } else {
+            abort(403, 'No tienes permiso para consultar este jugador.');
         }
 
-        if ($usuario->rol === 'tutor') {
-            abort(403, 'No tienes permiso para consultar fichas de profesores.');
-        }
+        // Cargar categoría y tutores asociados.
+        $jugador->load([
+            'categoria:id,anio',
+            'tutores:id,dni,nombre,apellido,email,telefono,direccion,localidad',
+        ]);
 
-        $profesor->load('categorias:id,anio');
+        // Administradores y tutores asociados pueden editar.
+        $puedeEditar = $this->esAdministrador()
+            || $this->esJugadorDelTutor($jugador);
 
-        return Inertia::render('Profesores/Show', [
-            'profesor' => $profesor,
+        return Inertia::render('Jugadores/Show', [
+            'jugador' => $jugador,
+            'puedeEditar' => $puedeEditar,
         ]);
     }
     /**

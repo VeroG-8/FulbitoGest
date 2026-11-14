@@ -14,6 +14,7 @@ interface Inscripcion {
     id: number;
     torneo: string;
     torneo_id: number;
+    tipo: 'propio' | 'externo';
     jugador: string;
     jugador_id: number;
     dni: string;
@@ -227,14 +228,17 @@ export default function MisInscripciones({
 
                                 <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
                                     <tr>
-                                        <th className="px-6 py-4">
+                                        <th className="px-6 py-4 font-semibold">
                                             {encabezadoOrdenable(
                                                 'Torneo',
                                                 'torneo',
                                             )}
                                         </th>
+                                        <th className="px-6 py-4 font-semibold">
+                                            Tipo
+                                        </th>
 
-                                        <th className="px-6 py-4">
+                                        <th className="px-6 py-4 font-semibold">
                                             {encabezadoOrdenable(
                                                 'Jugador',
                                                 'jugador',
@@ -245,7 +249,7 @@ export default function MisInscripciones({
                                             Categoría
                                         </th>
 
-                                        <th className="px-6 py-4">
+                                        <th className="px-6 py-4 font-semibold">
                                             {encabezadoOrdenable(
                                                 'Fecha de inscripción',
                                                 'fecha_inscripcion',
@@ -274,6 +278,17 @@ export default function MisInscripciones({
                                                     {inscripcion.torneo}
                                                 </span>
                                             </td>
+                                            <td className="px-6 py-4">
+                                            <span
+                                                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                                                    inscripcion.tipo === 'propio'
+                                                        ? 'bg-blue-50 text-blue-700'
+                                                        : 'bg-emerald-50 text-emerald-700'
+                                                }`}
+                                            >
+                                                {inscripcion.tipo === 'propio' ? 'Propio' : 'Externo'}
+                                            </span>
+                                        </td>
 
                                             <td className="px-6 py-4">
                                                 <p className="font-medium text-slate-800">

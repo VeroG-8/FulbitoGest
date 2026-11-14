@@ -457,6 +457,7 @@ class TorneoController extends Controller
                     'id' => $jugador->pivot->id,
                     'torneo' => $torneo->nombre,
                     'torneo_id' => $torneo->id,
+                    'tipo' => $torneo->tipo,
                     'jugador' => $jugador->apellido . ', ' . $jugador->nombre,
                     'jugador_id' => $jugador->id,
                     'dni' => $jugador->dni,
