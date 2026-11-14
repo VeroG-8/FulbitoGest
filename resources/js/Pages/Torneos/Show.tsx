@@ -374,7 +374,7 @@ export default function Show({ torneo }: Props) {
                                     <p className="mt-1 text-sm !text-slate-500">
                                         {esProfesor
                                             ? 'Equipos con inscripción activa en este torneo.'
-                                            : 'Equipos inscriptos en este torneo.'}
+                                            : 'Equipos invitados inscriptos en este torneo.'}
                                     </p>
                                 </div>
 
@@ -526,7 +526,7 @@ export default function Show({ torneo }: Props) {
                                 <p className="mt-1 text-sm !text-slate-500">
                                     {esProfesor
                                         ? 'Jugadores con inscripción confirmada en este torneo.'
-                                        : 'Jugadores inscriptos en este torneo.'}
+                                        : 'Jugadores de nuestro plantel inscriptos en este torneo.'}
                                 </p>
                             </div>
 
