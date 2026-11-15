@@ -24,7 +24,10 @@ Route::get('/pagos', [PagoController::class, 'index'])
 
 Route::get('/cuotas/seguimiento', [CuotaXJugadorController::class, 'seguimiento'])
     ->name('cuotas.seguimiento');
-
+    
+Route::get('/cuotas/{cuota}', [CuotaController::class, 'show'])
+    ->whereNumber('cuota')
+    ->name('cuotas.show');
 // Consultar los pagos de una cuota asignada.
 Route::get(
     '/cuotas/asignaciones/{cuotaXJugador}/pagos',
