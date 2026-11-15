@@ -20,6 +20,10 @@ interface Jugador {
     nombre: string;
     apellido: string;
     dni: string;
+    pivot: {
+        parentesco: string;
+        es_tutor_principal: boolean | number;
+    };
 }
 
 interface Tutor {
@@ -250,6 +254,14 @@ export default function Show({ tutor }: Props) {
                                             Nombre
                                         </th>
 
+                                        <th className="px-6 py-4 font-semibold">
+                                            Parentesco
+                                        </th>
+
+                                        <th className="px-6 py-4 font-semibold">
+                                            Tipo de tutor
+                                        </th>
+
                                         <th className="px-6 py-4 text-center font-semibold">
                                             Acción
                                         </th>
@@ -257,34 +269,59 @@ export default function Show({ tutor }: Props) {
                                 </thead>
 
                                 <tbody className="divide-y divide-slate-100">
-                                    {tutor.jugadores.map((jugador) => (
-                                        <tr
-                                            key={jugador.id}
-                                            className="transition hover:bg-slate-50"
-                                        >
-                                            <td className="px-6 py-4 font-medium text-slate-700">
-                                                {jugador.dni}
-                                            </td>
+                                    {tutor.jugadores.map((jugador) => {
+                                        const esPrincipal =
+                                            Boolean(
+                                                jugador.pivot?.es_tutor_principal,
+                                            );
 
-                                            <td className="px-6 py-4 text-slate-700">
-                                                {jugador.apellido}
-                                            </td>
+                                        return (
+                                            <tr
+                                                key={jugador.id}
+                                                className="transition hover:bg-slate-50"
+                                            >
+                                                <td className="px-6 py-4 font-medium text-slate-700">
+                                                    {jugador.dni}
+                                                </td>
 
-                                            <td className="px-6 py-4 text-slate-700">
-                                                {jugador.nombre}
-                                            </td>
+                                                <td className="px-6 py-4 text-slate-700">
+                                                    {jugador.apellido}
+                                                </td>
 
-                                            <td className="px-6 py-4 text-center">
-                                                <Link
-                                                    href={`/jugadores/${jugador.id}`}
-                                                    className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
-                                                >
-                                                    <Eye size={15} />
-                                                    Ver jugador
-                                                </Link>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                <td className="px-6 py-4 text-slate-700">
+                                                    {jugador.nombre}
+                                                </td>
+
+                                                <td className="px-6 py-4 text-slate-700">
+                                                    {jugador.pivot?.parentesco || '-'}
+                                                </td>
+
+                                                <td className="px-6 py-4">
+                                                    <span
+                                                        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                                                            esPrincipal
+                                                                ? 'bg-emerald-100 text-emerald-700'
+                                                                : 'bg-amber-100 text-amber-700'
+                                                        }`}
+                                                    >
+                                                        {esPrincipal
+                                                            ? 'Tutor principal'
+                                                            : 'Tutor suplente'}
+                                                    </span>
+                                                </td>
+
+                                                <td className="px-6 py-4 text-center">
+                                                    <Link
+                                                        href={`/jugadores/${jugador.id}`}
+                                                        className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
+                                                    >
+                                                        <Eye size={15} />
+                                                        Ver jugador
+                                                    </Link>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>

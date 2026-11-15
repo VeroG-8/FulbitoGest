@@ -20,7 +20,7 @@ interface Jugador {
     apellido: string;
     pivot: {
         parentesco: string;
-        es_tutor_principal: boolean | number;
+        es_tutor_principal: boolean | number | string;
     };
 }
 
@@ -271,7 +271,7 @@ export default function Edit({
                                     Jugadores asociados
                                 </h2>
                                 <p className="text-xs text-slate-500">
-                                    Parentesco de este tutor con cada jugador.
+                                    Parentesco y tipo de tutor de cada jugador.
                                 </p>
                             </div>
                         </div>
@@ -283,24 +283,43 @@ export default function Edit({
                                         `relaciones.${index}.parentesco` as keyof typeof errors
                                     ] as string | undefined;
 
+                                    const esPrincipal =
+                                        jugador.pivot?.es_tutor_principal === true ||
+                                        jugador.pivot?.es_tutor_principal === 1 ||
+                                        jugador.pivot?.es_tutor_principal === '1';
+
                                     return (
                                         <div
                                             key={jugador.id}
                                             className="rounded-xl border border-slate-200 p-4"
                                         >
-                                            <div className="mb-4 flex items-center gap-3">
-                                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                                                    <UserRoundCheck size={20} />
+                                            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                                                        <UserRoundCheck size={20} />
+                                                    </div>
+
+                                                    <div>
+                                                        <p className="font-semibold text-slate-800">
+                                                            {jugador.nombre} {jugador.apellido}
+                                                        </p>
+                                                        <p className="text-xs text-slate-500">
+                                                            DNI: {jugador.dni}
+                                                        </p>
+                                                    </div>
                                                 </div>
 
-                                                <div>
-                                                    <p className="font-semibold text-slate-800">
-                                                        {jugador.nombre} {jugador.apellido}
-                                                    </p>
-                                                    <p className="text-xs text-slate-500">
-                                                        DNI: {jugador.dni}
-                                                    </p>
-                                                </div>
+                                                <span
+                                                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                                                        esPrincipal
+                                                            ? 'bg-emerald-100 text-emerald-700'
+                                                            : 'bg-amber-100 text-amber-700'
+                                                    }`}
+                                                >
+                                                    {esPrincipal
+                                                        ? 'Tutor principal'
+                                                        : 'Tutor suplente'}
+                                                </span>
                                             </div>
 
                                             {puedeAdministrarRelaciones ? (
