@@ -3,14 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CategoriaController;
 
-// Consultas disponibles para usuarios autorizados.
-Route::get('/categorias', [CategoriaController::class, 'index'])
-    ->name('categorias.index');
-
-Route::get('/categorias/{categoria}', [CategoriaController::class, 'show'])
-    ->name('categorias.show');
-
-// Operaciones exclusivas para administradores y superadministradores.
+// Consultas y operaciones exclusivas para administradores y superadministradores.
 Route::middleware('rol:admin')->group(function () {
 
     // Historial de categorías inactivas.
@@ -39,3 +32,11 @@ Route::middleware('rol:admin')->group(function () {
     Route::delete('/categorias/{categoria}', [CategoriaController::class, 'destroy'])
         ->name('categorias.destroy');
 });
+
+// Consultas disponibles para usuarios autorizados.
+Route::get('/categorias', [CategoriaController::class, 'index'])
+    ->name('categorias.index');
+
+Route::get('/categorias/{categoria}', [CategoriaController::class, 'show'])
+    ->whereNumber('categoria')
+    ->name('categorias.show');

@@ -88,9 +88,6 @@ class CategoriaController extends Controller
                 'profesores as profesores_activos_count' => function ($query) {
                     $query->where('profesores.estado', true);
                 },
-                'equipos as equipos_activos_count' => function ($query) {
-                    $query->where('estado', true);
-                },
                 'horarios as horarios_activos_count' => function ($query) {
                     $query->where('estado', true);
                 },
@@ -168,67 +165,71 @@ class CategoriaController extends Controller
     /**
      * Mostrar una categoría y sus relaciones.
      */
-    public function show(Categoria $categoria)
+    public function show(Request $request, Categoria $categoria)
     {
         $usuario = auth()->user();
 
-        // Verificar que el usuario tenga acceso a esta categoría.
         $categoria = $this->categoriasVisiblesQuery($usuario)
             ->whereKey($categoria->id)
             ->where('estado', true)
             ->firstOrFail();
 
-        // Relaciones que se mostrarán en el detalle.
+        // Validar parámetros de ordenamiento.
+        $orden = $request->input('orden', 'apellido');
+        $direccion = $request->input('direccion', 'asc');
+
+        $orden = in_array($orden, ['apellido', 'nombre'])
+            ? $orden
+            : 'apellido';
+
+        $direccion = in_array($direccion, ['asc', 'desc'])
+            ? $direccion
+            : 'asc';
+
+        // Relaciones generales de la categoría.
         $relaciones = [
-            'jugadores',
             'profesores',
-            'equipos.club',
             'horarios.profesor',
             'horarios.cancha',
-            'torneos',
         ];
 
-        // Los profesores solamente pueden consultar registros activos.
+        // Los profesores solamente visualizan información activa.
         if ($usuario->rol === 'profesor') {
-
             $relaciones = [
-                'jugadores' => function ($query) {
-                    $query->where('jugadores.estado', true);
-                },
-
                 'profesores' => function ($query) {
                     $query->where('profesores.estado', true);
                 },
-
-                'equipos' => function ($query) {
-                    $query->where('equipos.estado', true);
-                },
-
-                'equipos.club',
-
                 'horarios' => function ($query) {
                     $query->where('horarios.estado', true);
                 },
-
                 'horarios.profesor',
-
                 'horarios.cancha',
-
-                'torneos' => function ($query) {
-                    $query->where('torneos.estado', true);
-                },
             ];
         }
 
-        // Cargar las relaciones correspondientes.
         $categoria->load($relaciones);
+
+        // Obtener jugadores con ordenamiento y paginación.
+        $consultaJugadores = $categoria->jugadores();
+
+        if ($usuario->rol === 'profesor') {
+            $consultaJugadores->where('jugadores.estado', true);
+        }
+
+        $jugadores = $consultaJugadores
+            ->orderBy($orden, $direccion)
+            ->orderBy('jugadores.id')
+            ->paginate(8)
+            ->withQueryString();
 
         return Inertia::render('Categorias/Show', [
             'categoria' => $categoria,
-            'puedeGestionar' => in_array(
-                $usuario->rol,
-                ['admin', 'superadmin']
-            ),
+            'jugadores' => $jugadores,
+            'filtros' => [
+                'orden' => $orden,
+                'direccion' => $direccion,
+            ],
+            'puedeGestionar' => in_array($usuario->rol, ['admin', 'superadmin']),
         ]);
     }
 

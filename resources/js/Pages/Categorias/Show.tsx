@@ -1,21 +1,21 @@
 import { Head, Link } from '@inertiajs/react';
 import {
+    ArrowDown,
     ArrowLeft,
+    ArrowUp,
+    ArrowUpDown,
     CalendarDays,
+    ChevronLeft,
+    ChevronRight,
     Edit,
+    Eye,
     GraduationCap,
     Layers,
     Users,
-    UserRound,
-    Shield,
-    Clock,
-    Trophy,
-    Building2,
 } from 'lucide-react';
 
 import PageHeader from '@/Components/Shared/PageHeader';
 import StatusBadge from '@/Components/Shared/StatusBadge';
-import StatCard from '@/Components/Shared/StatCard';
 
 interface Jugador {
     id: number;
@@ -31,15 +31,6 @@ interface Profesor {
     apellido: string;
     especialidad?: string | null;
     estado: boolean;
-}
-
-interface Equipo {
-    id: number;
-    nombre: string;
-    estado: boolean;
-    club?: {
-        nombre: string;
-    } | null;
 }
 
 interface Horario {
@@ -58,44 +49,64 @@ interface Horario {
     } | null;
 }
 
-interface Torneo {
-    id: number;
-    nombre: string;
-    estado?: boolean;
-}
-
 interface Categoria {
     id: number;
     anio: number;
     estado: boolean;
-    jugadores: Jugador[];
     profesores: Profesor[];
-    equipos: Equipo[];
     horarios: Horario[];
-    torneos: Torneo[];
+}
+
+interface PaginacionJugadores {
+    data: Jugador[];
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    from: number | null;
+    to: number | null;
+    prev_page_url: string | null;
+    next_page_url: string | null;
+}
+
+interface Filtros {
+    orden: 'apellido' | 'nombre';
+    direccion: 'asc' | 'desc';
 }
 
 interface Props {
     categoria: Categoria;
+    jugadores: PaginacionJugadores;
+    filtros: Filtros;
     puedeGestionar: boolean;
 }
 
-export default function Show({ categoria, puedeGestionar }: Props) {
-    const jugadoresActivos = categoria.jugadores.filter(
-        (jugador) => jugador.estado,
-    ).length;
+export default function Show({
+    categoria,
+    jugadores,
+    filtros,
+    puedeGestionar,
+}: Props) {
+    const cambiarOrden = (campo: 'apellido' | 'nombre') => {
+        const direccion =
+            filtros.orden === campo && filtros.direccion === 'asc'
+                ? 'desc'
+                : 'asc';
 
-    const profesoresActivos = categoria.profesores.filter(
-        (profesor) => profesor.estado,
-    ).length;
+        return `/categorias/${categoria.id}?orden=${campo}&direccion=${direccion}`;
+    };
 
-    const equiposActivos = categoria.equipos.filter(
-        (equipo) => equipo.estado,
-    ).length;
+    const iconoOrden = (campo: 'apellido' | 'nombre') => {
+        if (filtros.orden !== campo) {
+            return <ArrowUpDown size={14} />;
+        }
 
-    const horariosActivos = categoria.horarios.filter(
-        (horario) => horario.estado,
-    ).length;
+        return filtros.direccion === 'asc' ? (
+            <ArrowUp size={14} />
+        ) : (
+            <ArrowDown size={14} />
+        );
+    };
 
     return (
         <>
@@ -104,7 +115,7 @@ export default function Show({ categoria, puedeGestionar }: Props) {
             <div className="space-y-6">
                 <PageHeader
                     title={`Categoría ${categoria.anio}`}
-                    description="Información general y recursos asociados a esta categoría."
+                    description="Información general y organización deportiva de esta categoría."
                     icon={<Layers size={20} />}
                     actions={
                         <div className="flex flex-wrap gap-2">
@@ -129,6 +140,7 @@ export default function Show({ categoria, puedeGestionar }: Props) {
                     }
                 />
 
+                {/* INFORMACIÓN GENERAL */}
                 <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div>
@@ -147,96 +159,160 @@ export default function Show({ categoria, puedeGestionar }: Props) {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    <StatCard
-                        title="Jugadores activos"
-                        value={jugadoresActivos}
-                        icon={<Users size={20} />}
-                        color="blue"
-                    />
-
-                    <StatCard
-                        title="Profesores activos"
-                        value={profesoresActivos}
-                        icon={<GraduationCap size={20} />}
-                        color="emerald"
-                    />
-
-                    <StatCard
-                        title="Equipos activos"
-                        value={equiposActivos}
-                        icon={<Shield size={20} />}
-                        color="violet"
-                    />
-
-                    <StatCard
-                        title="Horarios activos"
-                        value={horariosActivos}
-                        icon={<Clock size={20} />}
-                        color="amber"
-                    />
-                </div>
-
                 {/* JUGADORES */}
                 <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4">
-                        <Users className="text-slate-600" size={20} />
-                        <div>
-                            <h3 className="font-semibold text-slate-900">
-                                Jugadores
-                            </h3>
-                            <p className="text-sm text-slate-500">
-                                Jugadores pertenecientes a esta categoría.
-                            </p>
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+                        <div className="flex items-center gap-3">
+                            <Users className="text-slate-600" size={20} />
+
+                            <div>
+                                <h3 className="font-semibold text-slate-900">
+                                    Jugadores
+                                </h3>
+
+                                <p className="text-sm text-slate-500">
+                                    Jugadores pertenecientes a esta categoría.
+                                </p>
+                            </div>
                         </div>
+
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700">
+                            {jugadores.total}{' '}
+                            {jugadores.total === 1
+                                ? 'jugador'
+                                : 'jugadores'}
+                        </span>
                     </div>
 
-                    {categoria.jugadores.length > 0 ? (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                                    <tr>
-                                        <th className="px-5 py-3">Jugador</th>
-                                        <th className="px-5 py-3">DNI</th>
-                                        <th className="px-5 py-3">Estado</th>
-                                        <th className="px-5 py-3 text-right">
-                                            Acción
-                                        </th>
-                                    </tr>
-                                </thead>
-
-                                <tbody className="divide-y divide-slate-100">
-                                    {categoria.jugadores.map((jugador) => (
-                                        <tr key={jugador.id}>
-                                            <td className="px-5 py-3 font-medium text-slate-800">
-                                                {jugador.apellido},{' '}
-                                                {jugador.nombre}
-                                            </td>
-                                            <td className="px-5 py-3 text-slate-600">
-                                                {jugador.dni}
-                                            </td>
-                                            <td className="px-5 py-3">
-                                                <StatusBadge
-                                                    status={
-                                                        jugador.estado
-                                                            ? 'activo'
-                                                            : 'inactivo'
-                                                    }
-                                                />
-                                            </td>
-                                            <td className="px-5 py-3 text-right">
+                    {jugadores.data.length > 0 ? (
+                        <>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                                        <tr>
+                                            <th className="px-5 py-3">
                                                 <Link
-                                                    href={`/jugadores/${jugador.id}`}
-                                                    className="font-medium text-slate-700 hover:text-blue-700"
+                                                    href={cambiarOrden('apellido')}
+                                                    preserveScroll
+                                                    className="inline-flex items-center gap-2 transition hover:text-slate-900"
                                                 >
-                                                    Ver ficha
+                                                    Jugador
+                                                    {iconoOrden('apellido')}
                                                 </Link>
-                                            </td>
+                                            </th>
+
+                                            <th className="px-5 py-3">
+                                                DNI
+                                            </th>
+
+                                            <th className="px-5 py-3">
+                                                Estado
+                                            </th>
+
+                                            <th className="px-5 py-3 text-right">
+                                                Acción
+                                            </th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+
+                                    <tbody className="divide-y divide-slate-100">
+                                        {jugadores.data.map((jugador) => (
+                                            <tr
+                                                key={jugador.id}
+                                                className="transition hover:bg-slate-50"
+                                            >
+                                                <td className="px-5 py-3 font-medium text-slate-800">
+                                                    {jugador.apellido},{' '}
+                                                    {jugador.nombre}
+                                                </td>
+
+                                                <td className="px-5 py-3 text-slate-600">
+                                                    {jugador.dni}
+                                                </td>
+
+                                                <td className="px-5 py-3">
+                                                    <StatusBadge
+                                                        status={
+                                                            jugador.estado
+                                                                ? 'activo'
+                                                                : 'inactivo'
+                                                        }
+                                                    />
+                                                </td>
+
+                                                <td className="px-5 py-3 text-right">
+                                                    <Link
+                                                        href={`/jugadores/${jugador.id}`}
+                                                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-900 hover:text-white"
+                                                    >
+                                                        <Eye size={15} />
+                                                        Ver ficha
+                                                    </Link>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* PAGINACIÓN */}
+                            <div className="flex flex-col gap-4 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                                <p className="text-sm text-slate-500">
+                                    Mostrando{' '}
+                                    <span className="font-semibold text-slate-700">
+                                        {jugadores.from}
+                                    </span>{' '}
+                                    a{' '}
+                                    <span className="font-semibold text-slate-700">
+                                        {jugadores.to}
+                                    </span>{' '}
+                                    de{' '}
+                                    <span className="font-semibold text-slate-700">
+                                        {jugadores.total}
+                                    </span>{' '}
+                                    jugadores
+                                </p>
+
+                                <div className="flex items-center gap-2">
+                                    {jugadores.prev_page_url ? (
+                                        <Link
+                                            href={jugadores.prev_page_url}
+                                            preserveScroll
+                                            className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                        >
+                                            <ChevronLeft size={16} />
+                                            Anterior
+                                        </Link>
+                                    ) : (
+                                        <span className="inline-flex cursor-not-allowed items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-400">
+                                            <ChevronLeft size={16} />
+                                            Anterior
+                                        </span>
+                                    )}
+
+                                    <span className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
+                                        {jugadores.current_page} /{' '}
+                                        {jugadores.last_page}
+                                    </span>
+
+                                    {jugadores.next_page_url ? (
+                                        <Link
+                                            href={jugadores.next_page_url}
+                                            preserveScroll
+                                            className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                        >
+                                            Siguiente
+                                            <ChevronRight size={16} />
+                                        </Link>
+                                    ) : (
+                                        <span className="inline-flex cursor-not-allowed items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-400">
+                                            Siguiente
+                                            <ChevronRight size={16} />
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </>
                     ) : (
                         <EmptyMessage mensaje="No hay jugadores asociados a esta categoría." />
                     )}
@@ -246,10 +322,12 @@ export default function Show({ categoria, puedeGestionar }: Props) {
                 <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4">
                         <GraduationCap className="text-slate-600" size={20} />
+
                         <div>
                             <h3 className="font-semibold text-slate-900">
                                 Profesores
                             </h3>
+
                             <p className="text-sm text-slate-500">
                                 Profesores asignados a esta categoría.
                             </p>
@@ -261,11 +339,15 @@ export default function Show({ categoria, puedeGestionar }: Props) {
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                                     <tr>
-                                        <th className="px-5 py-3">Profesor</th>
+                                        <th className="px-5 py-3">
+                                            Profesor
+                                        </th>
                                         <th className="px-5 py-3">
                                             Especialidad
                                         </th>
-                                        <th className="px-5 py-3">Estado</th>
+                                        <th className="px-5 py-3">
+                                            Estado
+                                        </th>
                                     </tr>
                                 </thead>
 
@@ -276,9 +358,11 @@ export default function Show({ categoria, puedeGestionar }: Props) {
                                                 {profesor.apellido},{' '}
                                                 {profesor.nombre}
                                             </td>
+
                                             <td className="px-5 py-3 text-slate-600">
                                                 {profesor.especialidad || '-'}
                                             </td>
+
                                             <td className="px-5 py-3">
                                                 <StatusBadge
                                                     status={
@@ -298,67 +382,16 @@ export default function Show({ categoria, puedeGestionar }: Props) {
                     )}
                 </section>
 
-                {/* EQUIPOS */}
-                <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4">
-                        <Shield className="text-slate-600" size={20} />
-                        <div>
-                            <h3 className="font-semibold text-slate-900">
-                                Equipos
-                            </h3>
-                            <p className="text-sm text-slate-500">
-                                Equipos registrados en esta categoría.
-                            </p>
-                        </div>
-                    </div>
-
-                    {categoria.equipos.length > 0 ? (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                                    <tr>
-                                        <th className="px-5 py-3">Equipo</th>
-                                        <th className="px-5 py-3">Club</th>
-                                        <th className="px-5 py-3">Estado</th>
-                                    </tr>
-                                </thead>
-
-                                <tbody className="divide-y divide-slate-100">
-                                    {categoria.equipos.map((equipo) => (
-                                        <tr key={equipo.id}>
-                                            <td className="px-5 py-3 font-medium text-slate-800">
-                                                {equipo.nombre}
-                                            </td>
-                                            <td className="px-5 py-3 text-slate-600">
-                                                {equipo.club?.nombre || '-'}
-                                            </td>
-                                            <td className="px-5 py-3">
-                                                <StatusBadge
-                                                    status={
-                                                        equipo.estado
-                                                            ? 'activo'
-                                                            : 'inactivo'
-                                                    }
-                                                />
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    ) : (
-                        <EmptyMessage mensaje="No hay equipos registrados en esta categoría." />
-                    )}
-                </section>
-
                 {/* HORARIOS */}
                 <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4">
                         <CalendarDays className="text-slate-600" size={20} />
+
                         <div>
                             <h3 className="font-semibold text-slate-900">
                                 Horarios
                             </h3>
+
                             <p className="text-sm text-slate-500">
                                 Horarios de entrenamiento de la categoría.
                             </p>
@@ -371,10 +404,18 @@ export default function Show({ categoria, puedeGestionar }: Props) {
                                 <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                                     <tr>
                                         <th className="px-5 py-3">Día</th>
-                                        <th className="px-5 py-3">Horario</th>
-                                        <th className="px-5 py-3">Profesor</th>
-                                        <th className="px-5 py-3">Cancha</th>
-                                        <th className="px-5 py-3">Estado</th>
+                                        <th className="px-5 py-3">
+                                            Horario
+                                        </th>
+                                        <th className="px-5 py-3">
+                                            Profesor
+                                        </th>
+                                        <th className="px-5 py-3">
+                                            Cancha
+                                        </th>
+                                        <th className="px-5 py-3">
+                                            Estado
+                                        </th>
                                     </tr>
                                 </thead>
 
@@ -386,20 +427,24 @@ export default function Show({ categoria, puedeGestionar }: Props) {
                                                     horario.dia ||
                                                     '-'}
                                             </td>
+
                                             <td className="px-5 py-3 text-slate-600">
                                                 {horario.hora_inicio || '-'}
                                                 {horario.hora_fin
                                                     ? ` - ${horario.hora_fin}`
                                                     : ''}
                                             </td>
+
                                             <td className="px-5 py-3 text-slate-600">
                                                 {horario.profesor
                                                     ? `${horario.profesor.apellido}, ${horario.profesor.nombre}`
                                                     : '-'}
                                             </td>
+
                                             <td className="px-5 py-3 text-slate-600">
                                                 {horario.cancha?.nombre || '-'}
                                             </td>
+
                                             <td className="px-5 py-3">
                                                 <StatusBadge
                                                     status={
@@ -416,48 +461,6 @@ export default function Show({ categoria, puedeGestionar }: Props) {
                         </div>
                     ) : (
                         <EmptyMessage mensaje="No hay horarios registrados para esta categoría." />
-                    )}
-                </section>
-
-                {/* TORNEOS */}
-                <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4">
-                        <Trophy className="text-slate-600" size={20} />
-                        <div>
-                            <h3 className="font-semibold text-slate-900">
-                                Torneos
-                            </h3>
-                            <p className="text-sm text-slate-500">
-                                Torneos vinculados a esta categoría.
-                            </p>
-                        </div>
-                    </div>
-
-                    {categoria.torneos.length > 0 ? (
-                        <div className="divide-y divide-slate-100">
-                            {categoria.torneos.map((torneo) => (
-                                <div
-                                    key={torneo.id}
-                                    className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
-                                >
-                                    <span className="font-medium text-slate-800">
-                                        {torneo.nombre}
-                                    </span>
-
-                                    {torneo.estado !== undefined && (
-                                        <StatusBadge
-                                            status={
-                                                torneo.estado
-                                                    ? 'activo'
-                                                    : 'inactivo'
-                                            }
-                                        />
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <EmptyMessage mensaje="Esta categoría no está vinculada a ningún torneo." />
                     )}
                 </section>
             </div>

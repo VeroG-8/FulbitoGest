@@ -8,7 +8,6 @@ import {
     Pencil,
     Users,
     GraduationCap,
-    ShieldCheck,
     CalendarDays,
     ArrowUp,
     ArrowDown,
@@ -28,7 +27,6 @@ interface Categoria {
     estado: boolean;
     jugadores_activos_count: number;
     profesores_activos_count: number;
-    equipos_activos_count: number;
     horarios_activos_count: number;
 }
 
@@ -184,7 +182,7 @@ export default function Index({
                                     >
                                         <History size={18} />
                                         Historial
-                                        </Link>
+                                    </Link>
 
                                     <Link
                                         href="/categorias/create"
@@ -295,8 +293,6 @@ export default function Index({
                                     )}
                                 </div>
                             </div>
-
-                          
                         </div>
 
                         {/* TABLA */}
@@ -331,13 +327,6 @@ export default function Index({
 
                                         <th className="px-5 py-4">
                                             <span className="inline-flex items-center gap-2">
-                                                <ShieldCheck size={15} />
-                                                Equipos
-                                            </span>
-                                        </th>
-
-                                        <th className="px-5 py-4">
-                                            <span className="inline-flex items-center gap-2">
                                                 <CalendarDays size={15} />
                                                 Horarios
                                             </span>
@@ -357,7 +346,7 @@ export default function Index({
                                     {categorias.data.length === 0 ? (
                                         <tr>
                                             <td
-                                                colSpan={7}
+                                                colSpan={6}
                                                 className="px-5 py-14 text-center"
                                             >
                                                 <Layers
@@ -397,12 +386,6 @@ export default function Index({
                                                 <td className="px-5 py-4">
                                                     <span className="font-semibold text-slate-700">
                                                         {categoria.profesores_activos_count}
-                                                    </span>
-                                                </td>
-
-                                                <td className="px-5 py-4">
-                                                    <span className="font-semibold text-slate-700">
-                                                        {categoria.equipos_activos_count}
                                                     </span>
                                                 </td>
 
