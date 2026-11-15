@@ -2,23 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Jugador;
 use App\Models\Tutor;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class TutorController extends Controller
 {
-    /**
-     * Comprueba si el usuario es administrador o superadministrador.
-     */
     private function esAdministrador(): bool
     {
         return in_array(auth()->user()->rol, ['admin', 'superadmin'], true);
     }
 
-    /**
-     * Comprueba si el usuario puede consultar el módulo de tutores.
-     */
     private function autorizarConsulta(): void
     {
         $rol = auth()->user()->rol;
@@ -30,9 +28,6 @@ class TutorController extends Controller
         );
     }
 
-    /**
-     * Comprueba si el usuario puede editar un tutor determinado.
-     */
     private function autorizarEdicion(Tutor $tutor): void
     {
         $usuario = auth()->user();
@@ -41,14 +36,12 @@ class TutorController extends Controller
             return;
         }
 
-        if (
-            $usuario->rol === 'tutor' &&
-            (int) $usuario->tutor_id === (int) $tutor->id
-        ) {
-            return;
-        }
-
-        abort(403, 'No tienes permiso para modificar este tutor.');
+        abort_unless(
+            $usuario->rol === 'tutor'
+                && (int) $usuario->tutor_id === (int) $tutor->id,
+            403,
+            'No tienes permiso para modificar este tutor.'
+        );
     }
 
     /**
@@ -59,10 +52,8 @@ class TutorController extends Controller
         $this->autorizarConsulta();
 
         $usuario = auth()->user();
-
         $consulta = Tutor::query();
 
-        // El tutor solamente puede consultar su propio registro.
         if ($usuario->rol === 'tutor') {
             $consulta->where('id', $usuario->tutor_id);
         }
@@ -94,40 +85,117 @@ class TutorController extends Controller
      */
     public function create()
     {
-        abort_unless(
-            $this->esAdministrador(),
-            403,
-            'No tienes permiso para crear tutores.'
-        );
+        abort_unless($this->esAdministrador(), 403);
 
-        return Inertia::render('Tutores/Create');
+        $jugadores = Jugador::where('estado', true)
+            ->withCount('tutores')
+            ->orderBy('apellido')
+            ->orderBy('nombre')
+            ->get(['id', 'dni', 'nombre', 'apellido']);
+
+        return Inertia::render('Tutores/Create', [
+            'jugadores' => $jugadores,
+        ]);
     }
 
     /**
-     * Registrar un tutor.
+     * Registrar un tutor y, opcionalmente, asociarlo a un jugador.
      */
     public function store(Request $request)
     {
-        abort_unless(
-            $this->esAdministrador(),
-            403,
-            'No tienes permiso para crear tutores.'
-        );
+        abort_unless($this->esAdministrador(), 403);
 
-        $validated = $request->validate([
-            'dni' => 'required|string|max:20|unique:tutores,dni',
+        $datos = $request->validate([
+            'dni' => [
+                'required',
+                'string',
+                'max:20',
+                Rule::unique('tutores', 'dni'),
+            ],
             'nombre' => 'required|string|max:100',
             'apellido' => 'required|string|max:100',
             'email' => 'nullable|email|max:150',
             'telefono' => 'nullable|string|max:30',
             'direccion' => 'nullable|string|max:150',
             'localidad' => 'nullable|string|max:100',
+            'jugador_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('jugadores', 'id')->where('estado', true),
+            ],
+            'parentesco' => [
+                'nullable',
+                'required_with:jugador_id',
+                'string',
+                'max:50',
+            ],
+        ], [
+            'dni.required' => 'El DNI es obligatorio.',
+            'dni.unique' => 'Ya existe un tutor registrado con ese DNI.',
+            'nombre.required' => 'El nombre es obligatorio.',
+            'apellido.required' => 'El apellido es obligatorio.',
+            'jugador_id.exists' => 'El jugador seleccionado no existe o está inactivo.',
+            'parentesco.required_with' => 'Debes indicar el parentesco del tutor con el jugador.',
+            'parentesco.max' => 'El parentesco no puede superar los 50 caracteres.',
         ]);
 
-        Tutor::create([
-            ...$validated,
-            'estado' => true,
-        ]);
+        if (
+            isset($datos['jugador_id'])
+            && trim($datos['parentesco'] ?? '') === ''
+        ) {
+            throw ValidationException::withMessages([
+                'parentesco' => 'Debes indicar el parentesco del tutor con el jugador.',
+            ]);
+        }
+
+        DB::transaction(function () use ($datos) {
+            $tutor = Tutor::create([
+                'dni' => $datos['dni'],
+                'nombre' => $datos['nombre'],
+                'apellido' => $datos['apellido'],
+                'email' => $datos['email'] ?? null,
+                'telefono' => $datos['telefono'] ?? null,
+                'direccion' => $datos['direccion'] ?? null,
+                'localidad' => $datos['localidad'] ?? null,
+                'estado' => true,
+            ]);
+
+            // La asociación es opcional.
+            if (empty($datos['jugador_id'])) {
+                return;
+            }
+
+            $jugador = Jugador::whereKey($datos['jugador_id'])
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $cantidadTutores = $jugador->tutores()->count();
+
+            if ($cantidadTutores >= 2) {
+                throw ValidationException::withMessages([
+                    'jugador_id' => 'Este jugador ya tiene el máximo de dos tutores asociados.',
+                ]);
+            }
+
+            $hayTitular = $jugador->tutores()
+                ->wherePivot('es_tutor_principal', true)
+                ->exists();
+
+            // Si no hay tutor, el nuevo será titular.
+            // Si ya hay uno, el nuevo será suplente.
+            $esPrincipal = $cantidadTutores === 0 || !$hayTitular;
+
+            if ($esPrincipal) {
+                DB::table('jugador_tutor')
+                    ->where('jugador_id', $jugador->id)
+                    ->update(['es_tutor_principal' => false]);
+            }
+
+            $jugador->tutores()->attach($tutor->id, [
+                'parentesco' => trim($datos['parentesco']),
+                'es_tutor_principal' => $esPrincipal,
+            ]);
+        });
 
         return redirect()
             ->route('tutores.index')
@@ -148,11 +216,7 @@ class TutorController extends Controller
                 'No tienes permiso para consultar este tutor.'
             );
         } else {
-            abort_unless(
-                $this->esAdministrador(),
-                403,
-                'No tienes permiso para consultar fichas de tutores.'
-            );
+            abort_unless($this->esAdministrador(), 403);
         }
 
         $tutor->load('jugadores');
@@ -169,29 +233,101 @@ class TutorController extends Controller
     {
         $this->autorizarEdicion($tutor);
 
+        $tutor->load([
+            'jugadores:id,dni,nombre,apellido',
+        ]);
+
         return Inertia::render('Tutores/Edit', [
             'tutor' => $tutor,
+            'puedeAdministrarRelaciones' => $this->esAdministrador(),
         ]);
     }
 
     /**
-     * Actualizar los datos personales y de contacto.
+     * Actualizar datos personales y, para administradores,
+     * el parentesco de cada jugador asociado.
      */
     public function update(Request $request, Tutor $tutor)
     {
         $this->autorizarEdicion($tutor);
 
-        $validated = $request->validate([
-            'dni' => 'required|string|max:20|unique:tutores,dni,' . $tutor->id,
+        $reglas = [
+            'dni' => [
+                'required',
+                'string',
+                'max:20',
+                Rule::unique('tutores', 'dni')->ignore($tutor->id),
+            ],
             'nombre' => 'required|string|max:100',
             'apellido' => 'required|string|max:100',
             'email' => 'nullable|email|max:150',
             'telefono' => 'nullable|string|max:30',
             'direccion' => 'nullable|string|max:150',
             'localidad' => 'nullable|string|max:100',
+        ];
+
+        if ($this->esAdministrador() && $request->has('relaciones')) {
+            $reglas['relaciones'] = ['array'];
+            $reglas['relaciones.*.jugador_id'] = [
+                'required',
+                'integer',
+                'distinct',
+                'exists:jugadores,id',
+            ];
+            $reglas['relaciones.*.parentesco'] = [
+                'required',
+                'string',
+                'max:50',
+            ];
+        }
+
+        $datos = $request->validate($reglas, [
+            'dni.required' => 'El DNI es obligatorio.',
+            'dni.unique' => 'Ya existe otro tutor registrado con ese DNI.',
+            'nombre.required' => 'El nombre es obligatorio.',
+            'apellido.required' => 'El apellido es obligatorio.',
+            'relaciones.*.parentesco.required' => 'El parentesco es obligatorio.',
+            'relaciones.*.parentesco.max' => 'El parentesco no puede superar los 50 caracteres.',
         ]);
 
-        $tutor->update($validated);
+        foreach ($datos['relaciones'] ?? [] as $indice => $relacion) {
+            if (trim($relacion['parentesco']) === '') {
+                throw ValidationException::withMessages([
+                    "relaciones.{$indice}.parentesco" => 'El parentesco es obligatorio.',
+                ]);
+            }
+        }
+
+        DB::transaction(function () use ($tutor, $datos) {
+            $tutor->update([
+                'dni' => $datos['dni'],
+                'nombre' => $datos['nombre'],
+                'apellido' => $datos['apellido'],
+                'email' => $datos['email'] ?? null,
+                'telefono' => $datos['telefono'] ?? null,
+                'direccion' => $datos['direccion'] ?? null,
+                'localidad' => $datos['localidad'] ?? null,
+            ]);
+
+            // Solo administradores pueden modificar parentescos.
+            foreach ($datos['relaciones'] ?? [] as $relacion) {
+                $jugador = $tutor->jugadores()
+                    ->where('jugadores.id', $relacion['jugador_id'])
+                    ->first();
+
+                // No se permite crear asociaciones desde este formulario.
+                abort_if(
+                    !$jugador,
+                    403,
+                    'No puedes modificar una relación que no pertenece a este tutor.'
+                );
+
+                $tutor->jugadores()->updateExistingPivot(
+                    $jugador->id,
+                    ['parentesco' => trim($relacion['parentesco'])]
+                );
+            }
+        });
 
         if (auth()->user()->rol === 'tutor') {
             return redirect()
@@ -209,15 +345,9 @@ class TutorController extends Controller
      */
     public function destroy(Tutor $tutor)
     {
-        abort_unless(
-            $this->esAdministrador(),
-            403,
-            'No tienes permiso para deshabilitar tutores.'
-        );
+        abort_unless($this->esAdministrador(), 403);
 
-        $tutor->update([
-            'estado' => false,
-        ]);
+        $tutor->update(['estado' => false]);
 
         return redirect()
             ->route('tutores.index')
@@ -225,44 +355,30 @@ class TutorController extends Controller
     }
 
     /**
-     * Consultar historial de tutores inactivos.
+     * Historial de tutores inactivos.
      */
-    /**
- * Consultar historial de tutores inactivos.
- * Exclusivo de administradores y superadministradores.
- */
-public function historial()
-{
-    abort_unless(
-        $this->esAdministrador(),
-        403,
-        'No tienes permiso para consultar el historial de tutores.'
-    );
+    public function historial()
+    {
+        abort_unless($this->esAdministrador(), 403);
 
-    $tutores = Tutor::where('estado', false)
-        ->orderBy('apellido')
-        ->orderBy('nombre')
-        ->get();
+        $tutores = Tutor::where('estado', false)
+            ->orderBy('apellido')
+            ->orderBy('nombre')
+            ->get();
 
-    return Inertia::render('Tutores/Historial', [
-        'tutores' => $tutores,
-    ]);
-}
+        return Inertia::render('Tutores/Historial', [
+            'tutores' => $tutores,
+        ]);
+    }
 
     /**
      * Reactivar un tutor.
      */
     public function reactivar(Tutor $tutor)
     {
-        abort_unless(
-            $this->esAdministrador(),
-            403,
-            'No tienes permiso para reactivar tutores.'
-        );
+        abort_unless($this->esAdministrador(), 403);
 
-        $tutor->update([
-            'estado' => true,
-        ]);
+        $tutor->update(['estado' => true]);
 
         return redirect()
             ->route('tutores.historial')

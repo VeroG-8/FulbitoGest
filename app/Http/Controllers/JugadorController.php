@@ -7,6 +7,9 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use App\Models\Categoria;
 use App\Models\Jugador;
+use App\Models\Tutor;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class JugadorController extends Controller
 {
@@ -374,10 +377,27 @@ class JugadorController extends Controller
         // Administradores y tutores asociados pueden editar.
         $puedeEditar = $this->esAdministrador()
             || $this->esJugadorDelTutor($jugador);
+        $puedeAdministrarTutores = $this->esAdministrador();
+        $tutores = $jugador->tutores;
+        $puedeAsociarTutor = $this->esAdministrador()
+            && $tutores->count() < 2;
+
+        $tutoresDisponibles = $puedeAsociarTutor
+            ? Tutor::where('estado', true)
+                ->whereDoesntHave('jugadores', function ($query) use ($jugador) {
+                    $query->where('jugadores.id', $jugador->id);
+                })
+                ->orderBy('apellido')
+                ->orderBy('nombre')
+                ->get(['id', 'dni', 'nombre', 'apellido'])
+            : collect();
 
         return Inertia::render('Jugadores/Show', [
             'jugador' => $jugador,
             'puedeEditar' => $puedeEditar,
+            'puedeAsociarTutor' => $puedeAsociarTutor,
+            'puedeAdministrarTutores' => $puedeAdministrarTutores,
+            'tutoresDisponibles' => $tutoresDisponibles,
         ]);
     }
     /**
@@ -451,5 +471,207 @@ class JugadorController extends Controller
         return redirect()
             ->route('jugadores.historial')
             ->with('success', 'Jugador reactivado correctamente.');
+    }
+
+    public function asociarTutor(Request $request, Jugador $jugador)
+    {
+        abort_unless(
+            $this->esAdministrador(),
+            403,
+            'No tienes permiso para asociar tutores.'
+        );
+
+        $datos = $request->validate([
+            'tutor_id' => [
+                'required',
+                'integer',
+                Rule::exists('tutores', 'id')->where('estado', true),
+            ],
+            'parentesco' => [
+                'required',
+                'string',
+                'max:50',
+            ],
+            'es_tutor_principal' => [
+                'required',
+                'boolean',
+            ],
+        ], [
+            'tutor_id.required' => 'Debes seleccionar un tutor.',
+            'tutor_id.exists' => 'El tutor seleccionado no existe o está inactivo.',
+            'parentesco.required' => 'Debes indicar el parentesco.',
+            'parentesco.max' => 'El parentesco no puede superar los 50 caracteres.',
+        ]);
+
+        DB::transaction(function () use ($jugador, $datos) {
+
+            $jugadorBloqueado = Jugador::whereKey($jugador->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $cantidadTutores = $jugadorBloqueado->tutores()->count();
+
+            if ($cantidadTutores >= 2) {
+                throw ValidationException::withMessages([
+                    'tutor_id' => 'El jugador ya tiene el máximo de dos tutores asociados.',
+                ]);
+            }
+
+            if ($jugadorBloqueado->tutores()
+                ->where('tutores.id', $datos['tutor_id'])
+                ->exists()) {
+                throw ValidationException::withMessages([
+                    'tutor_id' => 'Este tutor ya está asociado al jugador.',
+                ]);
+            }
+
+            $hayTutorPrincipal = $jugadorBloqueado->tutores()
+                ->wherePivot('es_tutor_principal', true)
+                ->exists();
+
+            // El primero siempre será principal.
+            // Si no existe uno principal, el nuevo también deberá serlo.
+            $esPrincipal = $cantidadTutores === 0
+                || !$hayTutorPrincipal
+                || (bool) $datos['es_tutor_principal'];
+
+            // Si se elige un nuevo tutor principal, se actualiza el anterior.
+            if ($esPrincipal) {
+                $tutorPrincipalActual = $jugadorBloqueado->tutores()
+                    ->wherePivot('es_tutor_principal', true)
+                    ->first();
+
+                if ($tutorPrincipalActual) {
+                    $jugadorBloqueado->tutores()->updateExistingPivot(
+                        $tutorPrincipalActual->id,
+                        ['es_tutor_principal' => false]
+                    );
+                }
+            }
+
+            $jugadorBloqueado->tutores()->attach($datos['tutor_id'], [
+                'parentesco' => trim($datos['parentesco']),
+                'es_tutor_principal' => $esPrincipal,
+            ]);
+        });
+
+        return redirect()
+            ->route('jugadores.show', $jugador->id)
+            ->with('success', 'Tutor asociado correctamente.');
+    }
+    /**
+     * Actualizar los datos personales de un tutor y su relación
+     * con un jugador determinado.
+     */
+    public function actualizarTutor(
+        Request $request,
+        Jugador $jugador,
+        Tutor $tutor
+    ) {
+        abort_unless(
+            $this->esAdministrador(),
+            403,
+            'No tienes permiso para modificar tutores.'
+        );
+
+        $datos = $request->validate([
+            'dni' => [
+                'required',
+                'string',
+                'max:20',
+                Rule::unique('tutores', 'dni')->ignore($tutor->id),
+            ],
+            'nombre' => 'required|string|max:100',
+            'apellido' => 'required|string|max:100',
+            'email' => 'nullable|email|max:150',
+            'telefono' => 'nullable|string|max:30',
+            'direccion' => 'nullable|string|max:150',
+            'localidad' => 'nullable|string|max:100',
+            'parentesco' => 'required|string|max:50',
+            'es_tutor_principal' => 'required|boolean',
+        ], [
+            'dni.required' => 'El DNI es obligatorio.',
+            'dni.unique' => 'Ya existe otro tutor registrado con ese DNI.',
+            'nombre.required' => 'El nombre es obligatorio.',
+            'apellido.required' => 'El apellido es obligatorio.',
+            'parentesco.required' => 'Debes indicar el parentesco.',
+        ]);
+
+        if (trim($datos['parentesco']) === '') {
+            throw ValidationException::withMessages([
+                'parentesco' => 'Debes indicar el parentesco.',
+            ]);
+        }
+
+        DB::transaction(function () use ($jugador, $tutor, $datos) {
+            $jugadorBloqueado = Jugador::whereKey($jugador->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $tutorAsociado = $jugadorBloqueado->tutores()
+                ->where('tutores.id', $tutor->id)
+                ->exists();
+
+            abort_unless(
+                $tutorAsociado,
+                404,
+                'El tutor no está asociado a este jugador.'
+            );
+
+            $tutoresActuales = $jugadorBloqueado->tutores()->get();
+
+            $otroTutor = $tutoresActuales->first(
+                fn ($item) => (int) $item->id !== (int) $tutor->id
+            );
+
+            $quiereSerPrincipal = (bool) $datos['es_tutor_principal'];
+
+            // Si hay un solo tutor, no puede quedar como suplente.
+            if (!$quiereSerPrincipal && !$otroTutor) {
+                throw ValidationException::withMessages([
+                    'es_tutor_principal' => 'El jugador debe tener un tutor titular.',
+                ]);
+            }
+
+            // Actualizar los datos personales del tutor.
+            $tutor->update([
+                'dni' => $datos['dni'],
+                'nombre' => $datos['nombre'],
+                'apellido' => $datos['apellido'],
+                'email' => $datos['email'] ?? null,
+                'telefono' => $datos['telefono'] ?? null,
+                'direccion' => $datos['direccion'] ?? null,
+                'localidad' => $datos['localidad'] ?? null,
+            ]);
+
+            // Primero se desmarca la titularidad de todas las relaciones.
+            DB::table('jugador_tutor')
+                ->where('jugador_id', $jugadorBloqueado->id)
+                ->update([
+                    'es_tutor_principal' => false,
+                    'updated_at' => now(),
+                ]);
+
+            // Actualizar parentesco y condición del tutor editado.
+            $jugadorBloqueado->tutores()->updateExistingPivot(
+                $tutor->id,
+                [
+                    'parentesco' => trim($datos['parentesco']),
+                    'es_tutor_principal' => $quiereSerPrincipal,
+                ]
+            );
+
+            // Si el editado pasa a suplente, el otro pasa a titular.
+            if (!$quiereSerPrincipal && $otroTutor) {
+                $jugadorBloqueado->tutores()->updateExistingPivot(
+                    $otroTutor->id,
+                    ['es_tutor_principal' => true]
+                );
+            }
+        });
+
+        return redirect()
+            ->route('jugadores.show', $jugador->id)
+            ->with('success', 'Tutor actualizado correctamente.');
     }
 }
