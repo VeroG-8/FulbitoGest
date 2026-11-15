@@ -27,6 +27,7 @@ interface Profesor {
     dni: string;
     nombre: string;
     apellido: string;
+    fecha_nacimiento: string | null;
     email: string | null;
     telefono: string | null;
     direccion: string | null;
@@ -38,6 +39,14 @@ interface Profesor {
 
 interface Props {
     profesor: Profesor;
+}
+
+function formatearFecha(fecha: string | null | undefined): string {
+    if (!fecha) return 'No especificada';
+
+    const [anio, mes, dia] = fecha.slice(0, 10).split('-');
+
+    return `${dia}/${mes}/${anio}`;
 }
 
 function Dato({
@@ -87,7 +96,8 @@ export default function MiFicha({ profesor }: Props) {
                                 href={route('dashboard')}
                                 className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
                             >
-                                <ArrowLeft size={17} />Volver
+                                <ArrowLeft size={17} />
+                                Volver
                             </Link>
 
                             <Link
@@ -216,6 +226,12 @@ export default function MiFicha({ profesor }: Props) {
                         <Dato
                             etiqueta="DNI"
                             valor={profesor.dni}
+                        />
+
+                        <Dato
+                            etiqueta="Fecha de nacimiento"
+                            valor={formatearFecha(profesor.fecha_nacimiento)}
+                            icono={<CalendarDays size={17} />}
                         />
 
                         <Dato

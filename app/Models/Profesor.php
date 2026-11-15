@@ -15,6 +15,7 @@ class Profesor extends Model
         'dni',
         'nombre',
         'apellido',
+        'fecha_nacimiento',
         'email',
         'telefono',
         'direccion',
@@ -24,6 +25,7 @@ class Profesor extends Model
     ];
 
     protected $casts = [
+        'fecha_nacimiento' => 'date',
         'estado' => 'boolean',
     ];
 

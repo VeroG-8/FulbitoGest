@@ -14,6 +14,7 @@ import {
     Search,
     Check,
     X,
+    CalendarDays,
 } from 'lucide-react';
 
 import PageHeader from '@/Components/Shared/PageHeader';
@@ -31,6 +32,7 @@ interface ProfesorForm {
     dni: string;
     nombre: string;
     apellido: string;
+    fecha_nacimiento: string;
     email: string;
     telefono: string;
     direccion: string;
@@ -48,6 +50,7 @@ export default function Create({ categorias }: Props) {
             dni: '',
             nombre: '',
             apellido: '',
+            fecha_nacimiento: '',
             email: '',
             telefono: '',
             direccion: '',
@@ -96,6 +99,14 @@ export default function Create({ categorias }: Props) {
         'mb-1.5 block text-sm font-semibold text-slate-700';
 
     const errorClass = 'mt-1.5 text-xs font-medium text-red-600';
+
+    const fechaMaxima = new Date();
+    fechaMaxima.setDate(fechaMaxima.getDate() - 1);
+    const fechaMaximaString = [
+        fechaMaxima.getFullYear(),
+        String(fechaMaxima.getMonth() + 1).padStart(2, '0'),
+        String(fechaMaxima.getDate()).padStart(2, '0'),
+    ].join('-');
 
     return (
         <>
@@ -184,6 +195,37 @@ export default function Create({ categorias }: Props) {
                                 {errors.apellido && (
                                     <p className={errorClass}>
                                         {errors.apellido}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>
+                                    Fecha de nacimiento
+                                </label>
+
+                                <div className="relative">
+                                    <CalendarDays
+                                        size={17}
+                                        className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400"
+                                    />
+                                    <input
+                                        type="date"
+                                        value={data.fecha_nacimiento}
+                                        max={fechaMaximaString}
+                                        onChange={(e) =>
+                                            setData(
+                                                'fecha_nacimiento',
+                                                e.target.value,
+                                            )
+                                        }
+                                        className={`${inputClass} pl-10`}
+                                    />
+                                </div>
+
+                                {errors.fecha_nacimiento && (
+                                    <p className={errorClass}>
+                                        {errors.fecha_nacimiento}
                                     </p>
                                 )}
                             </div>

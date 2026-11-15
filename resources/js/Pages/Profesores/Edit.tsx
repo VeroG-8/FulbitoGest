@@ -14,6 +14,7 @@ import {
     Search,
     Check,
     X,
+    CalendarDays,
 } from 'lucide-react';
 
 import PageHeader from '@/Components/Shared/PageHeader';
@@ -23,6 +24,7 @@ interface Profesor {
     dni: string;
     nombre: string;
     apellido: string;
+    fecha_nacimiento: string | null;
     email: string | null;
     telefono: string | null;
     direccion: string | null;
@@ -45,6 +47,7 @@ interface ProfesorForm {
     dni: string;
     nombre: string;
     apellido: string;
+    fecha_nacimiento: string;
     email: string;
     telefono: string;
     direccion: string;
@@ -66,6 +69,9 @@ export default function Edit({
             dni: profesor.dni ?? '',
             nombre: profesor.nombre ?? '',
             apellido: profesor.apellido ?? '',
+            fecha_nacimiento: profesor.fecha_nacimiento
+                ? profesor.fecha_nacimiento.slice(0, 10)
+                : '',
             email: profesor.email ?? '',
             telefono: profesor.telefono ?? '',
             direccion: profesor.direccion ?? '',
@@ -109,6 +115,14 @@ export default function Edit({
         'mb-1.5 block text-sm font-semibold text-slate-700';
 
     const errorClass = 'mt-1.5 text-xs font-medium text-red-600';
+
+    const fechaMaxima = new Date();
+    fechaMaxima.setDate(fechaMaxima.getDate() - 1);
+    const fechaMaximaString = [
+        fechaMaxima.getFullYear(),
+        String(fechaMaxima.getMonth() + 1).padStart(2, '0'),
+        String(fechaMaxima.getDate()).padStart(2, '0'),
+    ].join('-');
 
     return (
         <>
@@ -195,6 +209,37 @@ export default function Edit({
                                 {errors.apellido && (
                                     <p className={errorClass}>
                                         {errors.apellido}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>
+                                    Fecha de nacimiento
+                                </label>
+
+                                <div className="relative">
+                                    <CalendarDays
+                                        size={17}
+                                        className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400"
+                                    />
+                                    <input
+                                        type="date"
+                                        value={data.fecha_nacimiento}
+                                        max={fechaMaximaString}
+                                        onChange={(e) =>
+                                            setData(
+                                                'fecha_nacimiento',
+                                                e.target.value,
+                                            )
+                                        }
+                                        className={`${inputClass} pl-10`}
+                                    />
+                                </div>
+
+                                {errors.fecha_nacimiento && (
+                                    <p className={errorClass}>
+                                        {errors.fecha_nacimiento}
                                     </p>
                                 )}
                             </div>

@@ -122,6 +122,7 @@ class ProfesorController extends Controller
             'dni' => 'required|string|max:20|unique:profesores,dni',
             'nombre' => 'required|string|max:100',
             'apellido' => 'required|string|max:100',
+            'fecha_nacimiento' => 'required|date|before:today',
             'email' => 'nullable|email|max:150',
             'telefono' => 'nullable|string|max:30',
             'direccion' => 'nullable|string|max:150',
@@ -187,14 +188,15 @@ class ProfesorController extends Controller
         }
 
         $profesor->load('categorias:id,anio');
+
         return Inertia::render('Profesores/Show', [
             'profesor' => $profesor,
         ]);
     }
 
     /**
- * Mostrar la ficha personal del profesor autenticado.
- */
+     * Mostrar la ficha personal del profesor autenticado.
+     */
     public function miFicha()
     {
         $usuario = auth()->user();
@@ -214,32 +216,33 @@ class ProfesorController extends Controller
             'profesor' => $profesor,
         ]);
     }
+
     /**
- * Mostrar el formulario para editar la ficha personal
- * del profesor autenticado.
- */
-public function editarMiFicha()
-{
-    $usuario = auth()->user();
+     * Mostrar el formulario para editar la ficha personal
+     * del profesor autenticado.
+     */
+    public function editarMiFicha()
+    {
+        $usuario = auth()->user();
 
-    abort_unless(
-        $usuario->rol === 'profesor' && $usuario->profesor_id,
-        403,
-        'No tienes permiso para editar esta ficha.'
-    );
+        abort_unless(
+            $usuario->rol === 'profesor' && $usuario->profesor_id,
+            403,
+            'No tienes permiso para editar esta ficha.'
+        );
 
-    $profesor = Profesor::with('categorias')
-        ->findOrFail($usuario->profesor_id);
+        $profesor = Profesor::with('categorias')
+            ->findOrFail($usuario->profesor_id);
 
-    return Inertia::render('Profesores/EditarMiFicha', [
-        'profesor' => $profesor,
-    ]);
-}
+        return Inertia::render('Profesores/EditarMiFicha', [
+            'profesor' => $profesor,
+        ]);
+    }
 
-/**
- * Actualizar los datos personales del profesor autenticado.
- * No permite modificar categorías ni estado.
- */
+    /**
+     * Actualizar los datos personales del profesor autenticado.
+     * No permite modificar categorías ni estado.
+     */
     public function actualizarMiFicha(Request $request)
     {
         $usuario = auth()->user();
@@ -261,6 +264,7 @@ public function editarMiFicha()
             ],
             'nombre' => 'required|string|max:100',
             'apellido' => 'required|string|max:100',
+            'fecha_nacimiento' => 'required|date|before:today',
             'email' => 'nullable|email|max:150',
             'telefono' => 'nullable|string|max:30',
             'direccion' => 'nullable|string|max:150',
@@ -322,6 +326,7 @@ public function editarMiFicha()
             ],
             'nombre' => 'required|string|max:100',
             'apellido' => 'required|string|max:100',
+            'fecha_nacimiento' => 'required|date|before:today',
             'email' => 'nullable|email|max:150',
             'telefono' => 'nullable|string|max:30',
             'direccion' => 'nullable|string|max:150',

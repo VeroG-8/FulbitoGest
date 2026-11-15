@@ -27,6 +27,7 @@ interface Profesor {
     dni: string;
     nombre: string;
     apellido: string;
+    fecha_nacimiento: string | null;
     email: string | null;
     telefono: string | null;
     direccion: string | null;
@@ -38,6 +39,14 @@ interface Profesor {
 
 interface Props {
     profesor: Profesor;
+}
+
+function formatearFecha(fecha: string | null | undefined): string {
+    if (!fecha) return 'No especificada';
+
+    const [anio, mes, dia] = fecha.slice(0, 10).split('-');
+
+    return `${dia}/${mes}/${anio}`;
 }
 
 function Dato({
@@ -212,6 +221,12 @@ export default function Show({ profesor }: Props) {
                         />
 
                         <Dato
+                            etiqueta="Fecha de nacimiento"
+                            valor={formatearFecha(profesor.fecha_nacimiento)}
+                            icono={<CalendarDays size={17} />}
+                        />
+
+                        <Dato
                             etiqueta="Especialidad"
                             valor={
                                 profesor.especialidad || 'No especificada'
@@ -316,7 +331,7 @@ export default function Show({ profesor }: Props) {
                                             key={categoria.id}
                                             className="transition hover:bg-slate-50"
                                         >
-                                           <td className="px-6 py-4 font-semibold text-slate-700">
+                                            <td className="px-6 py-4 font-semibold text-slate-700">
                                                 Categoría {categoria.anio}
                                             </td>
 
