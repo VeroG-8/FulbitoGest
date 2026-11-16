@@ -37,4 +37,25 @@ class CuotaXJugador extends Model
     {
         return $this->hasMany(Pago::class);
     }
+    /**
+     * Movimientos de cuenta corriente asociados a esta asignación.
+     */
+    public function movimientosCuentaCorriente(): HasMany
+    {
+        return $this->hasMany(
+            MovimientoCuentaCorriente::class,
+            'cuota_x_jugador_id'
+        );
+    }
+
+    /**
+     * Aplicaciones de crédito utilizadas para pagar esta cuota.
+     */
+    public function aplicacionesCredito(): HasMany
+    {
+        return $this->hasMany(
+            AplicacionCredito::class,
+            'cuota_x_jugador_id'
+        );
+    }
 }

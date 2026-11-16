@@ -80,5 +80,19 @@ class Jugador extends Model
             'estado'
         )->withTimestamps();
     }
+    /**
+     * Movimientos de la cuenta corriente del jugador.
+     */
+    public function movimientosCuentaCorriente(): HasMany
+    {
+        return $this->hasMany(MovimientoCuentaCorriente::class);
+    }
 
+    /**
+     * Aplicaciones de crédito del jugador.
+     */
+    public function aplicacionesCredito(): HasMany
+    {
+        return $this->hasMany(AplicacionCredito::class);
+    }
 }

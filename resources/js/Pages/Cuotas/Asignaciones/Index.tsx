@@ -14,6 +14,9 @@ import {
     Filter,
     Search,
     X,
+    UserPlus,
+    Ban,
+    RotateCcw,
 } from 'lucide-react';
 
 interface Cuota {
@@ -42,6 +45,7 @@ interface Asignacion {
     fecha_asignacion: string;
     fecha_vencimiento: string;
     estado: string;
+    pagos_count: number;
     cuota: Cuota;
     jugador: Jugador;
 }
@@ -71,6 +75,7 @@ interface Props {
         total: number;
         pendientes: number;
         pagadas: number;
+        anuladas: number;
     };
 }
 
@@ -97,7 +102,7 @@ export default function Index({
         });
     };
 
-    // Aplicar búsqueda y categoría conjuntamente
+    // Aplicar búsqueda y categoría conjuntamente.
     const aplicarFiltros = (
         categoriaId: string,
         termino: string,
@@ -136,12 +141,43 @@ export default function Index({
         });
     };
 
+    const anularAsignacion = (asignacion: Asignacion) => {
+        const confirmar = window.confirm(
+            `¿Estás seguro de anular la asignación de ${asignacion.jugador.apellido}, ${asignacion.jugador.nombre}?\n\nEsta acción solo está permitida si no existen pagos asociados.`
+        );
+
+        if (!confirmar) return;
+
+        router.put(
+            `/cuotas/asignaciones/${asignacion.id}/anular`,
+            {},
+            {
+                preserveScroll: true,
+            }
+        );
+    };
+
+    const reactivarAsignacion = (asignacion: Asignacion) => {
+        const confirmar = window.confirm(
+            `¿Deseás reactivar la asignación de ${asignacion.jugador.apellido}, ${asignacion.jugador.nombre}?`
+        );
+
+        if (!confirmar) return;
+
+        router.put(
+            `/cuotas/asignaciones/${asignacion.id}/reactivar`,
+            {},
+            {
+                preserveScroll: true,
+            }
+        );
+    };
+
     const hayFiltrosAplicados =
         Boolean(filtros.categoria_id) || Boolean(filtros.buscar);
 
     return (
         <>
-        
             <Head title="Asignaciones de cuotas" />
 
             <div className="min-h-screen bg-slate-50 p-6">
@@ -152,17 +188,28 @@ export default function Index({
                         description="Administración y seguimiento de cuotas asignadas a los jugadores."
                         icon={<Wallet className="h-7 w-7" />}
                         actions={
-                            <Link
-                                href="/cuotas/asignaciones/masivas/crear"
-                                className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-                            >
-                                + Asignación masiva
-                            </Link>
+                            <div className="flex flex-nowrap items-center gap-3 whitespace-nowrap">
+                                <Link
+                                    href="/cuotas/asignaciones/crear"
+                                    className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-900"
+                                >
+                                    <UserPlus className="h-4 w-4" />
+                                    Asignación individual
+                                </Link>
+
+                                <Link
+                                    href="/cuotas/asignaciones/masivas/crear"
+                                    className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                                >
+                                    <Users className="h-4 w-4" />
+                                    Asignación masiva
+                                </Link>
+                            </div>
                         }
                     />
 
                     {/* Estadísticas */}
-                    <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <StatCard
                             title="Total de asignaciones"
                             value={estadisticas.total}
@@ -185,6 +232,14 @@ export default function Index({
                             description="Cuotas abonadas"
                             icon={<CheckCircle className="h-6 w-6" />}
                             color="emerald"
+                        />
+
+                        <StatCard
+                            title="Anuladas"
+                            value={estadisticas.anuladas}
+                            description="Asignaciones dadas de baja"
+                            icon={<Ban className="h-6 w-6" />}
+                            color="blue"
                         />
                     </div>
 
@@ -302,50 +357,90 @@ export default function Index({
                                 </thead>
 
                                 <tbody className="divide-y divide-slate-100">
-                                    {asignaciones.data.map((asignacion) => (
-                                        <tr
-                                            key={asignacion.id}
-                                            className="transition hover:bg-slate-50"
-                                        >
-                                            <td className="whitespace-nowrap px-6 py-4 font-semibold text-slate-800">
-                                                {asignacion.jugador.apellido}, {asignacion.jugador.nombre}
-                                            </td>
+                                    {asignaciones.data.map((asignacion) => {
+                                        const puedeAnular =
+                                            asignacion.estado === 'pendiente' &&
+                                            asignacion.pagos_count === 0;
 
-                                            <td className="whitespace-nowrap px-6 py-4 text-slate-600">
-                                                {asignacion.jugador.categoria?.anio ?? '-'}
-                                            </td>
+                                        const puedeReactivar =
+                                            asignacion.estado === 'anulada' &&
+                                            asignacion.pagos_count === 0;
 
-                                            <td className="whitespace-nowrap px-6 py-4 text-slate-600">
-                                                {asignacion.cuota.nombre}
-                                            </td>
+                                        return (
+                                            <tr
+                                                key={asignacion.id}
+                                                className="transition hover:bg-slate-50"
+                                            >
+                                                <td className="whitespace-nowrap px-6 py-4 font-semibold text-slate-800">
+                                                    {asignacion.jugador.apellido},{' '}
+                                                    {asignacion.jugador.nombre}
+                                                </td>
 
-                                            <td className="whitespace-nowrap px-6 py-4 font-medium text-slate-700">
-                                                {formatearMonto(asignacion.cuota.monto)}
-                                            </td>
+                                                <td className="whitespace-nowrap px-6 py-4 text-slate-600">
+                                                    {asignacion.jugador.categoria?.anio ?? '-'}
+                                                </td>
 
-                                            <td className="whitespace-nowrap px-6 py-4 text-slate-600">
-                                                {formatearFecha(asignacion.fecha_asignacion)}
-                                            </td>
+                                                <td className="whitespace-nowrap px-6 py-4 text-slate-600">
+                                                    {asignacion.cuota.nombre}
+                                                </td>
 
-                                            <td className="whitespace-nowrap px-6 py-4 text-slate-600">
-                                                {formatearFecha(asignacion.fecha_vencimiento)}
-                                            </td>
+                                                <td className="whitespace-nowrap px-6 py-4 font-medium text-slate-700">
+                                                    {formatearMonto(asignacion.cuota.monto)}
+                                                </td>
 
-                                            <td className="whitespace-nowrap px-6 py-4">
-                                                <StatusBadge status={asignacion.estado} />
-                                            </td>
+                                                <td className="whitespace-nowrap px-6 py-4 text-slate-600">
+                                                    {formatearFecha(asignacion.fecha_asignacion)}
+                                                </td>
 
-                                            <td className="whitespace-nowrap px-6 py-4 text-right">
-                                                <Link
-                                                    href={`/cuotas/asignaciones/${asignacion.id}/pagos`}
-                                                    className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50 hover:text-blue-800"
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                    Ver pagos
-                                                </Link>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                <td className="whitespace-nowrap px-6 py-4 text-slate-600">
+                                                    {formatearFecha(asignacion.fecha_vencimiento)}
+                                                </td>
+
+                                                <td className="whitespace-nowrap px-6 py-4">
+                                                    <StatusBadge status={asignacion.estado} />
+                                                </td>
+
+                                                <td className="whitespace-nowrap px-6 py-4">
+                                                    <div className="flex items-center justify-end gap-1">
+
+                                                        {/* Consultar pagos */}
+                                                        <Link
+                                                            href={`/cuotas/asignaciones/${asignacion.id}/pagos`}
+                                                            title="Ver pagos"
+                                                            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50 hover:text-blue-800"
+                                                        >
+                                                            <Eye className="h-4 w-4" />
+                                                            <span>Ver pagos</span>
+                                                        </Link>
+
+                                                        {/* Anular asignación */}
+                                                        {puedeAnular && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => anularAsignacion(asignacion)}
+                                                                title="Anular asignación"
+                                                                className="inline-flex items-center justify-center rounded-lg p-2 text-red-600 transition hover:bg-red-50 hover:text-red-800"
+                                                            >
+                                                                <Ban className="h-4 w-4" />
+                                                            </button>
+                                                        )}
+
+                                                        {/* Reactivar asignación */}
+                                                        {puedeReactivar && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => reactivarAsignacion(asignacion)}
+                                                                title="Reactivar asignación"
+                                                                className="inline-flex items-center justify-center rounded-lg p-2 text-emerald-600 transition hover:bg-emerald-50 hover:text-emerald-800"
+                                                            >
+                                                                <RotateCcw className="h-4 w-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
 
                                     {asignaciones.data.length === 0 && (
                                         <tr>
@@ -374,7 +469,8 @@ export default function Index({
                         {asignaciones.last_page > 1 && (
                             <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
                                 <p className="text-sm text-slate-500">
-                                    Mostrando {asignaciones.from} a {asignaciones.to} de {asignaciones.total} asignaciones
+                                    Mostrando {asignaciones.from} a {asignaciones.to} de{' '}
+                                    {asignaciones.total} asignaciones
                                 </p>
 
                                 <div className="flex flex-wrap items-center gap-1">
@@ -404,7 +500,11 @@ export default function Index({
                                                 ) : esSiguiente ? (
                                                     <ChevronRight className="h-4 w-4" />
                                                 ) : (
-                                                    <span dangerouslySetInnerHTML={{ __html: link.label }} />
+                                                    <span
+                                                        dangerouslySetInnerHTML={{
+                                                            __html: link.label,
+                                                        }}
+                                                    />
                                                 )}
                                             </button>
                                         );

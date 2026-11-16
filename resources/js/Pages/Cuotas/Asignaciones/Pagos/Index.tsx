@@ -44,6 +44,8 @@ interface Asignacion {
 interface Props {
     asignacion: Asignacion;
     totalPagado: number;
+    creditoAplicado: number;
+    totalCubierto: number;
     saldoPendiente: number;
     modalidadesPago: ModalidadPago[];
 }
@@ -75,6 +77,8 @@ const fechaActual = () => {
 export default function Index({
     asignacion,
     totalPagado,
+    creditoAplicado,
+    totalCubierto,
     saldoPendiente,
     modalidadesPago,
 }: Props) {
@@ -98,9 +102,18 @@ export default function Index({
         .join(' ') || `Jugador #${asignacion.jugador?.id}`;
 
     const montoCuota = Number(asignacion.cuota?.monto) || 0;
+    const totalPagadoReal = Number(totalPagado) || 0;
+    const credito = Number(creditoAplicado) || 0;
+    const totalCubiertoReal = Number(totalCubierto) || 0;
+    const saldo = Number(saldoPendiente) || 0;
+
+    const estaAnulada = asignacion.estado === 'anulada';
+    const estaPagada = saldo <= 0 && !estaAnulada;
 
     const registrarPago = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+
+        if (estaAnulada || estaPagada) return;
 
         post(`/cuotas/asignaciones/${asignacion.id}/pagos`, {
             preserveScroll: true,
@@ -124,6 +137,7 @@ export default function Index({
                         </div>
                     )}
 
+                    {/* Encabezado */}
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
@@ -147,10 +161,25 @@ export default function Index({
                         </Link>
                     </div>
 
+                    {/* Datos de la asignación */}
                     <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                        <h2 className="text-lg font-bold text-slate-900">
-                            Datos de la asignación
-                        </h2>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <h2 className="text-lg font-bold text-slate-900">
+                                Datos de la asignación
+                            </h2>
+
+                            <span
+                                className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold capitalize ${
+                                    estaAnulada
+                                        ? 'bg-slate-100 text-slate-600'
+                                        : asignacion.estado === 'pagada'
+                                            ? 'bg-emerald-100 text-emerald-700'
+                                            : 'bg-amber-100 text-amber-700'
+                                }`}
+                            >
+                                {asignacion.estado.replaceAll('_', ' ')}
+                            </span>
+                        </div>
 
                         <div className="mt-4 grid gap-4 sm:grid-cols-2">
                             <div>
@@ -168,14 +197,18 @@ export default function Index({
                             </div>
 
                             <div>
-                                <p className="text-sm text-slate-500">Fecha de asignación</p>
+                                <p className="text-sm text-slate-500">
+                                    Fecha de asignación
+                                </p>
                                 <p className="font-medium text-slate-800">
                                     {formatearFecha(asignacion.fecha_asignacion)}
                                 </p>
                             </div>
 
                             <div>
-                                <p className="text-sm text-slate-500">Fecha de vencimiento</p>
+                                <p className="text-sm text-slate-500">
+                                    Fecha de vencimiento
+                                </p>
                                 <p className="font-medium text-slate-800">
                                     {formatearFecha(asignacion.fecha_vencimiento)}
                                 </p>
@@ -183,43 +216,167 @@ export default function Index({
                         </div>
                     </section>
 
-                    <section className="grid gap-4 sm:grid-cols-3">
+                    {/* Aviso de asignación anulada */}
+                    {estaAnulada && (
+                        <div className="rounded-xl border border-slate-300 bg-slate-100 p-4">
+                            <p className="font-semibold text-slate-800">
+                                Esta asignación se encuentra anulada.
+                            </p>
+
+                            <p className="mt-1 text-sm text-slate-600">
+                                No es posible registrar nuevos pagos. El historial
+                                de pagos permanece disponible para consulta y trazabilidad.
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Resumen económico */}
+                    <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+                        {/* Importe de la cuota */}
                         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                             <p className="text-sm font-medium text-slate-500">
                                 Total de la cuota
                             </p>
+
                             <p className="mt-2 text-2xl font-bold text-slate-900">
                                 {formatoMoneda(montoCuota)}
                             </p>
                         </div>
 
+                        {/* Pagos reales */}
                         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
                             <p className="text-sm font-medium text-emerald-800">
-                                Total pagado
+                                Pagos realizados
                             </p>
+
                             <p className="mt-2 text-2xl font-bold text-emerald-900">
-                                {formatoMoneda(totalPagado)}
+                                {formatoMoneda(totalPagadoReal)}
+                            </p>
+
+                            <p className="mt-1 text-xs text-emerald-700">
+                                Dinero efectivamente recibido
                             </p>
                         </div>
 
+                        {/* Crédito aplicado */}
+                        <div className="rounded-xl border border-violet-200 bg-violet-50 p-5">
+                            <p className="text-sm font-medium text-violet-800">
+                                Crédito aplicado
+                            </p>
+
+                            <p className="mt-2 text-2xl font-bold text-violet-900">
+                                {formatoMoneda(credito)}
+                            </p>
+
+                            <p className="mt-1 text-xs text-violet-700">
+                                Cubierto con saldo de cuenta corriente
+                            </p>
+                        </div>
+
+                        {/* Saldo pendiente */}
                         <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
                             <p className="text-sm font-medium text-amber-800">
                                 Saldo pendiente
                             </p>
+
                             <p className="mt-2 text-2xl font-bold text-amber-900">
-                                {formatoMoneda(saldoPendiente)}
+                                {formatoMoneda(saldo)}
                             </p>
                         </div>
                     </section>
 
-                    {saldoPendiente > 0 && (
+                    {/* Total cubierto */}
+                    <section className="rounded-xl border border-blue-200 bg-blue-50 p-5">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-sm font-semibold text-blue-900">
+                                    Total cubierto de la cuota
+                                </p>
+
+                                <p className="mt-1 text-xs text-blue-700">
+                                    Incluye pagos reales y crédito aplicado.
+                                </p>
+                            </div>
+
+                            <p className="text-2xl font-bold text-blue-900">
+                                {formatoMoneda(totalCubiertoReal)}
+                            </p>
+                        </div>
+
+                        <div className="mt-4 h-3 overflow-hidden rounded-full bg-blue-100">
+                            <div
+                                className="h-full rounded-full bg-blue-600 transition-all"
+                                style={{
+                                    width: `${
+                                        montoCuota > 0
+                                            ? Math.min(
+                                                100,
+                                                (totalCubiertoReal / montoCuota) * 100
+                                            )
+                                            : 0
+                                    }%`,
+                                }}
+                            />
+                        </div>
+
+                        <div className="mt-2 flex justify-between text-xs text-blue-700">
+                            <span>
+                                {montoCuota > 0
+                                    ? `${Math.min(
+                                        100,
+                                        Math.round(
+                                            (totalCubiertoReal / montoCuota) * 100
+                                        )
+                                    )}% cubierto`
+                                    : '0% cubierto'}
+                            </span>
+
+                            <span>
+                                {formatoMoneda(montoCuota)}
+                            </span>
+                        </div>
+                    </section>
+
+                    {/* Aviso de crédito aplicado */}
+                    {credito > 0 && (
+                        <div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
+                            <p className="font-semibold text-violet-900">
+                                Se aplicó crédito de la cuenta corriente.
+                            </p>
+
+                            <p className="mt-1 text-sm text-violet-800">
+                                {formatoMoneda(credito)} de esta cuota fueron cubiertos
+                                mediante crédito disponible del jugador. Este importe
+                                no representa un pago nuevo ni genera un recibo.
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Aviso de cuota pagada */}
+                    {estaPagada && (
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                            <p className="font-semibold text-emerald-900">
+                                Esta cuota se encuentra cubierta en su totalidad.
+                            </p>
+
+                            <p className="mt-1 text-sm text-emerald-800">
+                                El importe fue cubierto mediante pagos reales,
+                                crédito aplicado o una combinación de ambos.
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Formulario de pago */}
+                    {!estaAnulada && !estaPagada && saldo > 0 && (
                         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                             <h2 className="text-lg font-bold text-slate-900">
                                 Registrar un pago
                             </h2>
 
                             <p className="mt-1 text-sm text-slate-600">
-                                Podés registrar un pago total o parcial. El importe no puede superar el saldo pendiente.
+                                Podés registrar un pago total o parcial. El importe
+                                no puede superar el saldo pendiente.
                             </p>
 
                             <form
@@ -302,7 +459,7 @@ export default function Index({
                                         id="monto"
                                         type="number"
                                         min="0.01"
-                                        max={saldoPendiente}
+                                        max={saldo}
                                         step="0.01"
                                         value={data.monto}
                                         onChange={(e) =>
@@ -314,7 +471,7 @@ export default function Index({
                                     />
 
                                     <p className="mt-1 text-xs text-slate-500">
-                                        Máximo disponible: {formatoMoneda(saldoPendiente)}
+                                        Máximo disponible: {formatoMoneda(saldo)}
                                     </p>
 
                                     {errors.monto && (
@@ -339,6 +496,7 @@ export default function Index({
                         </section>
                     )}
 
+                    {/* Historial de pagos reales */}
                     <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
                         <div className="border-b border-slate-200 px-5 py-4">
                             <h2 className="text-lg font-bold text-slate-900">
@@ -346,18 +504,21 @@ export default function Index({
                             </h2>
 
                             <p className="mt-1 text-sm text-slate-600">
-                                Consultá los importes abonados y los números de recibo.
+                                Consultá los importes efectivamente abonados
+                                y los números de recibo.
                             </p>
                         </div>
 
                         {asignacion.pagos.length === 0 ? (
                             <div className="px-5 py-10 text-center">
                                 <p className="font-medium text-slate-700">
-                                    Todavía no hay pagos registrados.
+                                    Todavía no hay pagos reales registrados.
                                 </p>
 
                                 <p className="mt-1 text-sm text-slate-500">
-                                    Cuando registres el primer pago, aparecerá en este historial.
+                                    Las aplicaciones de crédito de la cuenta corriente
+                                    no aparecen en este historial porque no representan
+                                    dinero recibido ni generan recibos.
                                 </p>
                             </div>
                         ) : (
@@ -365,11 +526,25 @@ export default function Index({
                                 <table className="w-full min-w-[650px] text-left text-sm">
                                     <thead className="bg-slate-50 text-slate-600">
                                         <tr>
-                                            <th className="px-5 py-3 font-semibold">Fecha</th>
-                                            <th className="px-5 py-3 font-semibold">Modalidad</th>
-                                            <th className="px-5 py-3 font-semibold">Importe</th>
-                                            <th className="px-5 py-3 font-semibold">Estado</th>
-                                            <th className="px-5 py-3 font-semibold">N.º de recibo</th>
+                                            <th className="px-5 py-3 font-semibold">
+                                                Fecha
+                                            </th>
+
+                                            <th className="px-5 py-3 font-semibold">
+                                                Modalidad
+                                            </th>
+
+                                            <th className="px-5 py-3 font-semibold">
+                                                Importe
+                                            </th>
+
+                                            <th className="px-5 py-3 font-semibold">
+                                                Estado
+                                            </th>
+
+                                            <th className="px-5 py-3 font-semibold">
+                                                N.º de recibo
+                                            </th>
                                         </tr>
                                     </thead>
 

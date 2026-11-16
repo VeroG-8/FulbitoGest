@@ -32,4 +32,14 @@ class Cuota extends Model
     {
         return $this->hasMany(CuotaXJugador::class);
     }
+    /**
+     * Historial de modificaciones del importe de esta cuota.
+     */
+    public function historialModificaciones(): HasMany
+    {
+        return $this->hasMany(
+            HistorialModificacionCuota::class,
+            'cuota_id'
+        );
+    }
 }

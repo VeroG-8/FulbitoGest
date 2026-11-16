@@ -6,6 +6,7 @@ use App\Models\Cuota;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use App\Services\CuentaCorrienteService;
 
 class CuotaController extends Controller
 {
@@ -145,8 +146,11 @@ class CuotaController extends Controller
         ]);
     }
 
-    public function update(Request $request, Cuota $cuota)
-    {
+    public function update(
+        Request $request,
+        Cuota $cuota,
+        CuentaCorrienteService $cuentaCorrienteService
+    ) {
         $validated = $request->validate([
             'nombre' => 'required|string|max:150',
             'descripcion' => 'nullable|string|max:255',
@@ -161,7 +165,70 @@ class CuotaController extends Controller
             $validated['periodo_mes'] = null;
         }
 
-        $cuota->update($validated);
+        DB::transaction(function () use (
+            $validated,
+            $cuota,
+            $cuentaCorrienteService
+        ) {
+
+            // Bloquear la cuota para evitar modificaciones simultáneas.
+            $cuotaBloqueada = Cuota::query()
+                ->whereKey($cuota->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $montoAnterior = round(
+                (float) $cuotaBloqueada->monto,
+                2
+            );
+
+            $montoNuevo = round(
+                (float) $validated['monto'],
+                2
+            );
+
+            // Comparar importes en centavos para evitar
+            // diferencias por precisión de decimales.
+            $anteriorCentavos = (int) round($montoAnterior * 100);
+            $nuevoCentavos = (int) round($montoNuevo * 100);
+
+            $montoModificado = $anteriorCentavos !== $nuevoCentavos;
+
+            // Si cambió el importe, registrar el historial.
+            $historial = null;
+
+            if ($montoModificado) {
+
+                $diferencia = round(
+                    $montoNuevo - $montoAnterior,
+                    2
+                );
+
+                $historial = \App\Models\HistorialModificacionCuota::create([
+                    'cuota_id' => $cuotaBloqueada->id,
+                    'cuota_nombre' => $validated['nombre'],
+                    'monto_anterior' => $montoAnterior,
+                    'monto_nuevo' => $montoNuevo,
+                    'diferencia' => $diferencia,
+                    'user_id' => auth()->id(),
+                    'observacion' => 'Modificación del importe de la cuota.',
+                ]);
+            }
+
+            // Actualizar los datos de la cuota.
+            $cuotaBloqueada->update($validated);
+
+            // Registrar los ajustes individuales de cada jugador.
+            if ($montoModificado) {
+
+                $cuentaCorrienteService->registrarCorreccionCuota(
+                    $cuotaBloqueada->id,
+                    $montoNuevo,
+                    $historial->id,
+                    auth()->id()
+                );
+            }
+        });
 
         return redirect()
             ->route('cuotas.index')

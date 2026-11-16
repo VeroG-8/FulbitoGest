@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Pago;
 use App\Models\CuotaXJugador;
 use App\Models\ModalidadPago;
+use App\Models\Jugador;
+use App\Models\AplicacionCredito;
 use App\Services\ReciboService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +36,9 @@ class PagoController extends Controller
 
     /**
      * Mostrar los pagos de una cuota asignada a un jugador.
+     *
+     * Permite consultar el historial incluso si la asignación
+     * se encuentra anulada.
      */
     public function show(CuotaXJugador $cuotaXJugador)
     {
@@ -42,21 +47,36 @@ class PagoController extends Controller
             'jugador',
             'pagos.modalidadPago',
             'pagos.recibo',
+            'aplicacionesCredito',
         ]);
 
         $totalPagado = $cuotaXJugador->pagos
             ->where('estado', 'confirmado')
             ->sum(fn ($pago) => (float) $pago->monto);
 
+        $creditoAplicado = $this->calcularCreditoAplicado(
+            $cuotaXJugador->aplicacionesCredito
+        );
+
         $montoCuota = (float) $cuotaXJugador->cuota->monto;
+
+        $totalCubierto = round(
+            $totalPagado + $creditoAplicado,
+            2
+        );
+
+        $saldoPendiente = round(
+            max(0, $montoCuota - $totalCubierto),
+            2
+        );
 
         return Inertia::render('Cuotas/Asignaciones/Pagos/Index', [
             'asignacion' => $cuotaXJugador,
             'totalPagado' => round($totalPagado, 2),
-            'saldoPendiente' => round(
-                max(0, $montoCuota - $totalPagado),
-                2
-            ),
+            'creditoAplicado' => $creditoAplicado,
+            'totalCubierto' => $totalCubierto,
+            'saldoPendiente' => $saldoPendiente,
+
             'modalidadesPago' => ModalidadPago::where('estado', true)
                 ->orderBy('nombre')
                 ->get(['id', 'nombre']),
@@ -64,7 +84,10 @@ class PagoController extends Controller
     }
 
     /**
-     * Registrar un pago de cuota.
+     * Registrar un pago real de una cuota.
+     *
+     * El importe no puede superar el saldo pendiente después
+     * de descontar el crédito aplicado a esa asignación.
      */
     public function store(
         Request $request,
@@ -86,13 +109,47 @@ class PagoController extends Controller
             $cuotaXJugador,
             $reciboService
         ) {
+            /*
+             * Mantener el orden de bloqueos utilizado por
+             * CuentaCorrienteService:
+             * primero el jugador y después la asignación.
+             */
+            $jugador = Jugador::query()
+                ->whereKey($cuotaXJugador->jugador_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
             $asignacion = CuotaXJugador::query()
                 ->whereKey($cuotaXJugador->id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
+            // Verificar que la asignación pertenezca al jugador.
+            if ((int) $asignacion->jugador_id !== (int) $jugador->id) {
+                throw ValidationException::withMessages([
+                    'asignacion' =>
+                        'La asignación no corresponde al jugador indicado.',
+                ]);
+            }
+
+            // Impedir pagos sobre asignaciones anuladas.
+            if ($asignacion->estado === 'anulada') {
+                throw ValidationException::withMessages([
+                    'asignacion' =>
+                        'No se pueden registrar pagos sobre una asignación anulada.',
+                ]);
+            }
+
             $asignacion->load('cuota');
 
+            if (!$asignacion->cuota) {
+                throw ValidationException::withMessages([
+                    'asignacion' =>
+                        'No se encontró la cuota correspondiente a esta asignación.',
+                ]);
+            }
+
+            // Verificar que la modalidad de pago esté activa.
             $modalidadActiva = ModalidadPago::query()
                 ->whereKey($validated['modalidad_pago_id'])
                 ->where('estado', true)
@@ -105,15 +162,31 @@ class PagoController extends Controller
                 ]);
             }
 
-            $totalPagado = Pago::query()
+            // Obtener el total de pagos reales confirmados.
+            $totalPagado = (float) Pago::query()
                 ->where('cuota_x_jugador_id', $asignacion->id)
                 ->where('estado', 'confirmado')
                 ->sum('monto');
 
+            // Obtener el crédito neto aplicado a esta asignación.
+            $aplicaciones = AplicacionCredito::query()
+                ->where('cuota_x_jugador_id', $asignacion->id)
+                ->get(['tipo', 'monto']);
+
+            $creditoAplicado = $this->calcularCreditoAplicado(
+                $aplicaciones
+            );
+
             $montoCuota = (float) $asignacion->cuota->monto;
 
+            // El crédito aplicado también cubre parte de la cuota.
+            $totalCubierto = round(
+                $totalPagado + $creditoAplicado,
+                2
+            );
+
             $saldoPendiente = round(
-                $montoCuota - (float) $totalPagado,
+                max(0, $montoCuota - $totalCubierto),
                 2
             );
 
@@ -121,18 +194,21 @@ class PagoController extends Controller
 
             if ($saldoPendiente <= 0) {
                 throw ValidationException::withMessages([
-                    'monto' => 'Esta cuota ya está pagada en su totalidad.',
+                    'monto' =>
+                        'Esta cuota ya está cubierta en su totalidad mediante pagos y crédito aplicado.',
                 ]);
             }
 
             if ($monto > $saldoPendiente) {
                 throw ValidationException::withMessages([
-                    'monto' => 'El pago no puede superar el saldo pendiente de $'
+                    'monto' =>
+                        'El pago no puede superar el saldo pendiente de $'
                         . number_format($saldoPendiente, 2, ',', '.')
                         . '.',
                 ]);
             }
 
+            // Registrar únicamente el dinero recibido.
             $pago = Pago::create([
                 'cuota_x_jugador_id' => $asignacion->id,
                 'modalidad_pago_id' => $validated['modalidad_pago_id'],
@@ -141,15 +217,26 @@ class PagoController extends Controller
                 'estado' => 'confirmado',
             ]);
 
+            /*
+             * El recibo corresponde exclusivamente al pago real.
+             * Las aplicaciones de crédito no generan recibos.
+             */
             $reciboService->generar($pago);
 
-            $totalPagado = Pago::query()
+            // Recalcular los pagos reales confirmados.
+            $totalPagado = (float) Pago::query()
                 ->where('cuota_x_jugador_id', $asignacion->id)
                 ->where('estado', 'confirmado')
                 ->sum('monto');
 
+            $totalCubierto = round(
+                $totalPagado + $creditoAplicado,
+                2
+            );
+
+            // Actualizar el estado de la asignación.
             $asignacion->update([
-                'estado' => (float) $totalPagado >= $montoCuota
+                'estado' => $totalCubierto >= $montoCuota
                     ? 'pagada'
                     : 'pendiente',
             ]);
@@ -157,6 +244,28 @@ class PagoController extends Controller
 
         return redirect()
             ->route('cuotas.asignaciones.pagos.index', $cuotaXJugador)
-            ->with('success', 'El pago se registró correctamente y se generó el recibo.');
+            ->with(
+                'success',
+                'El pago se registró correctamente y se generó el recibo.'
+            );
+    }
+
+    /**
+     * Calcular el crédito neto aplicado a una asignación.
+     *
+     * Las aplicaciones suman crédito y las reversiones
+     * descuentan el crédito previamente aplicado.
+     */
+    private function calcularCreditoAplicado($aplicaciones): float
+    {
+        $total = $aplicaciones->sum(function ($aplicacion) {
+            $monto = (float) $aplicacion->monto;
+
+            return $aplicacion->tipo === 'reversion'
+                ? -$monto
+                : $monto;
+        });
+
+        return round(max(0, $total), 2);
     }
 }

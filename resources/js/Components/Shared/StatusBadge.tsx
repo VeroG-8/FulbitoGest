@@ -20,7 +20,7 @@ const statusStyles: Record<string, string> = {
     inactivo: 'bg-red-100 text-red-700 ring-red-600/20',
     inactiva: 'bg-red-100 text-red-700 ring-red-600/20',
     cancelado: 'bg-red-100 text-red-700 ring-red-600/20',
-
+    anulada: 'bg-slate-100 text-slate-600 ring-slate-500/20',
     // Otros estados
     finalizado: 'bg-slate-100 text-slate-700 ring-slate-600/20',
     en_curso: 'bg-blue-100 text-blue-700 ring-blue-600/20',

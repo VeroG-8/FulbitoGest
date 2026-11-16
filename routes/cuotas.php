@@ -24,10 +24,11 @@ Route::get('/pagos', [PagoController::class, 'index'])
 
 Route::get('/cuotas/seguimiento', [CuotaXJugadorController::class, 'seguimiento'])
     ->name('cuotas.seguimiento');
-    
+
 Route::get('/cuotas/{cuota}', [CuotaController::class, 'show'])
     ->whereNumber('cuota')
     ->name('cuotas.show');
+
 // Consultar los pagos de una cuota asignada.
 Route::get(
     '/cuotas/asignaciones/{cuotaXJugador}/pagos',
@@ -38,7 +39,8 @@ Route::get(
 Route::get('/mis-cuotas', [CuotaXJugadorController::class, 'misCuotas'])
     ->middleware('rol:tutor')
     ->name('cuotas.mis');
-    // Consultar el historial de pagos de una cuota propia.
+
+// Consultar el historial de pagos de una cuota propia.
 Route::get(
     '/mis-cuotas/{cuotaXJugador}/pagos',
     [CuotaXJugadorController::class, 'misCuotasPagos']
@@ -94,6 +96,19 @@ Route::middleware('rol:admin')->group(function () {
         '/cuotas/asignaciones/masivas',
         [CuotaXJugadorController::class, 'storeMasivo']
     )->name('cuotas.asignaciones.masivas.store');
+
+
+    // Anular una asignación.
+    Route::put(
+        '/cuotas/asignaciones/{cuotaXJugador}/anular',
+        [CuotaXJugadorController::class, 'anular']
+    )->name('cuotas.asignaciones.anular');
+
+    // Reactivar una asignación anulada.
+    Route::put(
+        '/cuotas/asignaciones/{cuotaXJugador}/reactivar',
+        [CuotaXJugadorController::class, 'reactivar']
+    )->name('cuotas.asignaciones.reactivar');
 
 
     // Registrar pagos.
