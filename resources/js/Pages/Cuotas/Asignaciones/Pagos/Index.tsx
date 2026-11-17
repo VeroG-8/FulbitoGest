@@ -45,6 +45,7 @@ interface Props {
     asignacion: Asignacion;
     totalPagado: number;
     creditoAplicado: number;
+    creditoDisponible: number;
     totalCubierto: number;
     saldoPendiente: number;
     modalidadesPago: ModalidadPago[];
@@ -78,6 +79,7 @@ export default function Index({
     asignacion,
     totalPagado,
     creditoAplicado,
+    creditoDisponible,
     totalCubierto,
     saldoPendiente,
     modalidadesPago,
@@ -93,6 +95,7 @@ export default function Index({
             success?: string;
         };
     };
+    const creditoDisponibleReal = Number(creditoDisponible) || 0;
 
     const nombreJugador = [
         asignacion.jugador?.nombre,
@@ -110,10 +113,21 @@ export default function Index({
     const estaAnulada = asignacion.estado === 'anulada';
     const estaPagada = saldo <= 0 && !estaAnulada;
 
+    const porcentajeCubierto =
+        montoCuota > 0
+            ? Math.min(100, Math.round((totalCubiertoReal / montoCuota) * 100))
+            : 0;
+
     const registrarPago = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        if (estaAnulada || estaPagada) return;
+        if (estaAnulada || estaPagada || processing) return;
+
+        const importe = Number(data.monto);
+
+        if (!Number.isFinite(importe) || importe <= 0 || importe > saldo) {
+            return;
+        }
 
         post(`/cuotas/asignaciones/${asignacion.id}/pagos`, {
             preserveScroll: true,
@@ -231,9 +245,8 @@ export default function Index({
                     )}
 
                     {/* Resumen económico */}
-                    <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
 
-                        {/* Importe de la cuota */}
                         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                             <p className="text-sm font-medium text-slate-500">
                                 Total de la cuota
@@ -244,7 +257,6 @@ export default function Index({
                             </p>
                         </div>
 
-                        {/* Pagos reales */}
                         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
                             <p className="text-sm font-medium text-emerald-800">
                                 Pagos realizados
@@ -259,7 +271,6 @@ export default function Index({
                             </p>
                         </div>
 
-                        {/* Crédito aplicado */}
                         <div className="rounded-xl border border-violet-200 bg-violet-50 p-5">
                             <p className="text-sm font-medium text-violet-800">
                                 Crédito aplicado
@@ -270,11 +281,24 @@ export default function Index({
                             </p>
 
                             <p className="mt-1 text-xs text-violet-700">
-                                Cubierto con saldo de cuenta corriente
+                                Crédito utilizado en esta cuota
                             </p>
                         </div>
 
-                        {/* Saldo pendiente */}
+                        <div className="rounded-xl border border-teal-200 bg-teal-50 p-5">
+                            <p className="text-sm font-medium text-teal-800">
+                                Crédito disponible
+                            </p>
+
+                            <p className="mt-2 text-2xl font-bold text-teal-900">
+                                {formatoMoneda(creditoDisponibleReal)}
+                            </p>
+
+                            <p className="mt-1 text-xs text-teal-700">
+                                Saldo disponible en la cuenta corriente del jugador
+                            </p>
+                        </div>
+
                         <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
                             <p className="text-sm font-medium text-amber-800">
                                 Saldo pendiente
@@ -284,6 +308,7 @@ export default function Index({
                                 {formatoMoneda(saldo)}
                             </p>
                         </div>
+
                     </section>
 
                     {/* Total cubierto */}
@@ -308,28 +333,14 @@ export default function Index({
                             <div
                                 className="h-full rounded-full bg-blue-600 transition-all"
                                 style={{
-                                    width: `${
-                                        montoCuota > 0
-                                            ? Math.min(
-                                                100,
-                                                (totalCubiertoReal / montoCuota) * 100
-                                            )
-                                            : 0
-                                    }%`,
+                                    width: `${porcentajeCubierto}%`,
                                 }}
                             />
                         </div>
 
                         <div className="mt-2 flex justify-between text-xs text-blue-700">
                             <span>
-                                {montoCuota > 0
-                                    ? `${Math.min(
-                                        100,
-                                        Math.round(
-                                            (totalCubiertoReal / montoCuota) * 100
-                                        )
-                                    )}% cubierto`
-                                    : '0% cubierto'}
+                                {porcentajeCubierto}% cubierto
                             </span>
 
                             <span>

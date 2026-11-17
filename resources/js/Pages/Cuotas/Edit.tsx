@@ -128,8 +128,8 @@ export default function Edit({ cuota }: Props) {
         fecha_vencimiento: formatearFechaInput(
             cuota.fecha_vencimiento,
         ),
+        cuenta_corriente: '',
     });
-
     const tipoSeleccionado = tipos.find(
         (tipo) => tipo.valor === data.tipo,
     );
@@ -176,6 +176,7 @@ export default function Edit({ cuota }: Props) {
                     />
 
                     <form onSubmit={submit}>
+                    <ErrorMessage message={errors.cuenta_corriente} />
                         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                             <div className="space-y-6 lg:col-span-2">
                                 {/* Tipo de concepto */}

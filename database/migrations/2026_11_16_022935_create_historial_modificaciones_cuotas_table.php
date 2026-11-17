@@ -21,8 +21,6 @@ return new class extends Migration
 
             $table->decimal('monto_anterior', 10, 2);
             $table->decimal('monto_nuevo', 10, 2);
-
-            // Diferencia: monto nuevo menos monto anterior.
             $table->decimal('diferencia', 10, 2);
 
             $table->foreignId('user_id')
@@ -31,6 +29,10 @@ return new class extends Migration
                 ->nullOnDelete();
 
             $table->text('observacion')->nullable();
+
+            // Permite reconocer que el historial ya fue procesado,
+            // incluso cuando la corrección no genera movimientos.
+            $table->timestamp('procesado_at')->nullable();
 
             $table->timestamps();
 

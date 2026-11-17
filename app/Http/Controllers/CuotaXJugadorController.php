@@ -10,6 +10,7 @@ use App\Services\CuentaCorrienteService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use App\Services\SaldoCuotaService;
 
 class CuotaXJugadorController extends Controller
 {
@@ -105,7 +106,7 @@ class CuotaXJugadorController extends Controller
      * Si existe una asignación activa o con pagos, se bloquea.
      *
      * Al crear o recuperar la asignación se aplica automáticamente
-     * el crédito disponible de la cuenta corriente del jugador.
+     * el crédito disponible del jugador.
      */
     public function store(
         Request $request,
@@ -148,7 +149,6 @@ class CuotaXJugadorController extends Controller
                 ->first();
 
             if ($asignacion) {
-
                 if ($asignacion->estado !== 'anulada') {
                     return [
                         'error' => 'Este jugador ya tiene asignada esta cuota.',
@@ -167,7 +167,6 @@ class CuotaXJugadorController extends Controller
                     'estado' => 'pendiente',
                 ]);
 
-                // Aplicar crédito disponible del mismo jugador.
                 $cuentaCorrienteService->aplicarCreditoDisponible(
                     $asignacion,
                     auth()->id()
@@ -183,7 +182,6 @@ class CuotaXJugadorController extends Controller
                 'estado' => 'pendiente',
             ]);
 
-            // Aplicar crédito disponible del mismo jugador.
             $cuentaCorrienteService->aplicarCreditoDisponible(
                 $asignacion,
                 auth()->id()
@@ -260,7 +258,6 @@ class CuotaXJugadorController extends Controller
             $omitidas = 0;
 
             foreach ($jugadores as $jugador) {
-
                 $asignacion = CuotaXJugador::where(
                     'cuota_id',
                     $cuota->id
@@ -270,7 +267,6 @@ class CuotaXJugadorController extends Controller
                     ->first();
 
                 if (!$asignacion) {
-
                     $asignacion = CuotaXJugador::create([
                         'cuota_id' => $cuota->id,
                         'jugador_id' => $jugador->id,
@@ -279,7 +275,6 @@ class CuotaXJugadorController extends Controller
                         'estado' => 'pendiente',
                     ]);
 
-                    // Aplicar crédito individual del jugador.
                     $cuentaCorrienteService->aplicarCreditoDisponible(
                         $asignacion,
                         auth()->id()
@@ -290,26 +285,22 @@ class CuotaXJugadorController extends Controller
                     continue;
                 }
 
-                // Las asignaciones activas no se duplican ni modifican.
                 if ($asignacion->estado !== 'anulada') {
                     $omitidas++;
                     continue;
                 }
 
-                // Las asignaciones anuladas con pagos conservan su historial.
                 if ($asignacion->pagos()->exists()) {
                     $omitidas++;
                     continue;
                 }
 
-                // Recuperar la asignación anulada sin crear otra fila.
                 $asignacion->update([
                     'fecha_asignacion' => $validated['fecha_asignacion'],
                     'fecha_vencimiento' => $validated['fecha_vencimiento'],
                     'estado' => 'pendiente',
                 ]);
 
-                // Aplicar crédito disponible del mismo jugador.
                 $cuentaCorrienteService->aplicarCreditoDisponible(
                     $asignacion,
                     auth()->id()
@@ -350,13 +341,20 @@ class CuotaXJugadorController extends Controller
     {
         $resultado = DB::transaction(function () use ($cuotaXJugador) {
 
-            // Mantener el mismo orden de bloqueo que el servicio:
-            // primero jugador y luego asignación.
-            Jugador::whereKey($cuotaXJugador->jugador_id)
+            // Mantener el orden de bloqueos:
+            // cuota -> jugador -> asignación.
+            Cuota::query()
+                ->whereKey($cuotaXJugador->cuota_id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            $asignacion = CuotaXJugador::whereKey($cuotaXJugador->id)
+            Jugador::query()
+                ->whereKey($cuotaXJugador->jugador_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $asignacion = CuotaXJugador::query()
+                ->whereKey($cuotaXJugador->id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
@@ -413,11 +411,21 @@ class CuotaXJugadorController extends Controller
             $cuotaXJugador,
             $cuentaCorrienteService
         ) {
-            Jugador::whereKey($cuotaXJugador->jugador_id)
+
+            // Mantener el orden de bloqueos:
+            // cuota -> jugador -> asignación.
+            Cuota::query()
+                ->whereKey($cuotaXJugador->cuota_id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            $asignacion = CuotaXJugador::whereKey($cuotaXJugador->id)
+            Jugador::query()
+                ->whereKey($cuotaXJugador->jugador_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $asignacion = CuotaXJugador::query()
+                ->whereKey($cuotaXJugador->id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
@@ -437,6 +445,7 @@ class CuotaXJugadorController extends Controller
                 'estado' => 'pendiente',
             ]);
 
+            // Aplicar crédito disponible del mismo jugador.
             $cuentaCorrienteService->aplicarCreditoDisponible(
                 $asignacion,
                 auth()->id()
@@ -478,7 +487,7 @@ class CuotaXJugadorController extends Controller
     }
 
     /**
-     * Seguimiento anual de cuotas.
+     * Seguimiento anual de cuotas mensuales.
      *
      * El saldo contempla pagos reales y créditos aplicados.
      * Los importes se mantienen separados para no confundir
@@ -491,7 +500,7 @@ class CuotaXJugadorController extends Controller
             'categoria_id' => 'nullable|exists:categorias,id',
         ]);
 
-        $anio = $request->input('anio', now()->year);
+        $anio = (int) $request->input('anio', now()->year);
         $categoriaId = $request->input('categoria_id');
 
         $categorias = Categoria::orderBy('anio')
@@ -507,7 +516,9 @@ class CuotaXJugadorController extends Controller
                 'cuotaXJugadores' => function ($query) use ($anio) {
                     $query->where('estado', '!=', 'anulada')
                         ->whereHas('cuota', function ($q) use ($anio) {
-                            $q->where('periodo_anio', $anio);
+                            $q->where('periodo_anio', $anio)
+                                ->where('tipo', 'cuota_mensual')
+                                ->whereNotNull('periodo_mes');
                         })
                         ->with([
                             'cuota:id,nombre,monto,periodo_mes,periodo_anio',
@@ -530,7 +541,6 @@ class CuotaXJugadorController extends Controller
             ->get();
 
         $jugadoresSeguimiento = $jugadores->map(function ($jugador) {
-
             $asignacionesPorMes = $jugador->cuotaXJugadores
                 ->groupBy(function ($asignacion) {
                     return $asignacion->cuota->periodo_mes;
@@ -539,11 +549,7 @@ class CuotaXJugadorController extends Controller
             $meses = [];
 
             for ($mes = 1; $mes <= 12; $mes++) {
-
-                $asignaciones = $asignacionesPorMes->get(
-                    $mes,
-                    collect()
-                );
+                $asignaciones = $asignacionesPorMes->get($mes, collect());
 
                 if ($asignaciones->isEmpty()) {
                     $meses[$mes] = [
@@ -569,9 +575,8 @@ class CuotaXJugadorController extends Controller
                     return $this->calcularCreditoAplicado($asignacion);
                 });
 
-                $totalCubierto = $pagado + $creditoAplicado;
-
-                $saldo = max(0, $monto - $totalCubierto);
+                $totalCubierto = round($pagado + $creditoAplicado, 2);
+                $saldo = round(max(0, $monto - $totalCubierto), 2);
 
                 if ($totalCubierto <= 0) {
                     $estado = 'pendiente';
@@ -586,7 +591,7 @@ class CuotaXJugadorController extends Controller
                     'monto' => round($monto, 2),
                     'pagado' => round($pagado, 2),
                     'credito_aplicado' => round($creditoAplicado, 2),
-                    'saldo' => round($saldo, 2),
+                    'saldo' => $saldo,
                 ];
             }
 
@@ -604,7 +609,7 @@ class CuotaXJugadorController extends Controller
             'categorias' => $categorias,
 
             'filtros' => [
-                'anio' => (int) $anio,
+                'anio' => $anio,
                 'categoria_id' => $categoriaId,
             ],
         ]);
@@ -614,122 +619,162 @@ class CuotaXJugadorController extends Controller
      * Consultar las cuotas de los jugadores asociados al tutor.
      */
     public function misCuotas(Request $request)
-    {
-        $usuario = auth()->user();
+{
+    $usuario = auth()->user();
 
-        abort_unless(
-            $usuario && $usuario->rol === 'tutor' && $usuario->tutor_id,
-            403,
-            'No tienes permiso para consultar estas cuotas.'
+    abort_unless(
+        $usuario && $usuario->rol === 'tutor' && $usuario->tutor_id,
+        403,
+        'No tienes permiso para consultar estas cuotas.'
+    );
+
+    $validated = $request->validate([
+        'orden' => 'nullable|in:jugador,cuota,vencimiento',
+        'direccion' => 'nullable|in:asc,desc',
+        'anio' => 'nullable|integer|between:2020,2100',
+    ]);
+
+    $orden = $validated['orden'] ?? 'vencimiento';
+    $direccion = $validated['direccion'] ?? 'desc';
+    $anio = $validated['anio'] ?? null;
+
+    // Consulta principal de asignaciones del tutor.
+    $consulta = CuotaXJugador::query()
+        ->where('cuota_x_jugador.estado', '!=', 'anulada')
+        ->whereHas('jugador.tutores', function ($query) use ($usuario) {
+            $query->where('tutores.id', $usuario->tutor_id);
+        })
+        ->leftJoin(
+            'jugadores',
+            'cuota_x_jugador.jugador_id',
+            '=',
+            'jugadores.id'
+        )
+        ->leftJoin(
+            'cuotas',
+            'cuota_x_jugador.cuota_id',
+            '=',
+            'cuotas.id'
+        )
+        ->select('cuota_x_jugador.*')
+        ->with([
+            'cuota',
+            'jugador:id,nombre,apellido,categoria_id',
+            'jugador.categoria:id,anio',
+
+            'pagos' => function ($query) {
+                $query->where('estado', 'confirmado')
+                    ->with([
+                        'modalidadPago',
+                        'recibo',
+                    ])
+                    ->orderBy('fecha_pago', 'desc');
+            },
+
+            'aplicacionesCredito:id,cuota_x_jugador_id,tipo,monto',
+        ]);
+
+    // Filtrar por año del período o, si no existe,
+    // por el año de vencimiento.
+    if ($anio) {
+        $consulta->whereRaw(
+            'COALESCE(cuotas.periodo_anio, YEAR(cuota_x_jugador.fecha_vencimiento)) = ?',
+            [$anio]
+        );
+    }
+
+    // Obtener los años disponibles para el tutor.
+    $anios = CuotaXJugador::query()
+        ->where('cuota_x_jugador.estado', '!=', 'anulada')
+        ->whereHas('jugador.tutores', function ($query) use ($usuario) {
+            $query->where('tutores.id', $usuario->tutor_id);
+        })
+        ->leftJoin(
+            'cuotas',
+            'cuota_x_jugador.cuota_id',
+            '=',
+            'cuotas.id'
+        )
+        ->selectRaw(
+            'COALESCE(cuotas.periodo_anio, YEAR(cuota_x_jugador.fecha_vencimiento)) as anio'
+        )
+        ->whereNotNull(
+            DB::raw(
+                'COALESCE(cuotas.periodo_anio, YEAR(cuota_x_jugador.fecha_vencimiento))'
+            )
+        )
+        ->distinct()
+        ->orderByDesc('anio')
+        ->pluck('anio')
+        ->map(fn ($anio) => (int) $anio)
+        ->values();
+
+    // Ordenamiento.
+    switch ($orden) {
+        case 'jugador':
+            $consulta
+                ->orderBy('jugadores.apellido', $direccion)
+                ->orderBy('jugadores.nombre', $direccion);
+            break;
+
+        case 'cuota':
+            $consulta->orderBy('cuotas.nombre', $direccion);
+            break;
+
+        case 'vencimiento':
+        default:
+            $consulta->orderBy(
+                'cuota_x_jugador.fecha_vencimiento',
+                $direccion
+            );
+            break;
+    }
+
+    $consulta->orderBy('cuota_x_jugador.id', 'desc');
+
+    // Paginación conservando los filtros.
+    $asignaciones = $consulta
+        ->paginate(10)
+        ->withQueryString();
+
+    $asignaciones->getCollection()->transform(function ($asignacion) {
+        $montoCuota = (float) ($asignacion->cuota?->monto ?? 0);
+        $totalPagado = (float) $asignacion->pagos->sum('monto');
+
+        $creditoAplicado = $this->calcularCreditoAplicado($asignacion);
+
+        $totalCubierto = round($totalPagado + $creditoAplicado, 2);
+
+        $saldoPendiente = round(
+            max(0, $montoCuota - $totalCubierto),
+            2
         );
 
-        $request->validate([
-            'orden' => 'nullable|in:jugador,cuota,vencimiento',
-            'direccion' => 'nullable|in:asc,desc',
-        ]);
+        $estadoCalculado = $this->calcularEstado(
+            $montoCuota,
+            $totalCubierto
+        );
 
-        $orden = $request->input('orden', 'vencimiento');
-        $direccion = $request->input('direccion', 'desc');
+        $asignacion->total_pagado = round($totalPagado, 2);
+        $asignacion->credito_aplicado = $creditoAplicado;
+        $asignacion->total_cubierto = $totalCubierto;
+        $asignacion->saldo_pendiente = $saldoPendiente;
+        $asignacion->estado_calculado = $estadoCalculado;
 
-        $consulta = CuotaXJugador::query()
-            ->where('cuota_x_jugador.estado', '!=', 'anulada')
-            ->whereHas('jugador.tutores', function ($query) use ($usuario) {
-                $query->where('tutores.id', $usuario->tutor_id);
-            })
-            ->leftJoin(
-                'jugadores',
-                'cuota_x_jugador.jugador_id',
-                '=',
-                'jugadores.id'
-            )
-            ->leftJoin(
-                'cuotas',
-                'cuota_x_jugador.cuota_id',
-                '=',
-                'cuotas.id'
-            )
-            ->select('cuota_x_jugador.*')
-            ->with([
-                'cuota',
-                'jugador:id,nombre,apellido,categoria_id',
-                'jugador.categoria:id,anio',
+        return $asignacion;
+    });
 
-                'pagos' => function ($query) {
-                    $query->where('estado', 'confirmado')
-                        ->with([
-                            'modalidadPago',
-                            'recibo',
-                        ])
-                        ->orderBy('fecha_pago', 'desc');
-                },
+    return Inertia::render('Cuotas/MisCuotas/Index', [
+        'asignaciones' => $asignaciones,
+        'anios' => $anios,
 
-                'aplicacionesCredito:id,cuota_x_jugador_id,tipo,monto',
-            ]);
-
-        switch ($orden) {
-            case 'jugador':
-                $consulta
-                    ->orderBy('jugadores.apellido', $direccion)
-                    ->orderBy('jugadores.nombre', $direccion);
-                break;
-
-            case 'cuota':
-                $consulta->orderBy('cuotas.nombre', $direccion);
-                break;
-
-            case 'vencimiento':
-            default:
-                $consulta->orderBy(
-                    'cuota_x_jugador.fecha_vencimiento',
-                    $direccion
-                );
-                break;
-        }
-
-        $consulta->orderBy('cuota_x_jugador.id', 'desc');
-
-        $asignaciones = $consulta
-            ->paginate(10)
-            ->withQueryString();
-
-        $asignaciones->getCollection()->transform(function ($asignacion) {
-
-            $montoCuota = (float) ($asignacion->cuota?->monto ?? 0);
-
-            $totalPagado = (float) $asignacion->pagos->sum('monto');
-
-            $creditoAplicado = $this->calcularCreditoAplicado($asignacion);
-
-            $totalCubierto = $totalPagado + $creditoAplicado;
-
-            $saldoPendiente = max(0, $montoCuota - $totalCubierto);
-
-            if ($saldoPendiente <= 0) {
-                $estadoCalculado = 'pagada';
-            } elseif ($totalCubierto > 0) {
-                $estadoCalculado = 'parcial';
-            } else {
-                $estadoCalculado = 'pendiente';
-            }
-
-            $asignacion->total_pagado = round($totalPagado, 2);
-            $asignacion->credito_aplicado = round($creditoAplicado, 2);
-            $asignacion->total_cubierto = round($totalCubierto, 2);
-            $asignacion->saldo_pendiente = round($saldoPendiente, 2);
-            $asignacion->estado_calculado = $estadoCalculado;
-
-            return $asignacion;
-        });
-
-        return Inertia::render('Cuotas/MisCuotas/Index', [
-            'asignaciones' => $asignaciones,
-
-            'filtros' => [
-                'orden' => $orden,
-                'direccion' => $direccion,
-            ],
-        ]);
-    }
+        'filtros' => [
+            'orden' => $orden,
+            'direccion' => $direccion,
+            'anio' => $anio,
+        ],
+    ]);
+}
 
     /**
      * Consultar el detalle y el historial de pagos de una cuota
@@ -775,24 +820,24 @@ class CuotaXJugadorController extends Controller
 
         $importeCuota = (float) ($asignacion->cuota?->monto ?? 0);
 
-        $totalCubierto = $totalPagado + $creditoAplicado;
+        $totalCubierto = round($totalPagado + $creditoAplicado, 2);
 
-        $saldoPendiente = max(0, $importeCuota - $totalCubierto);
+        $saldoPendiente = round(
+            max(0, $importeCuota - $totalCubierto),
+            2
+        );
 
-        if ($saldoPendiente <= 0) {
-            $estadoCalculado = 'pagada';
-        } elseif ($totalCubierto > 0) {
-            $estadoCalculado = 'parcial';
-        } else {
-            $estadoCalculado = 'pendiente';
-        }
+        $estadoCalculado = $this->calcularEstado(
+            $importeCuota,
+            $totalCubierto
+        );
 
         return Inertia::render('Cuotas/MisCuotas/Show', [
             'asignacion' => $asignacion,
             'totalPagado' => round($totalPagado, 2),
-            'creditoAplicado' => round($creditoAplicado, 2),
-            'totalCubierto' => round($totalCubierto, 2),
-            'saldoPendiente' => round($saldoPendiente, 2),
+            'creditoAplicado' => $creditoAplicado,
+            'totalCubierto' => $totalCubierto,
+            'saldoPendiente' => $saldoPendiente,
             'estadoCalculado' => $estadoCalculado,
         ]);
     }
@@ -841,24 +886,24 @@ class CuotaXJugadorController extends Controller
 
         $creditoAplicado = $this->calcularCreditoAplicado($asignacion);
 
-        $totalCubierto = $totalPagado + $creditoAplicado;
+        $totalCubierto = round($totalPagado + $creditoAplicado, 2);
 
-        $saldoPendiente = max(0, $montoCuota - $totalCubierto);
+        $saldoPendiente = round(
+            max(0, $montoCuota - $totalCubierto),
+            2
+        );
 
-        if ($saldoPendiente <= 0) {
-            $estadoCalculado = 'pagada';
-        } elseif ($totalCubierto > 0) {
-            $estadoCalculado = 'parcial';
-        } else {
-            $estadoCalculado = 'pendiente';
-        }
+        $estadoCalculado = $this->calcularEstado(
+            $montoCuota,
+            $totalCubierto
+        );
 
         return Inertia::render('Cuotas/MisCuotas/Pagos/Index', [
             'asignacion' => $asignacion,
             'totalPagado' => round($totalPagado, 2),
-            'creditoAplicado' => round($creditoAplicado, 2),
-            'totalCubierto' => round($totalCubierto, 2),
-            'saldoPendiente' => round($saldoPendiente, 2),
+            'creditoAplicado' => $creditoAplicado,
+            'totalCubierto' => $totalCubierto,
+            'saldoPendiente' => $saldoPendiente,
             'estadoCalculado' => $estadoCalculado,
         ]);
     }
@@ -867,26 +912,22 @@ class CuotaXJugadorController extends Controller
      * Calcular el crédito neto aplicado a una asignación.
      *
      * Las aplicaciones suman y las reversiones restan.
-     * Este importe no representa dinero recibido.
+     * El resultado se expresa con precisión de centavos.
      */
-    private function calcularCreditoAplicado(CuotaXJugador $asignacion): float
-    {
-        $aplicaciones = $asignacion->aplicacionesCredito;
+    private function calcularCreditoAplicado(
+    CuotaXJugador $asignacion
+): float {
+    return app(SaldoCuotaService::class)
+        ->calcularCreditoAplicado($asignacion);
+}
 
-        $total = $aplicaciones->sum(function ($aplicacion) {
-            if ($aplicacion->tipo === 'aplicacion') {
-                return (float) $aplicacion->monto;
-            }
-
-            if ($aplicacion->tipo === 'reversion') {
-                return -(float) $aplicacion->monto;
-            }
-
-            return 0;
-        });
-
-        return round(max(0, $total), 2);
-    }
+private function calcularEstado(
+    float $montoCuota,
+    float $totalCubierto
+): string {
+    return app(SaldoCuotaService::class)
+        ->calcularEstado($montoCuota, $totalCubierto);
+}
 
     /**
      * Determinar si una asignación tiene crédito neto aplicado.
@@ -911,6 +952,15 @@ class CuotaXJugadorController extends Controller
             ")
             ->value('total');
 
-        return (float) $creditoNeto > 0.001;
+        $centavos = (int) round((float) $creditoNeto * 100);
+
+        if ($centavos < 0) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'cuenta_corriente' =>
+                    'El historial de aplicaciones de crédito presenta inconsistencias.',
+            ]);
+        }
+
+        return $centavos > 0;
     }
 }

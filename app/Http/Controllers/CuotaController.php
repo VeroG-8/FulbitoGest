@@ -3,10 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cuota;
+use App\Models\HistorialModificacionCuota;
+use App\Services\CuentaCorrienteService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
-use App\Services\CuentaCorrienteService;
 
 class CuotaController extends Controller
 {
@@ -45,7 +46,6 @@ class CuotaController extends Controller
             $direccion = 'asc';
         }
 
-        // Consulta principal.
         $cuotasQuery = Cuota::where('estado', true);
 
         if ($tipo !== '') {
@@ -56,31 +56,25 @@ class CuotaController extends Controller
             $cuotasQuery->where('periodo_anio', (int) $anio);
         }
 
-        // Aplicar filtros antes de paginar.
         $cuotas = $cuotasQuery
             ->orderBy($orden, $direccion)
             ->orderBy('id', 'asc')
             ->paginate(10)
             ->withQueryString();
 
-        // Estadísticas generales de cuotas activas.
         $estadisticas = [
             'total' => Cuota::where('estado', true)->count(),
-
             'mensuales' => Cuota::where('estado', true)
                 ->where('tipo', 'cuota_mensual')
                 ->count(),
-
             'inscripcionesEscuelita' => Cuota::where('estado', true)
                 ->where('tipo', 'inscripcion_escuelita')
                 ->count(),
-
             'inscripcionesTorneo' => Cuota::where('estado', true)
                 ->where('tipo', 'inscripcion_torneo')
                 ->count(),
         ];
 
-        // Años disponibles para el filtro.
         $anios = Cuota::where('estado', true)
             ->whereNotNull('periodo_anio')
             ->distinct()
@@ -117,7 +111,6 @@ class CuotaController extends Controller
             'fecha_vencimiento' => 'required|date',
         ]);
 
-        // Las inscripciones no corresponden a un mes específico.
         if ($validated['tipo'] !== 'cuota_mensual') {
             $validated['periodo_mes'] = null;
         }
@@ -170,41 +163,25 @@ class CuotaController extends Controller
             $cuota,
             $cuentaCorrienteService
         ) {
-
             // Bloquear la cuota para evitar modificaciones simultáneas.
             $cuotaBloqueada = Cuota::query()
                 ->whereKey($cuota->id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            $montoAnterior = round(
-                (float) $cuotaBloqueada->monto,
-                2
-            );
+            $montoAnterior = round((float) $cuotaBloqueada->monto, 2);
+            $montoNuevo = round((float) $validated['monto'], 2);
 
-            $montoNuevo = round(
-                (float) $validated['monto'],
-                2
-            );
-
-            // Comparar importes en centavos para evitar
-            // diferencias por precisión de decimales.
             $anteriorCentavos = (int) round($montoAnterior * 100);
             $nuevoCentavos = (int) round($montoNuevo * 100);
-
             $montoModificado = $anteriorCentavos !== $nuevoCentavos;
 
-            // Si cambió el importe, registrar el historial.
             $historial = null;
 
             if ($montoModificado) {
+                $diferencia = round(($nuevoCentavos - $anteriorCentavos) / 100, 2);
 
-                $diferencia = round(
-                    $montoNuevo - $montoAnterior,
-                    2
-                );
-
-                $historial = \App\Models\HistorialModificacionCuota::create([
+                $historial = HistorialModificacionCuota::create([
                     'cuota_id' => $cuotaBloqueada->id,
                     'cuota_nombre' => $validated['nombre'],
                     'monto_anterior' => $montoAnterior,
@@ -215,12 +192,10 @@ class CuotaController extends Controller
                 ]);
             }
 
-            // Actualizar los datos de la cuota.
+            // El historial, la cuota y sus movimientos se confirman o revierten juntos.
             $cuotaBloqueada->update($validated);
 
-            // Registrar los ajustes individuales de cada jugador.
             if ($montoModificado) {
-
                 $cuentaCorrienteService->registrarCorreccionCuota(
                     $cuotaBloqueada->id,
                     $montoNuevo,
@@ -237,7 +212,6 @@ class CuotaController extends Controller
 
     public function destroy(Cuota $cuota)
     {
-        // Comprobar si la cuota ya fue asignada a algún jugador.
         $tieneAsignaciones = DB::table('cuota_x_jugador')
             ->where('cuota_id', $cuota->id)
             ->exists();

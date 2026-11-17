@@ -21,8 +21,11 @@ return new class extends Migration
                 ->restrictOnDelete();
 
             $table->foreignId('historial_modificacion_cuota_id')
-                ->nullable()
-                ->constrained('historial_modificaciones_cuotas')
+                ->nullable();
+
+            $table->foreign('historial_modificacion_cuota_id', 'mov_cc_historial_fk')
+                ->references('id')
+                ->on('historial_modificaciones_cuotas')
                 ->restrictOnDelete();
 
             $table->foreignId('movimiento_origen_id')
@@ -36,18 +39,17 @@ return new class extends Migration
                 ->nullOnDelete();
 
             $table->string('tipo', 40);
-
-            // Positivo: acredita saldo.
-            // Negativo: debita saldo o registra una corrección.
             $table->decimal('monto', 10, 2);
-
             $table->text('descripcion')->nullable();
 
             $table->timestamps();
 
             $table->index(['jugador_id', 'created_at']);
             $table->index('cuota_x_jugador_id');
-            $table->index('historial_modificacion_cuota_id');
+            $table->index(
+                'historial_modificacion_cuota_id',
+                'mov_cc_historial_idx'
+            );
             $table->index('movimiento_origen_id');
             $table->index('tipo');
         });
