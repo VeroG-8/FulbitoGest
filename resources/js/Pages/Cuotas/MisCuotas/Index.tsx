@@ -9,11 +9,14 @@ import {
     Users,
     ChevronLeft,
     ChevronRight,
+    ChevronDown,
     Eye,
     Receipt,
     ArrowUp,
     ArrowDown,
     ArrowUpDown,
+    CalendarDays,
+    Filter,
 } from 'lucide-react';
 
 interface Cuota {
@@ -64,14 +67,16 @@ type CampoOrden = 'jugador' | 'cuota' | 'vencimiento';
 interface Filtros {
     orden: CampoOrden;
     direccion: 'asc' | 'desc';
+    anio: number | null;
 }
 
 interface Props {
     asignaciones: Paginacion;
+    anios: number[];
     filtros: Filtros;
 }
 
-export default function Index({ asignaciones, filtros }: Props) {
+export default function Index({ asignaciones, anios, filtros }: Props) {
 
     const formatearFecha = (fecha: string | null) => {
         if (!fecha) return '—';
@@ -101,6 +106,26 @@ export default function Index({ asignaciones, filtros }: Props) {
             {
                 orden: campo,
                 direccion,
+                anio: filtros.anio ?? '',
+                page: 1,
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        );
+    };
+
+    // Filtrar las cuotas por año.
+    const filtrarPorAnio = (anio: string) => {
+        router.get(
+            route('cuotas.mis'),
+            {
+                anio,
+                orden: filtros.orden,
+                direccion: filtros.direccion,
+                page: 1,
             },
             {
                 preserveScroll: true,
@@ -209,14 +234,47 @@ export default function Index({ asignaciones, filtros }: Props) {
                     {/* Tabla de cuotas */}
                     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
-                        <div className="border-b border-slate-200 px-6 py-5">
-                            <h2 className="text-lg font-bold text-slate-800">
-                                Cuotas asignadas
-                            </h2>
+                        <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
 
-                            <p className="mt-1 text-sm text-slate-500">
-                                Consultá el estado de las cuotas y accedé al historial de pagos de cada una.
-                            </p>
+                            <div>
+                                <h2 className="text-lg font-bold text-slate-800">
+                                    Cuotas asignadas
+                                </h2>
+
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Consultá el estado de las cuotas y accedé al historial de pagos de cada una.
+                                </p>
+                            </div>
+
+                            {/* Filtro por año */}
+                            <div className="flex flex-col gap-2 sm:min-w-52">
+                                <label
+                                    htmlFor="filtro-anio"
+                                    className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500"
+                                >
+                                    <Filter className="h-3.5 w-3.5" />
+                                    Filtrar por año
+                                </label>
+
+                                <div className="relative">
+                                    <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+
+                                    <select
+                                        id="filtro-anio"
+                                        value={filtros.anio ?? ''}
+                                        onChange={(e) => filtrarPorAnio(e.target.value)}
+                                        className="w-full cursor-pointer rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                    >
+                                        <option value="">Todos los años</option>
+
+                                        {anios.map((anio) => (
+                                            <option key={anio} value={anio}>
+                                                {anio}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="overflow-x-auto">
@@ -353,7 +411,9 @@ export default function Index({ asignaciones, filtros }: Props) {
                                                 </p>
 
                                                 <p className="mt-1 text-sm text-slate-500">
-                                                    Todavía no hay cuotas registradas para tus jugadores.
+                                                    {filtros.anio
+                                                        ? `No se encontraron cuotas para el año ${filtros.anio}.`
+                                                        : 'Todavía no hay cuotas registradas para tus jugadores.'}
                                                 </p>
                                             </td>
                                         </tr>
@@ -364,7 +424,7 @@ export default function Index({ asignaciones, filtros }: Props) {
                         </div>
 
                         {/* Paginación */}
-                        {asignaciones.last_page > 1 && (
+                        {asignaciones.total > 0 && (
                             <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
 
                                 <p className="text-sm text-slate-500">

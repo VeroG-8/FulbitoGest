@@ -73,12 +73,10 @@ class PagoController extends Controller
             2
         );
         // Crédito disponible total del jugador en su cuenta corriente.
-        $creditoDisponible = max(
-            0,
-            $cuentaCorrienteService->obtenerSaldoDisponible(
+        $creditoDisponible = $cuentaCorrienteService
+            ->obtenerTotalCreditosDisponibles(
                 $cuotaXJugador->jugador_id
-            )
-        );
+            );
         $this->validarImportes([
             'totalPagado' => $totalPagado,
             'creditoAplicado' => $creditoAplicado,

@@ -21,18 +21,26 @@ class CuotaXJugadorController extends Controller
     {
         $categoriaId = $request->input('categoria_id');
         $buscar = trim((string) $request->input('buscar', ''));
+        $anio = $request->input('anio');
 
         $consulta = CuotaXJugador::with([
             'cuota',
             'jugador.categoria:id,anio',
         ])->withCount('pagos');
 
+        // Filtro por categoría del jugador.
         $consulta->when($categoriaId, function ($query) use ($categoriaId) {
             $query->whereHas('jugador', function ($q) use ($categoriaId) {
                 $q->where('categoria_id', $categoriaId);
             });
         });
 
+        // Filtro por año de fecha de asignación.
+        $consulta->when($anio, function ($query) use ($anio) {
+            $query->whereYear('fecha_asignacion', $anio);
+        });
+
+        // Búsqueda por nombre o apellido.
         $consulta->when($buscar !== '', function ($query) use ($buscar) {
             $query->whereHas('jugador', function ($q) use ($buscar) {
                 $q->where(function ($subquery) use ($buscar) {
@@ -42,6 +50,7 @@ class CuotaXJugadorController extends Controller
             });
         });
 
+        // Estadísticas respetando los filtros aplicados.
         $estadisticas = [
             'total' => (clone $consulta)->count(),
 
@@ -59,20 +68,29 @@ class CuotaXJugadorController extends Controller
         ];
 
         $asignaciones = $consulta
-            ->orderBy('fecha_vencimiento', 'desc')
+            ->orderBy('fecha_asignacion', 'desc')
             ->paginate(10)
             ->withQueryString();
 
         $categorias = Categoria::orderBy('anio')
             ->get(['id', 'anio']);
 
+        // Años en los que existen asignaciones.
+        $anios = CuotaXJugador::query()
+            ->selectRaw('YEAR(fecha_asignacion) as anio')
+            ->distinct()
+            ->orderByDesc('anio')
+            ->pluck('anio');
+
         return Inertia::render('Cuotas/Asignaciones/Index', [
             'asignaciones' => $asignaciones,
             'categorias' => $categorias,
+            'anios' => $anios,
 
             'filtros' => [
                 'categoria_id' => $categoriaId,
                 'buscar' => $buscar,
+                'anio' => $anio,
             ],
 
             'estadisticas' => $estadisticas,
@@ -89,13 +107,37 @@ class CuotaXJugadorController extends Controller
             ->get();
 
         $jugadores = Jugador::where('estado', true)
+            ->with('categoria:id,anio')
             ->orderBy('apellido')
             ->orderBy('nombre')
             ->get();
 
+        $categorias = Categoria::where('estado', true)
+            ->orderBy('anio')
+            ->get(['id', 'anio']);
+
+        $asignacionesExistentes = CuotaXJugador::query()
+            ->whereIn('cuota_id', $cuotas->pluck('id'))
+            ->whereIn('jugador_id', $jugadores->pluck('id'))
+            ->withExists('pagos')
+            ->get([
+                'id',
+                'cuota_id',
+                'jugador_id',
+                'estado',
+            ])
+            ->map(fn ($asignacion) => [
+                'cuota_id' => $asignacion->cuota_id,
+                'jugador_id' => $asignacion->jugador_id,
+                'estado' => $asignacion->estado,
+                'tiene_pagos' => (bool) $asignacion->pagos_exists,
+            ]);
+
         return Inertia::render('Cuotas/Asignaciones/Create', [
             'cuotas' => $cuotas,
             'jugadores' => $jugadores,
+            'categorias' => $categorias,
+            'asignacionesExistentes' => $asignacionesExistentes,
         ]);
     }
 
@@ -506,7 +548,8 @@ class CuotaXJugadorController extends Controller
         $categorias = Categoria::orderBy('anio')
             ->get(['id', 'anio']);
 
-        $jugadores = Jugador::where('estado', true)
+        // Obtener jugadores con paginación.
+        $paginador = Jugador::where('estado', true)
             ->when($categoriaId, function ($query) use ($categoriaId) {
                 $query->where('categoria_id', $categoriaId);
             })
@@ -538,8 +581,12 @@ class CuotaXJugadorController extends Controller
             ])
             ->orderBy('apellido')
             ->orderBy('nombre')
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
 
+        $jugadores = $paginador->getCollection();
+
+        // Calcular el seguimiento de los jugadores de la página actual.
         $jugadoresSeguimiento = $jugadores->map(function ($jugador) {
             $asignacionesPorMes = $jugador->cuotaXJugadores
                 ->groupBy(function ($asignacion) {
@@ -604,8 +651,11 @@ class CuotaXJugadorController extends Controller
             ];
         });
 
+        // Reemplazar los registros de la página por los datos calculados.
+        $paginador->setCollection($jugadoresSeguimiento);
+
         return Inertia::render('Cuotas/Seguimiento/Index', [
-            'jugadores' => $jugadoresSeguimiento,
+            'jugadores' => $paginador,
             'categorias' => $categorias,
 
             'filtros' => [

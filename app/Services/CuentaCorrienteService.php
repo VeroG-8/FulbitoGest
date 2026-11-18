@@ -786,6 +786,19 @@ class CuentaCorrienteService
 
         return $creditos;
     }
+
+    public function obtenerTotalCreditosDisponibles(int $jugadorId): float
+    {
+        $totalCentavos = 0;
+
+        foreach ($this->obtenerCreditosDisponibles($jugadorId) as $credito) {
+            $totalCentavos += (int) round(
+                (float) $credito['disponible'] * 100
+            );
+        }
+
+        return round($totalCentavos / 100, 2);
+    }
     /**
      * Compensa los débitos pendientes con créditos disponibles.
      *
@@ -796,17 +809,13 @@ class CuentaCorrienteService
      * Debe ejecutarse dentro de una transacción y con el jugador
      * bloqueado mediante lockForUpdate().
      */
+
     private function compensarDebitosPendientes(
         int $jugadorId,
         ?array $limitesCreditoCentavos = null
     ): void {
         /*
         * 1. Validar los límites de crédito autorizados.
-        *
-        * Formato:
-        * [
-        *     movimiento_id => importe_maximo_en_centavos,
-        * ]
         */
         if ($limitesCreditoCentavos !== null) {
             $limitesValidados = [];
@@ -838,9 +847,40 @@ class CuentaCorrienteService
         }
 
         /*
-        * 2. Obtener los débitos pendientes.
+        * 2. Clasificar la cuenta a la que pertenece cada movimiento.
+        *
+        * Los movimientos sin asignación o sin tipo identificable
+        * no participan en compensaciones automáticas.
+        */
+        $obtenerGrupoCuenta = function ($movimiento) use ($jugadorId): ?string {
+            $asignacion = $movimiento->asignacion;
+
+            if (!$asignacion || !$asignacion->cuota) {
+                return null;
+            }
+
+            if ((int) $asignacion->jugador_id !== $jugadorId) {
+                throw ValidationException::withMessages([
+                    'cuenta_corriente' =>
+                        'La asignación de un movimiento no corresponde al jugador.',
+                ]);
+            }
+
+            return match ($asignacion->cuota->tipo) {
+                'cuota_mensual' => 'mensual',
+
+                'inscripcion_torneo',
+                'inscripcion_escuelita' => 'inscripciones',
+
+                default => null,
+            };
+        };
+
+        /*
+        * 3. Obtener los débitos pendientes.
         */
         $debitos = MovimientoCuentaCorriente::query()
+            ->with('asignacion.cuota')
             ->where('jugador_id', $jugadorId)
             ->where('tipo', self::TIPO_DEBITO)
             ->where('monto', '<', 0)
@@ -854,7 +894,7 @@ class CuentaCorrienteService
         }
 
         /*
-        * 3. Obtener los créditos disponibles.
+        * 4. Obtener los créditos disponibles.
         */
         $creditosDisponibles = $this->obtenerCreditosDisponibles(
             $jugadorId
@@ -865,13 +905,45 @@ class CuentaCorrienteService
         }
 
         /*
-        * 4. Obtener las compensaciones existentes.
+        * Cargar las asignaciones y cuotas de los créditos.
+        */
+        $idsCreditos = collect($creditosDisponibles)
+            ->pluck('movimiento.id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $movimientosCredito = MovimientoCuentaCorriente::query()
+            ->with('asignacion.cuota')
+            ->whereIn('id', $idsCreditos)
+            ->get()
+            ->keyBy('id');
+
+        foreach ($creditosDisponibles as &$creditoDisponible) {
+            $idCredito = (int) $creditoDisponible['movimiento']->id;
+
+            if (!$movimientosCredito->has($idCredito)) {
+                throw ValidationException::withMessages([
+                    'cuenta_corriente' =>
+                        'No se pudo recuperar uno de los movimientos de crédito.',
+                ]);
+            }
+
+            $creditoDisponible['movimiento'] =
+                $movimientosCredito->get($idCredito);
+        }
+
+        /*
+        * 5. Obtener las compensaciones existentes.
         */
         $compensacionesDebitos = $this->obtenerTotalesCompensaciones(
             $jugadorId,
             'movimiento_debito_id'
         );
 
+        /*
+        * 6. Compensar respetando el grupo de cuenta.
+        */
         foreach ($debitos as $debito) {
             if (
                 (int) $debito->jugador_id !== $jugadorId ||
@@ -884,6 +956,13 @@ class CuentaCorrienteService
                     'cuenta_corriente' =>
                         'Se encontró un movimiento de débito inconsistente.',
                 ]);
+            }
+
+            $grupoDebito = $obtenerGrupoCuenta($debito);
+
+            // No compensar movimientos cuyo tipo de cuenta no se puede identificar.
+            if ($grupoDebito === null) {
+                continue;
             }
 
             $montoDebitoCentavos = (int) round(
@@ -953,8 +1032,19 @@ class CuentaCorrienteService
                 }
 
                 /*
-                * Si se especificaron límites, excluir los movimientos
-                * que no estén autorizados.
+                * Solo se permiten compensaciones dentro del mismo grupo.
+                */
+                $grupoCredito = $obtenerGrupoCuenta($movimientoCredito);
+
+                if (
+                    $grupoCredito === null ||
+                    $grupoCredito !== $grupoDebito
+                ) {
+                    continue;
+                }
+
+                /*
+                * Respetar los límites de crédito autorizados.
                 */
                 if (
                     $limitesCreditoCentavos !== null &&
@@ -981,9 +1071,6 @@ class CuentaCorrienteService
                     continue;
                 }
 
-                /*
-                * Respetar el límite autorizado para este movimiento.
-                */
                 if ($limitesCreditoCentavos !== null) {
                     $limiteCentavos = $limitesCreditoCentavos[
                         (int) $movimientoCredito->id
@@ -1025,9 +1112,6 @@ class CuentaCorrienteService
                     ) - $montoCompensarCentavos
                 ) / 100;
 
-                /*
-                * Descontar también el límite autorizado restante.
-                */
                 if ($limitesCreditoCentavos !== null) {
                     $idCredito = (int) $movimientoCredito->id;
 
@@ -1038,6 +1122,8 @@ class CuentaCorrienteService
 
             unset($creditoDisponible);
         }
+
+        unset($creditoDisponible);
     }
 
     /**
@@ -2467,9 +2553,7 @@ class CuentaCorrienteService
                         ]
                     );
                 }
-                // Compensar los débitos pendientes con cualquier crédito disponible.
-                $this->compensarDebitosPendientes($jugador->id);
-
+            
                 /*
                 * 11. ACTUALIZAR EL ESTADO DE LA ASIGNACIÓN
                 */
@@ -2511,12 +2595,8 @@ class CuentaCorrienteService
                         ->orderBy('id')
                         ->get();
 
-                    foreach ($asignacionesPendientes as $pendiente) {
-                        if ($this->obtenerSaldoDisponible($jugador->id) <= 0) {
-                            break;
-                        }
-
-                        $this->aplicarCreditoDisponible(
+                  foreach ($asignacionesPendientes as $pendiente) {
+                    $this->aplicarCreditoDisponible(
                             $pendiente,
                             $userId,
                             false,
@@ -3367,4 +3447,16 @@ private function obtenerCreditoExternoAplicadoAsignacionCentavos(
             2
         );
     }
+public function diagnosticarCreditos(int $jugadorId): array
+{
+    return array_map(
+        fn ($credito) => [
+            'movimiento_id' => $credito['movimiento']->id,
+            'monto_original' => (float) $credito['movimiento']->monto,
+            'disponible' => $credito['disponible'],
+        ],
+        $this->obtenerCreditosDisponibles($jugadorId)
+    );
+}
+
 }
