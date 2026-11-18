@@ -29,8 +29,20 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
+        // Si existe una sesión anterior, cerrarla antes de autenticar.
+        if (Auth::guard('web')->check()) {
+
+            Auth::guard('web')->logout();
+
+            $request->session()->invalidate();
+
+            $request->session()->regenerateToken();
+        }
+
+        // Autenticar las nuevas credenciales.
         $request->authenticate();
 
+        // Regenerar el identificador de sesión.
         $request->session()->regenerate();
 
         return redirect()->intended(route('dashboard', absolute: false));
