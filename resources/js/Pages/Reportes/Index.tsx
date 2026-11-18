@@ -117,6 +117,35 @@ const MESES = [
     { id: 11, nombre: 'Noviembre' },
     { id: 12, nombre: 'Diciembre' },
 ];
+const formatearFecha = (fecha: string | null): string => {
+    if (!fecha) {
+        return 'Sin vencimiento';
+    }
+
+    const coincidencia = fecha.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+    if (!coincidencia) {
+        return 'Fecha inválida';
+    }
+
+    const [, anio, mes, dia] = coincidencia;
+
+    const fechaValidada = new Date(
+            Number(anio),
+            Number(mes) - 1,
+            Number(dia),
+        );
+
+        if (
+            fechaValidada.getFullYear() !== Number(anio) ||
+            fechaValidada.getMonth() !== Number(mes) - 1 ||
+            fechaValidada.getDate() !== Number(dia)
+        ) {
+            return 'Fecha inválida';
+        }
+
+        return `${dia}/${mes}/${anio}`;
+    };
 
 export default function Index({
     estadisticas,
@@ -166,6 +195,36 @@ export default function Index({
     const [mesesEconomicosSeleccionados, setMesesEconomicosSeleccionados] =
         useState<number[]>(() => MESES.map((mes) => mes.id));
 
+    const formatearFecha = (fecha: string | null | undefined): string => {
+    if (!fecha || !fecha.trim()) {
+        return 'Sin vencimiento';
+    }
+
+    // Aceptar fechas con formato YYYY-MM-DD.
+    const coincidencia = fecha.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+    if (!coincidencia) {
+        return 'Fecha inválida';
+    }
+
+    const anio = Number(coincidencia[1]);
+    const mes = Number(coincidencia[2]);
+    const dia = Number(coincidencia[3]);
+
+    const fechaValidada = new Date(anio, mes - 1, dia);
+
+        // Comprobar que la fecha realmente exista.
+        if (
+            anio < 1900 ||
+            fechaValidada.getFullYear() !== anio ||
+            fechaValidada.getMonth() !== mes - 1 ||
+            fechaValidada.getDate() !== dia
+        ) {
+            return 'Fecha inválida';
+        }
+
+        return fechaValidada.toLocaleDateString('es-AR');
+    };    
     const [mostrarFiltroEconomico, setMostrarFiltroEconomico] = useState(false);
     const [mostrarFiltroMeses, setMostrarFiltroMeses] = useState(false);
 
@@ -1280,11 +1339,9 @@ export default function Index({
                                                                 </td>
 
                                                                 <td className="px-4 py-4 text-slate-600">
-                                                                    {item.fechaVencimiento
-                                                                        ? new Date(`${item.fechaVencimiento}T00:00:00`).toLocaleDateString('es-AR')
-                                                                        : 'Sin vencimiento'}
+                                                                    {formatearFecha(item.fechaVencimiento)}
                                                                 </td>
-                                                            </tr>
+                                                                                                                            </tr>
                                                         ))}
                                                     </tbody>
                                                 </table>

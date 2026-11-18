@@ -233,7 +233,7 @@ class ReporteService
                     'montoCuota' => $montoCuota,
                     'totalPagado' => $totalPagado,
                     'saldoPendiente' => $saldoPendiente,
-                    'fechaVencimiento' => $fechaVencimiento,
+                    'fechaVencimiento' => $fechaVencimiento?->toDateString(),
                     'estadoVencimiento' => $estadoVencimiento,
                 ];
             }
