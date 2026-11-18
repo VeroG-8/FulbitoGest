@@ -67,9 +67,11 @@ interface Paginacion {
 interface Props {
     asignaciones: Paginacion;
     categorias: Categoria[];
+    anios: number[];
     filtros: {
         categoria_id: string | null;
         buscar: string;
+        anio: string | null;
     };
     estadisticas: {
         total: number;
@@ -82,6 +84,7 @@ interface Props {
 export default function Index({
     asignaciones,
     categorias,
+    anios,
     filtros,
     estadisticas,
 }: Props) {
@@ -106,6 +109,7 @@ export default function Index({
     const aplicarFiltros = (
         categoriaId: string,
         termino: string,
+        anio: string,
     ) => {
         const parametros: Record<string, string> = {};
 
@@ -117,6 +121,10 @@ export default function Index({
             parametros.buscar = termino.trim();
         }
 
+        if (anio) {
+            parametros.anio = anio;
+        }
+
         router.get('/cuotas/asignaciones', parametros, {
             preserveState: true,
             preserveScroll: true,
@@ -124,12 +132,25 @@ export default function Index({
     };
 
     const cambiarCategoria = (categoriaId: string) => {
-        aplicarFiltros(categoriaId, buscar);
+        aplicarFiltros(categoriaId, buscar, filtros.anio ?? '');
+    };
+
+    const cambiarAnio = (anio: string) => {
+        aplicarFiltros(
+            filtros.categoria_id ?? '',
+            buscar,
+            anio,
+        );
     };
 
     const buscarJugador = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        aplicarFiltros(filtros.categoria_id ?? '', buscar);
+
+        aplicarFiltros(
+            filtros.categoria_id ?? '',
+            buscar,
+            filtros.anio ?? '',
+        );
     };
 
     const limpiarFiltros = () => {
@@ -174,7 +195,9 @@ export default function Index({
     };
 
     const hayFiltrosAplicados =
-        Boolean(filtros.categoria_id) || Boolean(filtros.buscar);
+    Boolean(filtros.categoria_id) ||
+    Boolean(filtros.buscar) ||
+    Boolean(filtros.anio);
 
     return (
         <>
@@ -190,7 +213,7 @@ export default function Index({
                         actions={
                             <div className="flex flex-nowrap items-center gap-3 whitespace-nowrap">
                                 <Link
-                                    href="/cuotas/asignaciones/crear"
+                                    href="/cuotas/asignaciones/create"
                                     className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-900"
                                 >
                                     <UserPlus className="h-4 w-4" />
@@ -252,10 +275,11 @@ export default function Index({
                             </h2>
                         </div>
 
-                        <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
-
+                       <div className="space-y-4">
+                        {/* Primera fila: filtros */}
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             {/* Filtro por categoría */}
-                            <div className="w-full lg:max-w-xs">
+                            <div>
                                 <label className="mb-2 block text-sm font-medium text-slate-700">
                                     Categoría
                                 </label>
@@ -266,7 +290,6 @@ export default function Index({
                                     className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                                 >
                                     <option value="">Todas las categorías</option>
-
                                     {categorias.map((categoria) => (
                                         <option key={categoria.id} value={categoria.id}>
                                             {categoria.anio}
@@ -275,51 +298,72 @@ export default function Index({
                                 </select>
                             </div>
 
-                            {/* Búsqueda por jugador */}
-                            <form
-                                onSubmit={buscarJugador}
-                                className="flex w-full flex-col gap-2 sm:flex-row lg:flex-1"
-                            >
-                                <div className="w-full flex-1">
-                                    <label className="mb-2 block text-sm font-medium text-slate-700">
-                                        Buscar jugador
-                                    </label>
+                            {/* Filtro por año de asignación */}
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-slate-700">
+                                    Año de asignación
+                                </label>
 
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
-                                        <input
-                                            type="text"
-                                            value={buscar}
-                                            onChange={(e) => setBuscar(e.target.value)}
-                                            placeholder="Ingresá nombre o apellido..."
-                                            className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="flex items-end gap-2">
-                                    <button
-                                        type="submit"
-                                        className="inline-flex h-[42px] items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-700"
-                                    >
-                                        <Search className="h-4 w-4" />
-                                        Buscar
-                                    </button>
-
-                                    {hayFiltrosAplicados && (
-                                        <button
-                                            type="button"
-                                            onClick={limpiarFiltros}
-                                            className="inline-flex h-[42px] items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
-                                        >
-                                            <X className="h-4 w-4" />
-                                            Limpiar
-                                        </button>
-                                    )}
-                                </div>
-                            </form>
+                                <select
+                                    value={filtros.anio ?? ''}
+                                    onChange={(e) => cambiarAnio(e.target.value)}
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                >
+                                    <option value="">Todos los años</option>
+                                    {anios.map((anio) => (
+                                        <option key={anio} value={anio}>
+                                            {anio}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
+
+                        {/* Segunda fila: buscador */}
+                        <form
+                            onSubmit={buscarJugador}
+                            className="flex flex-col gap-3 sm:flex-row sm:items-end"
+                        >
+                            <div className="min-w-0 flex-1">
+                                <label className="mb-2 block text-sm font-medium text-slate-700">
+                                    Buscar jugador
+                                </label>
+
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
+                                    <input
+                                        type="text"
+                                        value={buscar}
+                                        onChange={(e) => setBuscar(e.target.value)}
+                                        placeholder="Ingresá el nombre o apellido..."
+                                        className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2">
+                                <button
+                                    type="submit"
+                                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                                >
+                                    <Search className="h-4 w-4" />
+                                    Buscar
+                                </button>
+
+                                {hayFiltrosAplicados && (
+                                    <button
+                                        type="button"
+                                        onClick={limpiarFiltros}
+                                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+                                    >
+                                        <X className="h-4 w-4" />
+                                        Limpiar
+                                    </button>
+                                )}
+                            </div>
+                        </form>
+                    </div>
 
                         {hayFiltrosAplicados && (
                             <p className="mt-4 text-xs text-slate-500">
