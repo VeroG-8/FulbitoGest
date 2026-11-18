@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import PageHeader from '@/Components/Shared/PageHeader';
 import StatCard from '@/Components/Shared/StatCard';
 import StatusBadge from '@/Components/Shared/StatusBadge';
@@ -88,6 +88,11 @@ export default function Index({
     filtros,
     estadisticas,
 }: Props) {
+    const { url } = usePage();
+
+    const parametrosActuales = url.includes('?')
+        ? url.slice(url.indexOf('?'))
+        : '';
     const [buscar, setBuscar] = useState(filtros.buscar ?? '');
 
     const formatearFecha = (fecha: string) => {
@@ -448,8 +453,8 @@ export default function Index({
                                                     <div className="flex items-center justify-end gap-1">
 
                                                         {/* Consultar pagos */}
-                                                        <Link
-                                                            href={`/cuotas/asignaciones/${asignacion.id}/pagos`}
+                                                      <Link
+                                                            href={`/cuotas/asignaciones/${asignacion.id}/pagos${parametrosActuales}`}
                                                             title="Ver pagos"
                                                             className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50 hover:text-blue-800"
                                                         >

@@ -142,11 +142,20 @@ export default function Index({
         monto: '',
     });
 
-    const { flash } = usePage().props as unknown as {
+   const page = usePage();
+
+    const { flash } = page.props as unknown as {
         flash: {
             success?: string;
         };
     };
+
+    const parametrosActuales = page.url.includes('?')
+        ? page.url.slice(page.url.indexOf('?'))
+        : '';
+
+    const volverAsignacionesUrl =
+        `/cuotas/asignaciones${parametrosActuales}`;
 
     const creditoDisponibleReal = Number(creditoDisponible) || 0;
 
@@ -253,7 +262,7 @@ export default function Index({
                         icon={<Wallet className="h-6 w-6" />}
                         actions={
                             <Link
-                                href="/cuotas/asignaciones"
+                                href={volverAsignacionesUrl}
                                 className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
                             >
                                 Volver a asignaciones
