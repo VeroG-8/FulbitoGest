@@ -13,6 +13,11 @@ import {
     XCircle,
     Plus,
     Filter,
+    ChevronLeft,
+    ChevronRight,
+    ArrowUp,
+    ArrowDown,
+    ArrowUpDown,
 } from 'lucide-react';
 
 interface Categoria {
@@ -58,6 +63,17 @@ interface JugadorInscripto {
     };
 }
 
+interface Paginacion<T> {
+    data: T[];
+    current_page: number;
+    last_page: number;
+    total: number;
+    from: number | null;
+    to: number | null;
+    prev_page_url: string | null;
+    next_page_url: string | null;
+}
+
 interface Torneo {
     id: number;
     nombre: string;
@@ -69,15 +85,98 @@ interface Torneo {
     descripcion: string | null;
     estado: boolean;
     categorias: Categoria[];
-    equipos: Equipo[];
-    jugadores: JugadorInscripto[];
 }
 
 interface Props {
     torneo: Torneo;
+    equipos: Paginacion<Equipo>;
+    jugadores: Paginacion<JugadorInscripto>;
+    filtros: {
+        estado_jugador: string;
+        orden_jugador: 'jugador' | 'categoria';
+        direccion_jugador: 'asc' | 'desc';
+    };
 }
 
-export default function Show({ torneo }: Props) {
+interface PaginacionProps {
+    actual: number;
+    ultima: number;
+    anterior: string | null;
+    siguiente: string | null;
+}
+
+function ControlesPaginacion({
+    actual,
+    ultima,
+    anterior,
+    siguiente,
+}: PaginacionProps) {
+    if (ultima <= 1) return null;
+
+    return (
+        <div className="mt-5 flex flex-col items-center justify-between gap-3 border-t border-slate-200 pt-4 sm:flex-row">
+            <p className="text-sm !text-slate-500">
+                Página{' '}
+                <span className="font-semibold !text-slate-900">
+                    {actual}
+                </span>{' '}
+                de{' '}
+                <span className="font-semibold !text-slate-900">
+                    {ultima}
+                </span>
+            </p>
+
+            <div className="flex items-center gap-2">
+                {anterior ? (
+                    <Link
+                        href={anterior}
+                        preserveScroll
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-300 !bg-white px-3 py-2 text-sm font-medium !text-slate-700 transition hover:!bg-slate-100"
+                    >
+                        <ChevronLeft size={16} />
+                        Anterior
+                    </Link>
+                ) : (
+                    <button
+                        type="button"
+                        disabled
+                        className="inline-flex cursor-not-allowed items-center gap-1 rounded-lg border border-slate-200 !bg-slate-100 px-3 py-2 text-sm font-medium !text-slate-400"
+                    >
+                        <ChevronLeft size={16} />
+                        Anterior
+                    </button>
+                )}
+
+                {siguiente ? (
+                    <Link
+                        href={siguiente}
+                        preserveScroll
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-300 !bg-white px-3 py-2 text-sm font-medium !text-slate-700 transition hover:!bg-slate-100"
+                    >
+                        Siguiente
+                        <ChevronRight size={16} />
+                    </Link>
+                ) : (
+                    <button
+                        type="button"
+                        disabled
+                        className="inline-flex cursor-not-allowed items-center gap-1 rounded-lg border border-slate-200 !bg-slate-100 px-3 py-2 text-sm font-medium !text-slate-400"
+                    >
+                        Siguiente
+                        <ChevronRight size={16} />
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
+
+export default function Show({
+    torneo,
+    equipos,
+    jugadores,
+    filtros,
+}: Props) {
     const { auth, flash } = usePage<any>().props;
 
     const esAdministrador = ['admin', 'superadmin'].includes(
@@ -86,9 +185,63 @@ export default function Show({ torneo }: Props) {
 
     const esProfesor = auth?.user?.rol === 'profesor';
 
-    const [filtroEstado, setFiltroEstado] = useState('todos');
-    const [mostrarFiltro, setMostrarFiltro] = useState(false);
+    const [filtroEstado, setFiltroEstado] = useState(
+        filtros?.estado_jugador ?? 'todos',
+    );
 
+    const [mostrarFiltro, setMostrarFiltro] = useState(false);
+    const ordenJugador = filtros?.orden_jugador ?? 'jugador';
+    const direccionJugador = filtros?.direccion_jugador ?? 'asc';
+
+    const ordenarJugadores = (
+        columna: 'jugador' | 'categoria',
+    ) => {
+        const nuevaDireccion =
+            ordenJugador === columna && direccionJugador === 'asc'
+                ? 'desc'
+                : 'asc';
+
+        router.get(
+            `/torneos/${torneo.id}`,
+            {
+                estado_jugador: filtroEstado,
+                orden_jugador: columna,
+                direccion_jugador: nuevaDireccion,
+                equipos_page: equipos.current_page,
+                jugadores_page: 1,
+            },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            },
+        );
+    };
+
+    const iconoOrdenJugador = (
+        columna: 'jugador' | 'categoria',
+    ) => {
+        if (ordenJugador !== columna) {
+            return (
+                <ArrowUpDown
+                    size={15}
+                    className="text-slate-400"
+                />
+            );
+        }
+
+        return direccionJugador === 'asc' ? (
+            <ArrowUp
+                size={15}
+                className="text-blue-600"
+            />
+        ) : (
+            <ArrowDown
+                size={15}
+                className="text-blue-600"
+            />
+        );
+    };
     const actualizarEstado = (
         jugadorId: number,
         estado: 'pendiente' | 'inscripto' | 'cancelado',
@@ -112,14 +265,23 @@ export default function Show({ torneo }: Props) {
         );
     };
 
-    const jugadoresFiltrados = esAdministrador
-        ? torneo.jugadores.filter((jugador) => {
-              return (
-                  filtroEstado === 'todos' ||
-                  jugador.pivot.estado === filtroEstado
-              );
-          })
-        : torneo.jugadores;
+    const cambiarFiltroEstado = (estado: string) => {
+        setFiltroEstado(estado);
+
+        router.get(
+            `/torneos/${torneo.id}`,
+            {
+                estado_jugador: estado,
+                equipos_page: equipos.current_page,
+                jugadores_page: 1,
+            },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            },
+        );
+    };
 
     const formatearFecha = (fecha: string | null) => {
         if (!fecha) return 'Sin definir';
@@ -395,7 +557,7 @@ export default function Show({ torneo }: Props) {
                                 )}
                             </div>
 
-                            {torneo.equipos.length === 0 ? (
+                            {equipos.data.length === 0 ? (
                                 <div className="rounded-xl border border-slate-200 !bg-slate-50 px-5 py-8 text-center">
                                     <Users
                                         size={35}
@@ -446,7 +608,7 @@ export default function Show({ torneo }: Props) {
                                         </thead>
 
                                         <tbody className="divide-y divide-slate-200">
-                                            {torneo.equipos.map((equipo) => (
+                                            {equipos.data.map((equipo) => (
                                                 <tr
                                                     key={equipo.id}
                                                     className="transition hover:!bg-slate-50"
@@ -503,13 +665,27 @@ export default function Show({ torneo }: Props) {
                                 </div>
                             )}
 
-                            {torneo.equipos.length > 0 && (
-                                <p className="mt-4 text-sm !text-slate-500">
-                                    Total de equipos registrados:{' '}
-                                    <span className="font-semibold !text-slate-900">
-                                        {torneo.equipos.length}
-                                    </span>
-                                </p>
+                            {equipos.total > 0 && (
+                                <>
+                                    <p className="mt-4 text-sm !text-slate-500">
+                                        Mostrando{' '}
+                                        <span className="font-semibold !text-slate-900">
+                                            {equipos.from}–{equipos.to}
+                                        </span>{' '}
+                                        de{' '}
+                                        <span className="font-semibold !text-slate-900">
+                                            {equipos.total}
+                                        </span>{' '}
+                                        equipos registrados.
+                                    </p>
+
+                                    <ControlesPaginacion
+                                        actual={equipos.current_page}
+                                        ultima={equipos.last_page}
+                                        anterior={equipos.prev_page_url}
+                                        siguiente={equipos.next_page_url}
+                                    />
+                                </>
                             )}
                         </section>
                     )}
@@ -549,52 +725,37 @@ export default function Show({ torneo }: Props) {
 
                         {/* FILTRO POR ESTADO: SOLO ADMINISTRADORES */}
                         {esAdministrador && (
-                            <div className="mb-5 flex items-center justify-end gap-2">
-                                {mostrarFiltro && (
-                                    <select
-                                        id="filtroEstado"
-                                        value={filtroEstado}
-                                        onChange={(e) =>
-                                            setFiltroEstado(e.target.value)
-                                        }
-                                        className="rounded-lg border border-slate-300 !bg-white px-3 py-2 text-sm !text-slate-800 shadow-sm"
+                            <div className="mb-5 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-end sm:justify-between">
+                                <div>
+                                    <label
+                                        htmlFor="filtro-estado-jugador"
+                                        className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700"
                                     >
-                                        <option value="todos">
-                                            Todos los estados
-                                        </option>
-                                        <option value="pendiente">
-                                            Pendientes
-                                        </option>
-                                        <option value="inscripto">
-                                            Inscriptos
-                                        </option>
-                                        <option value="cancelado">
-                                            Cancelados
-                                        </option>
-                                    </select>
-                                )}
+                                        <Filter size={16} className="text-slate-500" />
+                                        Filtrar jugadores por estado de inscripción
+                                    </label>
 
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setMostrarFiltro(!mostrarFiltro)
-                                    }
-                                    title="Filtrar participantes"
-                                    aria-label="Mostrar u ocultar filtros"
-                                    aria-expanded={mostrarFiltro}
-                                    className={`flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${
-                                        filtroEstado !== 'todos'
-                                            ? 'border-blue-300 !bg-blue-50 !text-blue-700'
-                                            : 'border-slate-300 !bg-white !text-slate-600 hover:!bg-slate-100'
-                                    }`}
-                                >
-                                    <Filter size={18} />
-                                </button>
+                                    <select
+                                        id="filtro-estado-jugador"
+                                        value={filtroEstado}
+                                        onChange={(e) => cambiarFiltroEstado(e.target.value)}
+                                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:w-64"
+                                    >
+                                        <option value="todos">Todos los jugadores</option>
+                                        <option value="pendiente">Pendientes</option>
+                                        <option value="inscripto">Inscriptos</option>
+                                        <option value="cancelado">Cancelados</option>
+                                    </select>
+                                </div>
+
+                                <div className="text-sm text-slate-500">
+                                    Total de jugadores: <span className="font-semibold text-slate-700">{jugadores.total}</span>
+                                </div>
                             </div>
-                        )}
+                                                    )}
 
                         {/* LISTADO DE JUGADORES */}
-                        {torneo.jugadores.length === 0 ? (
+                        {jugadores.data.length === 0 ? (
                             <div className="rounded-xl border border-slate-200 !bg-slate-50 px-5 py-8 text-center">
                                 <Users
                                     size={35}
@@ -602,22 +763,18 @@ export default function Show({ torneo }: Props) {
                                 />
 
                                 <p className="text-sm font-semibold !text-slate-700">
-                                    {esProfesor
-                                        ? 'Todavía no hay jugadores con inscripción confirmada.'
-                                        : 'Todavía no hay jugadores inscriptos.'}
+                                    {esAdministrador && filtroEstado !== 'todos'
+                                        ? 'No hay jugadores con el estado seleccionado.'
+                                        : esProfesor
+                                          ? 'Todavía no hay jugadores con inscripción confirmada.'
+                                          : 'Todavía no hay jugadores inscriptos.'}
                                 </p>
 
-                                {esAdministrador && (
+                                {esAdministrador && filtroEstado === 'todos' && (
                                     <p className="mt-1 text-sm !text-slate-500">
                                         Podés comenzar registrando jugadores participantes en este torneo.
                                     </p>
                                 )}
-                            </div>
-                        ) : jugadoresFiltrados.length === 0 ? (
-                            <div className="rounded-xl border border-slate-200 !bg-slate-50 px-5 py-8 text-center">
-                                <p className="text-sm font-semibold !text-slate-700">
-                                    No hay jugadores con el estado seleccionado.
-                                </p>
                             </div>
                         ) : (
                             <div className="overflow-x-auto rounded-xl border border-slate-200">
@@ -625,7 +782,14 @@ export default function Show({ torneo }: Props) {
                                     <thead className="!bg-slate-100">
                                         <tr>
                                             <th className="px-4 py-3 font-semibold !text-slate-700">
-                                                Jugador
+                                                <button
+                                                    type="button"
+                                                    onClick={() => ordenarJugadores('jugador')}
+                                                    className="inline-flex items-center gap-2 transition hover:!text-blue-700"
+                                                >
+                                                    Jugador
+                                                    {iconoOrdenJugador('jugador')}
+                                                </button>
                                             </th>
 
                                             {esAdministrador && (
@@ -634,8 +798,15 @@ export default function Show({ torneo }: Props) {
                                                 </th>
                                             )}
 
-                                            <th className="px-4 py-3 font-semibold !text-slate-700">
-                                                Categoría
+                                          <th className="px-4 py-3 font-semibold !text-slate-700">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => ordenarJugadores('categoria')}
+                                                    className="inline-flex items-center gap-2 transition hover:!text-blue-700"
+                                                >
+                                                    Categoría
+                                                    {iconoOrdenJugador('categoria')}
+                                                </button>
                                             </th>
 
                                             <th className="px-4 py-3 font-semibold !text-slate-700">
@@ -655,7 +826,7 @@ export default function Show({ torneo }: Props) {
                                     </thead>
 
                                     <tbody className="divide-y divide-slate-200">
-                                        {jugadoresFiltrados.map((jugador) => (
+                                        {jugadores.data.map((jugador) => (
                                             <tr
                                                 key={jugador.id}
                                                 className="transition hover:!bg-slate-50"
@@ -746,13 +917,27 @@ export default function Show({ torneo }: Props) {
                             </div>
                         )}
 
-                        {torneo.jugadores.length > 0 && (
-                            <p className="mt-4 text-sm !text-slate-500">
-                                Total de jugadores inscriptos:{' '}
-                                <span className="font-semibold !text-slate-900">
-                                    {torneo.jugadores.length}
-                                </span>
-                            </p>
+                        {jugadores.total > 0 && (
+                            <>
+                                <p className="mt-4 text-sm !text-slate-500">
+                                    Mostrando{' '}
+                                    <span className="font-semibold !text-slate-900">
+                                        {jugadores.from}–{jugadores.to}
+                                    </span>{' '}
+                                    de{' '}
+                                    <span className="font-semibold !text-slate-900">
+                                        {jugadores.total}
+                                    </span>{' '}
+                                    jugadores inscriptos.
+                                </p>
+
+                                <ControlesPaginacion
+                                    actual={jugadores.current_page}
+                                    ultima={jugadores.last_page}
+                                    anterior={jugadores.prev_page_url}
+                                    siguiente={jugadores.next_page_url}
+                                />
+                            </>
                         )}
                     </section>
 

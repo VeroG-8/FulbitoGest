@@ -15,6 +15,8 @@ interface Inscripcion {
     torneo: string;
     torneo_id: number;
     tipo: 'propio' | 'externo';
+    fecha_inicio: string;
+    fecha_fin: string | null;
     jugador: string;
     jugador_id: number;
     dni: string;
@@ -23,11 +25,25 @@ interface Inscripcion {
     monto_inscripcion: number | string;
     estado: 'pendiente' | 'inscripto' | 'cancelado';
 }
-
+interface Paginacion<T> {
+    data: T[];
+    current_page: number;
+    last_page: number;
+    total: number;
+    from: number | null;
+    to: number | null;
+    prev_page_url: string | null;
+    next_page_url: string | null;
+}
 type CampoOrden = 'torneo' | 'jugador' | 'fecha_inscripcion';
 
 interface Props {
-    inscripciones: Inscripcion[];
+    inscripciones: Paginacion<Inscripcion>;
+    resumen: {
+        total: number;
+        pendientes: number;
+        confirmadas: number;
+    };
     filtros: {
         orden: CampoOrden;
         direccion: 'asc' | 'desc';
@@ -42,7 +58,7 @@ const formatoMoneda = (monto: number | string) => {
     }).format(Number(monto));
 };
 
-const formatoFecha = (fecha: string) => {
+const formatoFecha = (fecha: string | null) => {
     if (!fecha) return '-';
 
     const [anio, mes, dia] = fecha.substring(0, 10).split('-');
@@ -52,17 +68,12 @@ const formatoFecha = (fecha: string) => {
 
 export default function MisInscripciones({
     inscripciones,
+    resumen,
     filtros,
 }: Props) {
-    const totalInscripciones = inscripciones.length;
-
-    const pendientes = inscripciones.filter(
-        (item) => item.estado === 'pendiente',
-    ).length;
-
-    const confirmadas = inscripciones.filter(
-        (item) => item.estado === 'inscripto',
-    ).length;
+    const totalInscripciones = resumen.total;
+    const pendientes = resumen.pendientes;
+    const confirmadas = resumen.confirmadas;
 
     const ordenarPor = (campo: CampoOrden) => {
         const direccion =
@@ -75,6 +86,7 @@ export default function MisInscripciones({
             {
                 orden: campo,
                 direccion,
+                page: 1,
             },
             {
                 preserveScroll: true,
@@ -222,7 +234,8 @@ export default function MisInscripciones({
                         </p>
                     </div>
 
-                    {inscripciones.length > 0 ? (
+                    {inscripciones.data.length > 0 ? (
+                    <>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
 
@@ -237,7 +250,13 @@ export default function MisInscripciones({
                                         <th className="px-6 py-4 font-semibold">
                                             Tipo
                                         </th>
+                                        <th className="px-6 py-4 font-semibold">
+                                            Inicio
+                                        </th>
 
+                                        <th className="px-6 py-4 font-semibold">
+                                            Finalización
+                                        </th>
                                         <th className="px-6 py-4 font-semibold">
                                             {encabezadoOrdenable(
                                                 'Jugador',
@@ -268,7 +287,7 @@ export default function MisInscripciones({
 
                                 <tbody className="divide-y divide-slate-100">
 
-                                    {inscripciones.map((inscripcion) => (
+                                    {inscripciones.data.map((inscripcion) => (
                                         <tr
                                             key={inscripcion.id}
                                             className="transition hover:bg-slate-50"
@@ -279,25 +298,28 @@ export default function MisInscripciones({
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
-                                            <span
-                                                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-                                                    inscripcion.tipo === 'propio'
-                                                        ? 'bg-blue-50 text-blue-700'
-                                                        : 'bg-emerald-50 text-emerald-700'
-                                                }`}
-                                            >
-                                                {inscripcion.tipo === 'propio' ? 'Propio' : 'Externo'}
-                                            </span>
-                                        </td>
+                                                <span
+                                                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                                                        inscripcion.tipo === 'propio'
+                                                            ? 'bg-blue-50 text-blue-700'
+                                                            : 'bg-emerald-50 text-emerald-700'
+                                                    }`}
+                                                >
+                                                    {inscripcion.tipo === 'propio' ? 'Propio' : 'Externo'}
+                                                </span>
+                                            </td>
+                                            <td className="whitespace-nowrap px-6 py-4 text-slate-600">
+                                                {formatoFecha(inscripcion.fecha_inicio)}
+                                            </td>
 
+                                            <td className="whitespace-nowrap px-6 py-4 text-slate-600">
+                                                {formatoFecha(inscripcion.fecha_fin)}
+                                            </td>
                                             <td className="px-6 py-4">
                                                 <p className="font-medium text-slate-800">
                                                     {inscripcion.jugador}
                                                 </p>
-
-                                                <p className="mt-1 text-xs text-slate-500">
-                                                    DNI: {inscripcion.dni}
-                                                </p>
+            
                                             </td>
 
                                             <td className="px-6 py-4 text-slate-600">
@@ -329,6 +351,63 @@ export default function MisInscripciones({
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* PAGINACIÓN */}
+                        <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-sm text-slate-500">
+                                Mostrando{' '}
+                                <span className="font-semibold text-slate-700">
+                                    {inscripciones.from ?? 0}
+                                </span>{' '}
+                                a{' '}
+                                <span className="font-semibold text-slate-700">
+                                    {inscripciones.to ?? 0}
+                                </span>{' '}
+                                de{' '}
+                                <span className="font-semibold text-slate-700">
+                                    {inscripciones.total}
+                                </span>{' '}
+                                inscripciones
+                            </p>
+
+                            <div className="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    disabled={!inscripciones.prev_page_url}
+                                    onClick={() =>
+                                        inscripciones.prev_page_url &&
+                                        router.visit(inscripciones.prev_page_url, {
+                                            preserveScroll: true,
+                                            preserveState: true,
+                                        })
+                                    }
+                                    className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                    Anterior
+                                </button>
+
+                                <span className="text-sm font-medium text-slate-600">
+                                    Página {inscripciones.current_page} de{' '}
+                                    {inscripciones.last_page}
+                                </span>
+
+                                <button
+                                    type="button"
+                                    disabled={!inscripciones.next_page_url}
+                                    onClick={() =>
+                                        inscripciones.next_page_url &&
+                                        router.visit(inscripciones.next_page_url, {
+                                            preserveScroll: true,
+                                            preserveState: true,
+                                        })
+                                    }
+                                    className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                    Siguiente
+                                </button>
+                            </div>
+                        </div>
+                      </>
                     ) : (
                         <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
                             <div className="mb-4 rounded-2xl bg-slate-100 p-5 text-slate-400">

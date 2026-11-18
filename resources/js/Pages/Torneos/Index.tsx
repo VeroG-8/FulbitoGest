@@ -13,6 +13,9 @@ import {
     Trash2,
     AlertTriangle,
     X,
+    ArrowUp,
+    ArrowDown,
+    ArrowUpDown,
 } from 'lucide-react';
 
 
@@ -50,6 +53,8 @@ interface Props {
     torneos: Paginacion<Torneo>;
     filtros: {
         buscar: string;
+        orden: 'nombre' | 'fecha_inicio';
+        direccion: 'asc' | 'desc';
     };
 }
 interface FlashMessages {
@@ -63,15 +68,49 @@ export default function Index({ torneos, filtros }: Props) {
         auth?.user?.rol,
     );
 
-const esProfesor = auth?.user?.rol === 'profesor';
+    const esProfesor = auth?.user?.rol === 'profesor';
     const [buscar, setBuscar] = useState(filtros.buscar ?? '');
+    const orden = filtros.orden ?? 'fecha_inicio';
+    const direccion = filtros.direccion ?? 'desc';
 
+    // Cambiar el orden de la tabla.
+    const ordenarPor = (columna: 'nombre' | 'fecha_inicio') => {
+        const nuevaDireccion =
+            orden === columna && direccion === 'asc' ? 'desc' : 'asc';
+
+        router.get(
+            '/torneos',
+            {
+                buscar,
+                orden: columna,
+                direccion: nuevaDireccion,
+            },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            },
+        );
+    };
+
+    // Icono indicador del orden.
+    const iconoOrden = (columna: 'nombre' | 'fecha_inicio') => {
+        if (orden !== columna) {
+            return <ArrowUpDown size={14} className="text-slate-400" />;
+        }
+
+        return direccion === 'asc'
+            ? <ArrowUp size={14} className="text-blue-600" />
+            : <ArrowDown size={14} className="text-blue-600" />;
+    };
     const buscarTorneos = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         router.get(
             '/torneos',
-            { buscar },
+            { buscar, orden,
+                direccion,
+            },
             {
                 preserveState: true,
                 preserveScroll: true,
@@ -287,12 +326,47 @@ const esProfesor = auth?.user?.rol === 'profesor';
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
                                     <tr>
-                                        <th className="px-5 py-4">Torneo</th>
-                                        <th className="px-5 py-4">Categorías</th>
-                                        <th className="px-5 py-4">Fecha de inicio</th>
-                                        <th className="px-5 py-4">Lugar</th>
-                                        <th className="px-5 py-4">Estado</th>
-                                        <th className="px-5 py-4 text-right">Acciones</th>
+                                        {/* TORNEO */}
+                                        <th className="px-5 py-4">
+                                            <button
+                                                type="button"
+                                                onClick={() => ordenarPor('nombre')}
+                                                className="inline-flex items-center gap-2 font-semibold transition hover:text-blue-700"
+                                                title="Ordenar por nombre"
+                                            >
+                                                Torneo
+                                                {iconoOrden('nombre')}
+                                            </button>
+                                        </th>
+
+                                        <th className="px-5 py-4">
+                                            Categorías
+                                        </th>
+
+                                        {/* FECHA DE INICIO */}
+                                        <th className="px-5 py-4">
+                                            <button
+                                                type="button"
+                                                onClick={() => ordenarPor('fecha_inicio')}
+                                                className="inline-flex items-center gap-2 font-semibold transition hover:text-blue-700"
+                                                title="Ordenar por fecha de inicio"
+                                            >
+                                                Fecha de inicio
+                                                {iconoOrden('fecha_inicio')}
+                                            </button>
+                                        </th>
+
+                                        <th className="px-5 py-4">
+                                            Lugar
+                                        </th>
+
+                                        <th className="px-5 py-4">
+                                            Estado
+                                        </th>
+
+                                        <th className="px-5 py-4 text-right">
+                                            Acciones
+                                        </th>
                                     </tr>
                                 </thead>
 

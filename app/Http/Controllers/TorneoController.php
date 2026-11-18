@@ -9,6 +9,7 @@ use Inertia\Inertia;
 use App\Models\Torneo;
 use App\Models\Categoria;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class TorneoController extends Controller
 {
@@ -62,7 +63,7 @@ class TorneoController extends Controller
         }
     }
 
-    /**
+   /**
      * Mostrar el listado de torneos.
      */
     public function index(Request $request)
@@ -71,13 +72,28 @@ class TorneoController extends Controller
 
         $usuario = auth()->user();
 
-        $buscar = trim($request->input('buscar', ''));
+        $validated = $request->validate([
+            'buscar' => ['nullable', 'string', 'max:150'],
+            'orden' => [
+                'nullable',
+                Rule::in(['nombre', 'fecha_inicio']),
+            ],
+            'direccion' => [
+                'nullable',
+                Rule::in(['asc', 'desc']),
+            ],
+        ]);
+
+        $buscar = trim($validated['buscar'] ?? '');
+        $orden = $validated['orden'] ?? 'fecha_inicio';
+        $direccion = $validated['direccion'] ?? 'desc';
 
         $torneos = Torneo::with('categorias:id,anio')
             // Los profesores solamente ven torneos activos.
             ->when($usuario->rol === 'profesor', function ($query) {
                 $query->where('estado', true);
             })
+            // Búsqueda de torneos.
             ->when($buscar, function ($query) use ($buscar) {
                 $query->where(function ($q) use ($buscar) {
                     $q->where('nombre', 'like', "%{$buscar}%")
@@ -85,7 +101,8 @@ class TorneoController extends Controller
                         ->orWhere('lugar', 'like', "%{$buscar}%");
                 });
             })
-            ->orderBy('fecha_inicio', 'desc')
+            // Ordenamiento dinámico.
+            ->orderBy($orden, $direccion)
             ->paginate(10)
             ->withQueryString();
 
@@ -93,6 +110,8 @@ class TorneoController extends Controller
             'torneos' => $torneos,
             'filtros' => [
                 'buscar' => $buscar,
+                'orden' => $orden,
+                'direccion' => $direccion,
             ],
         ]);
     }
@@ -192,40 +211,89 @@ class TorneoController extends Controller
 
     /**
      * Mostrar los detalles de un torneo,
-     * sus equipos y jugadores inscriptos.
+     * sus equipos y jugadores inscriptos con paginación independiente.
      */
-    public function show(Torneo $torneo)
+    public function show(Request $request, Torneo $torneo)
     {
         $this->autorizarConsulta($torneo);
 
-        $esProfesor = auth()->user()->rol === 'profesor';
+        $usuario = auth()->user();
 
-        $torneo->load([
-            'categorias:id,anio',
+        $esProfesor = $usuario->rol === 'profesor';
+        $esAdministrador = in_array(
+            $usuario->rol,
+            ['admin', 'superadmin'],
+            true
+        );
 
-            'equipos' => function ($query) use ($esProfesor) {
-                $query->with([
-                    'club',
-                    'categoria:id,anio',
-                ]);
-
-                if ($esProfesor) {
-                    $query->wherePivot('estado', true);
-                }
-            },
-
-            'jugadores' => function ($query) use ($esProfesor) {
-                $query->with([
-                    'categoria:id,anio',
-                ]);
-
-                if ($esProfesor) {
-                    $query->wherePivot('estado', 'inscripto');
-                }
-            },
+        $validated = $request->validate([
+            'estado_jugador' => [
+                'nullable',
+                Rule::in(['todos', 'pendiente', 'inscripto', 'cancelado']),
+            ],
+            'orden_jugador' => [
+                'nullable',
+                Rule::in(['jugador', 'categoria']),
+            ],
+            'direccion_jugador' => [
+                'nullable',
+                Rule::in(['asc', 'desc']),
+            ],
         ]);
 
-        // Los profesores no necesitan recibir información económica.
+        $estadoJugador = $validated['estado_jugador'] ?? 'todos';
+        $ordenJugador = $validated['orden_jugador'] ?? 'jugador';
+        $direccionJugador = $validated['direccion_jugador'] ?? 'asc';
+
+        // Datos generales del torneo y categorías.
+        $torneo->load('categorias:id,anio');
+
+        // Equipos: paginación independiente.
+        $equiposQuery = $torneo->equipos()
+            ->with([
+                'club',
+                'categoria:id,anio',
+            ]);
+
+        if ($esProfesor) {
+            $equiposQuery->wherePivot('estado', true);
+        }
+
+        $equipos = $equiposQuery
+            ->paginate(10, ['*'], 'equipos_page')
+            ->withQueryString();
+
+        // Jugadores: paginación independiente.
+        $jugadoresQuery = $torneo->jugadores()
+            ->with('categoria:id,anio');
+
+        if ($esProfesor) {
+            $jugadoresQuery->wherePivot('estado', 'inscripto');
+        } elseif ($esAdministrador && $estadoJugador !== 'todos') {
+            $jugadoresQuery->wherePivot('estado', $estadoJugador);
+        }
+
+        // Ordenamiento de jugadores.
+        if ($ordenJugador === 'categoria') {
+            $jugadoresQuery
+                ->orderBy(
+                    Categoria::select('anio')
+                        ->whereColumn('categorias.id', 'jugadores.categoria_id'),
+                    $direccionJugador
+                )
+                ->orderBy('jugadores.apellido')
+                ->orderBy('jugadores.nombre');
+        } else {
+            $jugadoresQuery
+                ->orderBy('jugadores.apellido', $direccionJugador)
+                ->orderBy('jugadores.nombre', $direccionJugador);
+        }
+
+        $jugadores = $jugadoresQuery
+            ->paginate(10, ['*'], 'jugadores_page')
+            ->withQueryString();
+
+        // Los profesores no deben recibir información económica.
         if ($esProfesor) {
             foreach ($torneo->categorias as $categoria) {
                 $categoria->pivot->makeHidden([
@@ -234,13 +302,13 @@ class TorneoController extends Controller
                 ]);
             }
 
-            foreach ($torneo->equipos as $equipo) {
+            foreach ($equipos->getCollection() as $equipo) {
                 $equipo->pivot->makeHidden([
                     'monto_inscripcion',
                 ]);
             }
 
-            foreach ($torneo->jugadores as $jugador) {
+            foreach ($jugadores->getCollection() as $jugador) {
                 $jugador->pivot->makeHidden([
                     'monto_inscripcion',
                 ]);
@@ -249,9 +317,15 @@ class TorneoController extends Controller
 
         return Inertia::render('Torneos/Show', [
             'torneo' => $torneo,
+            'equipos' => $equipos,
+            'jugadores' => $jugadores,
+            'filtros' => [
+                'estado_jugador' => $estadoJugador,
+                'orden_jugador' => $ordenJugador,
+                'direccion_jugador' => $direccionJugador,
+            ],
         ]);
     }
-
     /**
      * Mostrar el formulario para editar un torneo.
      */
@@ -458,6 +532,8 @@ class TorneoController extends Controller
                     'torneo' => $torneo->nombre,
                     'torneo_id' => $torneo->id,
                     'tipo' => $torneo->tipo,
+                    'fecha_inicio' => $torneo->fecha_inicio,
+                    'fecha_fin' => $torneo->fecha_fin,
                     'jugador' => $jugador->apellido . ', ' . $jugador->nombre,
                     'jugador_id' => $jugador->id,
                     'dni' => $jugador->dni,
@@ -485,12 +561,39 @@ class TorneoController extends Controller
         if ($direccion === 'desc') {
             $inscripciones = $inscripciones->reverse();
         }
-
+        // Resumen general de todas las inscripciones.
+        $resumen = [
+            'total' => $inscripciones->count(),
+            'pendientes' => $inscripciones->where('estado', 'pendiente')->count(),
+            'confirmadas' => $inscripciones->where('estado', 'inscripto')->count(),
+        ];
+        // Paginación de inscripciones.
+        $porPagina = 10;
+        $paginaActual = LengthAwarePaginator::resolveCurrentPage();
+        $resumen = [
+            'total' => $inscripciones->count(),
+            'pendientes' => $inscripciones->where('estado', 'pendiente')->count(),
+            'confirmadas' => $inscripciones->where('estado', 'inscripto')->count(),
+        ];
+        $inscripcionesPaginadas = new LengthAwarePaginator(
+            $inscripciones
+                ->forPage($paginaActual, $porPagina)
+                ->values(),
+            $inscripciones->count(),
+            $porPagina,
+            $paginaActual,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
         return Inertia::render('Torneos/MisInscripciones', [
-            'inscripciones' => $inscripciones->values(),
+            'inscripciones' => $inscripcionesPaginadas,
+            'resumen' => $resumen,
             'filtros' => [
                 'orden' => $orden,
                 'direccion' => $direccion,
+                
             ],
         ]);
     }

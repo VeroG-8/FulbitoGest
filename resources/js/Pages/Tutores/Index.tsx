@@ -15,6 +15,7 @@ import {
     Eye,
     Pencil,
     UserX,
+    History,
     ChevronLeft,
     ChevronRight,
 } from 'lucide-react';
@@ -193,13 +194,23 @@ export default function Index({
                     icon={<Users size={28} />}
                     actions={
                         puedeAdministrar ? (
-                            <Link
-                                href="/tutores/create"
-                                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
-                            >
-                                <UserPlus size={17} />
-                                Nuevo tutor
-                            </Link>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Link
+                                    href="/tutores/historial"
+                                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-800"
+                                >
+                                    <History size={17} />
+                                    Historial
+                                </Link>
+
+                                <Link
+                                    href="/tutores/create"
+                                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                                >
+                                    <UserPlus size={17} />
+                                    Nuevo tutor
+                                </Link>
+                            </div>
                         ) : undefined
                     }
                 />
