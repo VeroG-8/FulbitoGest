@@ -673,6 +673,275 @@ class CuentaCorrienteService
 
     return round($totalNetoCentavos / 100, 2);
 }
+private function obtenerCreditosNeutralizadosPorDebitos(
+    int $jugadorId
+): array {
+    $movimientos = MovimientoCuentaCorriente::query()
+        ->where('jugador_id', $jugadorId)
+        ->whereNotNull('cuota_x_jugador_id')
+        ->whereIn('tipo', [
+            self::TIPO_CREDITO,
+            self::TIPO_DEBITO,
+        ])
+        ->orderBy('cuota_x_jugador_id')
+        ->orderBy('id')
+        ->lockForUpdate()
+        ->get();
+
+    $porAsignacion = [];
+
+    foreach ($movimientos as $movimiento) {
+        if (
+            !is_numeric($movimiento->monto) ||
+            !is_finite((float) $movimiento->monto)
+        ) {
+            throw ValidationException::withMessages([
+                'cuenta_corriente' =>
+                    'Se encontró un movimiento correctivo con importe inválido.',
+            ]);
+        }
+
+        $montoCentavos = (int) round(
+            (float) $movimiento->monto * 100
+        );
+
+        if (
+            (
+                $movimiento->tipo === self::TIPO_CREDITO &&
+                $montoCentavos <= 0
+            ) ||
+            (
+                $movimiento->tipo === self::TIPO_DEBITO &&
+                $montoCentavos >= 0
+            )
+        ) {
+            throw ValidationException::withMessages([
+                'cuenta_corriente' =>
+                    'Se encontró un movimiento correctivo con signo inválido.',
+            ]);
+        }
+
+        $porAsignacion[$movimiento->cuota_x_jugador_id][] = [
+            'id' => (int) $movimiento->id,
+            'tipo' => $movimiento->tipo,
+            'monto' => $montoCentavos,
+        ];
+    }
+
+    $neutralizados = [];
+
+    foreach ($porAsignacion as $movimientosAsignacion) {
+        $creditosDisponibles = [];
+        $debitoPendienteCentavos = 0;
+
+        foreach ($movimientosAsignacion as $movimiento) {
+            if ($movimiento['tipo'] === self::TIPO_CREDITO) {
+                $creditoCentavos = $movimiento['monto'];
+
+                // Absorber primero los débitos anteriores pendientes.
+                $absorcionCentavos = min(
+                    $creditoCentavos,
+                    $debitoPendienteCentavos
+                );
+
+                if ($absorcionCentavos > 0) {
+                    $neutralizados[$movimiento['id']] =
+                        ($neutralizados[$movimiento['id']] ?? 0)
+                        + $absorcionCentavos;
+                }
+
+                $creditoCentavos -= $absorcionCentavos;
+                $debitoPendienteCentavos -= $absorcionCentavos;
+
+                if ($creditoCentavos > 0) {
+                    $creditosDisponibles[$movimiento['id']] =
+                        $creditoCentavos;
+                }
+
+                continue;
+            }
+
+            // El débito neutraliza primero los créditos más recientes.
+            $debitoRestanteCentavos = abs($movimiento['monto']);
+
+            foreach (
+                array_reverse(array_keys($creditosDisponibles))
+                as $creditoId
+            ) {
+                if ($debitoRestanteCentavos <= 0) {
+                    break;
+                }
+
+                $creditoRestanteCentavos =
+                    $creditosDisponibles[$creditoId];
+
+                $neutralizacionCentavos = min(
+                    $debitoRestanteCentavos,
+                    $creditoRestanteCentavos
+                );
+
+                $neutralizados[$creditoId] =
+                    ($neutralizados[$creditoId] ?? 0)
+                    + $neutralizacionCentavos;
+
+                $creditosDisponibles[$creditoId] -=
+                    $neutralizacionCentavos;
+
+                $debitoRestanteCentavos -=
+                    $neutralizacionCentavos;
+
+                if ($creditosDisponibles[$creditoId] === 0) {
+                    unset($creditosDisponibles[$creditoId]);
+                }
+            }
+
+            // El excedente queda pendiente para créditos posteriores.
+            $debitoPendienteCentavos += $debitoRestanteCentavos;
+        }
+    }
+
+    return $neutralizados;
+}
+
+private function obtenerDebitosNeutralizadosPorCreditos(
+    int $jugadorId
+): array {
+    $movimientos = MovimientoCuentaCorriente::query()
+        ->where('jugador_id', $jugadorId)
+        ->whereNotNull('cuota_x_jugador_id')
+        ->whereIn('tipo', [
+            self::TIPO_CREDITO,
+            self::TIPO_DEBITO,
+        ])
+        ->orderBy('cuota_x_jugador_id')
+        ->orderBy('id')
+        ->lockForUpdate()
+        ->get();
+
+    $porAsignacion = [];
+
+    foreach ($movimientos as $movimiento) {
+        if (
+            !is_numeric($movimiento->monto) ||
+            !is_finite((float) $movimiento->monto)
+        ) {
+            throw ValidationException::withMessages([
+                'cuenta_corriente' =>
+                    'Se encontró un movimiento correctivo con importe inválido.',
+            ]);
+        }
+
+        $montoCentavos = (int) round(
+            (float) $movimiento->monto * 100
+        );
+
+        if (
+            (
+                $movimiento->tipo === self::TIPO_CREDITO &&
+                $montoCentavos <= 0
+            ) ||
+            (
+                $movimiento->tipo === self::TIPO_DEBITO &&
+                $montoCentavos >= 0
+            )
+        ) {
+            throw ValidationException::withMessages([
+                'cuenta_corriente' =>
+                    'Se encontró un movimiento correctivo con signo inválido.',
+            ]);
+        }
+
+        $porAsignacion[$movimiento->cuota_x_jugador_id][] = [
+            'id' => (int) $movimiento->id,
+            'tipo' => $movimiento->tipo,
+            'monto' => $montoCentavos,
+        ];
+    }
+
+    $debitosNeutralizados = [];
+
+    foreach ($porAsignacion as $movimientosAsignacion) {
+        $creditosDisponibles = [];
+        $debitosPendientes = [];
+
+        foreach ($movimientosAsignacion as $movimiento) {
+            if ($movimiento['tipo'] === self::TIPO_CREDITO) {
+                $creditoRestante = $movimiento['monto'];
+
+                // Un crédito nuevo neutraliza primero los débitos
+                // anteriores que todavía están pendientes.
+                foreach (array_keys($debitosPendientes) as $debitoId) {
+                    if ($creditoRestante <= 0) {
+                        break;
+                    }
+
+                    $debitoRestante = $debitosPendientes[$debitoId];
+
+                    $neutralizacion = min(
+                        $creditoRestante,
+                        $debitoRestante
+                    );
+
+                    $debitosNeutralizados[$debitoId] =
+                        ($debitosNeutralizados[$debitoId] ?? 0)
+                        + $neutralizacion;
+
+                    $creditoRestante -= $neutralizacion;
+                    $debitosPendientes[$debitoId] -= $neutralizacion;
+
+                    if ($debitosPendientes[$debitoId] === 0) {
+                        unset($debitosPendientes[$debitoId]);
+                    }
+                }
+
+                if ($creditoRestante > 0) {
+                    $creditosDisponibles[$movimiento['id']] =
+                        $creditoRestante;
+                }
+
+                continue;
+            }
+
+            $debitoRestante = abs($movimiento['monto']);
+
+            // Un débito nuevo consume primero los créditos
+            // anteriores que todavía están disponibles.
+            foreach (
+                array_reverse(array_keys($creditosDisponibles))
+                as $creditoId
+            ) {
+                if ($debitoRestante <= 0) {
+                    break;
+                }
+
+                $creditoRestante = $creditosDisponibles[$creditoId];
+
+                $neutralizacion = min(
+                    $debitoRestante,
+                    $creditoRestante
+                );
+
+                $debitosNeutralizados[$movimiento['id']] =
+                    ($debitosNeutralizados[$movimiento['id']] ?? 0)
+                    + $neutralizacion;
+
+                $debitoRestante -= $neutralizacion;
+                $creditosDisponibles[$creditoId] -= $neutralizacion;
+
+                if ($creditosDisponibles[$creditoId] === 0) {
+                    unset($creditosDisponibles[$creditoId]);
+                }
+            }
+
+            if ($debitoRestante > 0) {
+                $debitosPendientes[$movimiento['id']] =
+                    $debitoRestante;
+            }
+        }
+    }
+
+    return $debitosNeutralizados;
+}
 
         /**
      * Obtiene los créditos que todavía pueden utilizarse.
@@ -697,6 +966,10 @@ class CuentaCorrienteService
             $jugadorId,
             'movimiento_credito_id'
         );
+
+        // Obtener cuánto neutralizaron los débitos de cada crédito.
+        $creditosNeutralizados =
+            $this->obtenerCreditosNeutralizadosPorDebitos($jugadorId);
 
         $creditos = [];
 
@@ -749,9 +1022,13 @@ class CuentaCorrienteService
                 (float) $compensado * 100
             );
 
+            $neutralizadoCentavos =
+                $creditosNeutralizados[$movimiento->id] ?? 0;
+
             if (
                 $aplicadoCentavos < 0 ||
-                $compensadoCentavos < 0
+                $compensadoCentavos < 0 ||
+                $neutralizadoCentavos < 0
             ) {
                 throw ValidationException::withMessages([
                     'cuenta_corriente' =>
@@ -759,20 +1036,20 @@ class CuentaCorrienteService
                 ]);
             }
 
-            if (
-                $aplicadoCentavos + $compensadoCentavos >
-                $montoOriginalCentavos
-            ) {
+            $totalConsumidoCentavos =
+                $aplicadoCentavos +
+                $compensadoCentavos +
+                $neutralizadoCentavos;
+
+            if ($totalConsumidoCentavos > $montoOriginalCentavos) {
                 throw ValidationException::withMessages([
                     'cuenta_corriente' =>
-                        'Las aplicaciones y compensaciones superan el importe del crédito.',
+                        'Las aplicaciones, compensaciones y neutralizaciones superan el importe del crédito.',
                 ]);
             }
 
             $disponibleCentavos =
-                $montoOriginalCentavos
-                - $aplicadoCentavos
-                - $compensadoCentavos;
+                $montoOriginalCentavos - $totalConsumidoCentavos;
 
             if ($disponibleCentavos <= 0) {
                 continue;
@@ -786,7 +1063,6 @@ class CuentaCorrienteService
 
         return $creditos;
     }
-
     public function obtenerTotalCreditosDisponibles(int $jugadorId): float
     {
         $totalCentavos = 0;
@@ -937,9 +1213,12 @@ class CuentaCorrienteService
         * 5. Obtener las compensaciones existentes.
         */
         $compensacionesDebitos = $this->obtenerTotalesCompensaciones(
-            $jugadorId,
-            'movimiento_debito_id'
-        );
+    $jugadorId,
+    'movimiento_debito_id'
+    );
+
+    $debitosNeutralizados =
+        $this->obtenerDebitosNeutralizadosPorCreditos($jugadorId);
 
         /*
         * 6. Compensar respetando el grupo de cuenta.
@@ -1004,8 +1283,28 @@ class CuentaCorrienteService
                 ]);
             }
 
-            $pendienteCentavos =
-                $montoDebitoCentavos - $totalCompensadoCentavos;
+           $neutralizadoCentavos =
+    $debitosNeutralizados[$debito->id] ?? 0;
+
+if ($neutralizadoCentavos < 0) {
+    throw ValidationException::withMessages([
+        'cuenta_corriente' =>
+            'El importe neutralizado del débito es inválido.',
+    ]);
+}
+
+$totalConsumidoCentavos =
+    $totalCompensadoCentavos + $neutralizadoCentavos;
+
+if ($totalConsumidoCentavos > $montoDebitoCentavos) {
+    throw ValidationException::withMessages([
+        'cuenta_corriente' =>
+            'Las compensaciones y neutralizaciones superan el importe del débito.',
+    ]);
+}
+
+$pendienteCentavos =
+    $montoDebitoCentavos - $totalConsumidoCentavos;
 
             if ($pendienteCentavos <= 0) {
                 continue;
@@ -1371,29 +1670,76 @@ class CuentaCorrienteService
                 $compensaciones->get($movimiento->id)->total ?? 0
             );
 
-            if ($movimiento->tipo === self::TIPO_CREDITO) {
-                $totalAplicadoCentavos = $this->obtenerTotalAplicadoMovimientoCreditoCentavos(
-                    $jugador->id,
-                    $movimiento
+           if ($movimiento->tipo === self::TIPO_CREDITO) {
+                $totalAplicadoCentavos =
+                    $this->obtenerTotalAplicadoMovimientoCreditoCentavos(
+                        $jugador->id,
+                        $movimiento
+                    );
+
+                $montoCreditoCentavos = (int) round(
+                    (float) $movimiento->monto * 100
                 );
 
-                $montoCreditoCentavos = (int) round((float) $movimiento->monto * 100);
+                $creditosNeutralizados =
+                    $this->obtenerCreditosNeutralizadosPorDebitos(
+                        $jugador->id
+                    );
 
-                if ($totalAplicadoCentavos > $montoCreditoCentavos) {
+                $neutralizadoCentavos =
+                    $creditosNeutralizados[$movimiento->id] ?? 0;
+
+                if (
+                    $totalAplicadoCentavos < 0 ||
+                    $neutralizadoCentavos < 0 ||
+                    ($totalAplicadoCentavos + $neutralizadoCentavos)
+                        > $montoCreditoCentavos
+                ) {
                     throw ValidationException::withMessages([
-                        'cuenta_corriente' => 'Las aplicaciones de crédito superan el importe del movimiento. No es posible reconciliar sus compensaciones hasta corregir ese historial.',
+                        'cuenta_corriente' =>
+                            'Las aplicaciones y neutralizaciones superan el importe del crédito.',
                     ]);
                 }
 
                 $maximoCompensableCentavos = max(
                     0,
-                    $montoCreditoCentavos - $totalAplicadoCentavos
+                    $montoCreditoCentavos
+                        - $totalAplicadoCentavos
+                        - $neutralizadoCentavos
                 );
 
-                $maximoCompensable = round($maximoCompensableCentavos / 100, 2);
-            } else {
                 $maximoCompensable = round(
-                    abs((float) $movimiento->monto),
+                    $maximoCompensableCentavos / 100,
+                    2
+                );
+            } else {
+                $debitosNeutralizados =
+                    $this->obtenerDebitosNeutralizadosPorCreditos(
+                        $jugador->id
+                    );
+
+                $montoDebitoCentavos = (int) round(
+                    abs((float) $movimiento->monto) * 100
+                );
+
+                $neutralizadoCentavos =
+                    $debitosNeutralizados[$movimiento->id] ?? 0;
+
+                if (
+                    $neutralizadoCentavos < 0 ||
+                    $neutralizadoCentavos > $montoDebitoCentavos
+                ) {
+                    throw ValidationException::withMessages([
+                        'cuenta_corriente' =>
+                            'La neutralización del débito presenta importes inconsistentes.',
+                    ]);
+                }
+
+                $maximoCompensableCentavos =
+                    $montoDebitoCentavos - $neutralizadoCentavos;
+
+                $maximoCompensable = round(
+                    $maximoCompensableCentavos / 100,
                     2
                 );
             }
@@ -1412,9 +1758,6 @@ class CuentaCorrienteService
                 );
             }
 
-            // Si quedaron débitos pendientes, se vuelven a compensar
-            // con los créditos que todavía estén disponibles.
-            $this->compensarDebitosPendientes($jugador->id);
         });
     }
 
@@ -2568,43 +2911,86 @@ class CuentaCorrienteService
                     $creditoAplicadoActual
                 );
 
-                /*
-                * 12. DISTRIBUIR CRÉDITOS DISPONIBLES
-                *
-                * Solo si se generó crédito nuevo o se liberó crédito externo.
-                */
-                $limitesCreditoDistribucionCentavos =
-                    $limitesCreditoExternosLiberadosCentavos;
+                    /*
+            * 12. DISTRIBUIR CRÉDITOS DISPONIBLES
+            *
+            * Se incluyen:
+            * - Créditos externos liberados.
+            * - Crédito correctivo nuevo.
+            * - Créditos correctivos anteriores que quedaron disponibles
+            *   después de neutralizar débitos.
+            */
+            
+            $limitesCreditoDistribucionCentavos =
+                $limitesCreditoExternosLiberadosCentavos;
 
-                // Incorporar el crédito correctivo nuevo, si existe.
-                if (
-                    $diferenciaCentavos > 0 &&
-                    $movimientoCorrectivoId !== null
-                ) {
-                    $limitesCreditoDistribucionCentavos[$movimientoCorrectivoId] =
-                        ($limitesCreditoDistribucionCentavos[$movimientoCorrectivoId] ?? 0)
-                        + $diferenciaCentavos;
-                }
-
-                if (!empty($limitesCreditoDistribucionCentavos)) {
-                    $asignacionesPendientes = CuotaXJugador::query()
-                        ->where('jugador_id', $jugador->id)
-                        ->where('estado', 'pendiente')
-                        ->where('id', '!=', $asignacion->id)
-                        ->orderBy('fecha_vencimiento')
-                        ->orderBy('id')
-                        ->get();
-
-                  foreach ($asignacionesPendientes as $pendiente) {
-                    $this->aplicarCreditoDisponible(
-                            $pendiente,
-                            $userId,
-                            false,
-                            $limitesCreditoDistribucionCentavos
-                        );
-                    }
-                }
+            // Incorporar el crédito correctivo nuevo, si existe.
+            if (
+                $diferenciaCentavos > 0 &&
+                $movimientoCorrectivoId !== null
+            ) {
+                $limitesCreditoDistribucionCentavos[$movimientoCorrectivoId] =
+                    ($limitesCreditoDistribucionCentavos[$movimientoCorrectivoId] ?? 0)
+                    + $diferenciaCentavos;
             }
+
+            // Incorporar créditos anteriores disponibles.
+            foreach ($this->obtenerCreditosDisponibles($jugador->id) as $credito) {
+                $movimientoId = (int) $credito['movimiento']->id;
+
+                $disponibleCentavos = (int) round(
+                    (float) $credito['disponible'] * 100
+                );
+
+                if ($disponibleCentavos <= 0) {
+                    continue;
+                }
+
+                $limitesCreditoDistribucionCentavos[$movimientoId] =
+                    max(
+                        $limitesCreditoDistribucionCentavos[$movimientoId] ?? 0,
+                        $disponibleCentavos
+                    );
+            }
+logger()->info('DISTRIBUCION DE CREDITOS', [
+    'jugador_id' => $jugador->id,
+    'asignacion_actual_id' => $asignacion->id,
+    'movimiento_correctivo_id' => $movimientoCorrectivoId,
+    'diferencia_centavos' => $diferenciaCentavos,
+    'limites_creditos' => $limitesCreditoDistribucionCentavos,
+    'asignaciones_pendientes' => CuotaXJugador::query()
+        ->where('jugador_id', $jugador->id)
+        ->where('estado', 'pendiente')
+        ->where('id', '!=', $asignacion->id)
+        ->pluck('id')
+        ->toArray(),
+]);
+            if (!empty($limitesCreditoDistribucionCentavos)) {
+                $asignacionesPendientes = CuotaXJugador::query()
+                    ->where('jugador_id', $jugador->id)
+                    ->where('estado', 'pendiente')
+                    ->where('id', '!=', $asignacion->id)
+                    ->orderBy('fecha_vencimiento')
+                    ->orderBy('id')
+                    ->get();
+
+                foreach ($asignacionesPendientes as $pendiente) {
+    $resultadoAplicacion = $this->aplicarCreditoDisponible(
+        $pendiente,
+        $userId,
+        false,
+        $limitesCreditoDistribucionCentavos
+    );
+
+    logger()->info('RESULTADO APLICACION AUTOMATICA', [
+        'jugador_id' => $jugador->id,
+        'asignacion_destino_id' => $pendiente->id,
+        'importe_aplicado' => $resultadoAplicacion,
+        'limites_restantes' => $limitesCreditoDistribucionCentavos,
+    ]);
+}
+            }
+        }
 
             DB::table('historial_modificaciones_cuotas')
                 ->where('id', $historialId)
